@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-07-12 v2.5.1 Documentation and Source-Free Validation Fix
+
+- Fixed the README Quick Start command to use the required `--spec` and `--out-dir` flags.
+- Added `semantic_validated_pass` for raw-data figures that have no reference image but pass semantic and vector validation.
+- Kept source-free validation distinct from visual strict status; `--require-strict` now fails fast unless `--source` is supplied.
+- Updated manifest schemas, validators, verification behavior, and regression tests for the source-free workflow.
+- Added GitHub Actions for fast, integration, source-free bundle, and release-acceptance tests.
+- Unified public version references on v2.5.1.
+
 ## 2026-07-05 v2.5.1 Stability and Path Portability
 
 - Converted deliverable JSON paths to bundle-relative POSIX paths.

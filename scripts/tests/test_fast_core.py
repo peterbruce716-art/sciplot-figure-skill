@@ -21,6 +21,22 @@ class FastCoreTests(ScientificFigureReproductionTestBase):
         manifest["status"] = "semantic_near_pass"
         self.assertEqual("near_pass", visualspec.manifest_overall_status(manifest))
 
+    def test_semantic_validated_status_maps_to_success_without_claiming_strict(self) -> None:
+        self.assertEqual("validated_pass", visualspec.status_to_qa_result("semantic_validated_pass"))
+        manifest = visualspec.make_manifest(spec_path="spec.json", output_dir="out")
+        manifest.update(
+            {
+                "source_code_status": "pass",
+                "render_status": "pass",
+                "export_status": "pass",
+                "qa_execution_status": "completed",
+                "quality_status": "validated_pass",
+                "status": "semantic_validated_pass",
+            }
+        )
+        self.assertEqual("validated_pass", manifest["quality_status"])
+        self.assertEqual("pass", visualspec.manifest_overall_status(manifest))
+
     def test_scaffold_uses_open_delivery_fields(self) -> None:
         scaffold = load_module("scaffold_figurespec", SCRIPTS / "scaffold_figurespec.py")
         spec = scaffold.build_spec(["fig1"], "outputs/figures", "outputs/source")

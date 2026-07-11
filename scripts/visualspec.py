@@ -24,6 +24,7 @@ SOURCE_STRATEGIES = {
 REPRESENTATIONS = {"semantic_vector", "semantic_raster", "mixed", "pixel_primitives"}
 FINAL_STATUSES = {
     "semantic_strict_pass",
+    "semantic_validated_pass",
     "semantic_near_pass",
     "visual_trace_pass",
     "render_only",
@@ -31,8 +32,8 @@ FINAL_STATUSES = {
     "failed",
 }
 QA_EXECUTION_STATUSES = {"not_run", "completed", "failed"}
-QA_RESULTS = {"strict_pass", "near_pass", "not_strict", "not_applicable"}
-QUALITY_STATUSES = {"strict_pass", "near_pass", "render_only", "not_strict", "not_applicable", "failed"}
+QA_RESULTS = {"strict_pass", "validated_pass", "near_pass", "not_strict", "not_applicable"}
+QUALITY_STATUSES = {"strict_pass", "validated_pass", "near_pass", "render_only", "not_strict", "not_applicable", "failed"}
 
 PLOT_STYLE_KEYS = {name: set(capability.style_fields) for name, capability in PLOT_CAPABILITIES.items()}
 PLOT_TOP_LEVEL_KEYS = {"id", "type", "label", "data", "style", "allow_empty", "colorbar"}
@@ -429,6 +430,8 @@ def require_valid_visualspec(spec: dict[str, Any]) -> None:
 def status_to_qa_result(status: str) -> str:
     if status in {"semantic_strict_pass", "visual_trace_pass"}:
         return "strict_pass"
+    if status == "semantic_validated_pass":
+        return "validated_pass"
     if status == "semantic_near_pass":
         return "near_pass"
     if status == "not_strict":
@@ -439,11 +442,15 @@ def status_to_qa_result(status: str) -> str:
 def manifest_overall_status(manifest: dict[str, Any]) -> str:
     if any(manifest.get(key) == "failed" for key in ["run_status", "source_code_status", "render_status", "export_status", "qa_execution_status", "visual_qa_status"]):
         return "failed"
+    if manifest.get("quality_status") == "validated_pass":
+        return "pass"
     if manifest.get("quality_status") in QUALITY_STATUSES - {"not_applicable"}:
         return str(manifest["quality_status"])
     status = manifest.get("status")
     if status in {"semantic_strict_pass", "visual_trace_pass"}:
         return "strict_pass"
+    if status == "semantic_validated_pass":
+        return "pass"
     if status == "semantic_near_pass":
         return "near_pass"
     if status in {"not_strict", "failed"}:

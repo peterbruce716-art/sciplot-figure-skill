@@ -74,6 +74,47 @@ class FastValidationTests(ScientificFigureReproductionTestBase):
             result = validator.validate_manifest(manifest_path, root=root, require_strict=True)
             self.assertEqual("failed", result["status"])
 
+    def test_source_free_semantic_validation_does_not_require_visual_score(self) -> None:
+        validator = load_module("validate_reproduction_manifest_source_free", SCRIPTS / "validate_reproduction_manifest.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for name in ["render.png", "render.svg", "render.pdf", "fig1.py"]:
+                (root / name).write_text("x", encoding="utf-8")
+            manifest = {
+                "schema": "scientificfigure.manifest.v2",
+                "status": "semantic_validated_pass",
+                "overall_status": "pass",
+                "source_strategy": "raw_data",
+                "representation": "semantic_vector",
+                "source_code_status": "pass",
+                "render_status": "pass",
+                "export_status": "pass",
+                "qa_status": "completed",
+                "qa_execution_status": "completed",
+                "quality_status": "validated_pass",
+                "visual_qa_status": "not_applicable",
+                "semantic_audit": {"overall": "pass"},
+                "vector_validation": {"status": "pass"},
+                "per_figure_scripts": {"fig1": "fig1.py"},
+                "figures": {
+                    "fig1": {
+                        "source": None,
+                        "exports": {"png": "render.png", "svg": "render.svg", "pdf": "render.pdf"},
+                        "qa": {"execution_status": "completed", "result": "validated_pass"},
+                        "status": "semantic_validated_pass",
+                        "source_strategy": "raw_data",
+                        "representation": "semantic_vector",
+                        "panels": {"A": {"bbox_normalized": [0, 0, 1, 1], "qa": {"execution_status": "not_run", "result": "not_applicable"}}},
+                    }
+                },
+            }
+            manifest_path = root / "manifest.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            self.assertEqual("ok", validator.validate_manifest(manifest_path, root=root)["status"])
+            strict = validator.validate_manifest(manifest_path, root=root, require_strict=True)
+            self.assertEqual("failed", strict["status"])
+            self.assertIn("strict_requires_reference_score", {item["code"] for item in strict["failures"]})
+
     def test_pixel_trace_cannot_claim_semantic_strict(self) -> None:
         validator = load_module("validate_reproduction_manifest", SCRIPTS / "validate_reproduction_manifest.py")
         with tempfile.TemporaryDirectory() as tmp:

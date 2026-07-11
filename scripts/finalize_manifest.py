@@ -58,6 +58,29 @@ def _status_from_score(score: dict[str, Any], *, profile: str, source_strategy: 
     return "not_strict"
 
 
+def classify_source_free_status(
+    *,
+    source_strategy: str,
+    representation: str,
+    semantic_audit: dict[str, Any] | None,
+    vector_validation: dict[str, Any] | None,
+) -> str:
+    """Classify a raw-data render when no reference image is available.
+
+    This is intentionally distinct from semantic_strict_pass: semantic and vector
+    checks can validate the generated artifact, but they cannot establish visual
+    fidelity to an external reference that was never supplied.
+    """
+    if source_strategy != "raw_data":
+        return "render_only"
+    if semantic_audit is None or vector_validation is None:
+        return "render_only"
+    semantic_ok = semantic_audit.get("overall") == "pass"
+    vector_required = representation == "semantic_vector"
+    vector_ok = (not vector_required) or vector_validation.get("status") == "pass"
+    return "semantic_validated_pass" if semantic_ok and vector_ok else "not_strict"
+
+
 def _load_optional_json(path: Path | None) -> dict[str, Any] | None:
     return load_json(path) if path and path.exists() else None
 
@@ -201,9 +224,22 @@ def finalize_manifest(
             )
             figure["qa"]["result"] = status_to_qa_result(figure_status)
         else:
-            figure["qa"]["execution_status"] = "not_run"
-            figure["qa"]["result"] = "not_applicable"
-            figure_status = "render_only"
+            figure_status = classify_source_free_status(
+                source_strategy=str(figure.get("source_strategy", "raw_data")),
+                representation=str(figure.get("representation", manifest.get("representation", "semantic_vector"))),
+                semantic_audit=semantic_audit,
+                vector_validation=vector_validation,
+            )
+            if figure_status == "semantic_validated_pass":
+                figure["qa"]["execution_status"] = "completed"
+                figure["qa"]["result"] = status_to_qa_result(figure_status)
+                figure["qa"]["validation_basis"] = "semantic_and_vector_without_reference_image"
+            elif figure_status == "not_strict":
+                figure["qa"]["execution_status"] = "failed"
+                figure["qa"]["result"] = "not_strict"
+            else:
+                figure["qa"]["execution_status"] = "not_run"
+                figure["qa"]["result"] = "not_applicable"
         panels = figure.get("panels")
         if isinstance(panels, dict):
             for panel_id, panel in panels.items():
@@ -232,6 +268,14 @@ def finalize_manifest(
         manifest["visual_qa_status"] = "pass"
         manifest["qa_status"] = "completed"
         manifest["qa_execution_status"] = "completed"
+    elif final_statuses and all(status == "semantic_validated_pass" for status in final_statuses):
+        manifest["visual_qa_status"] = "not_applicable"
+        manifest["qa_status"] = "completed"
+        manifest["qa_execution_status"] = "completed"
+    elif any(status == "not_strict" for status in final_statuses):
+        manifest["visual_qa_status"] = "not_applicable"
+        manifest["qa_status"] = "failed"
+        manifest["qa_execution_status"] = "failed"
     else:
         manifest["visual_qa_status"] = "not_run"
         manifest["qa_status"] = "not_run"
@@ -255,6 +299,8 @@ def finalize_manifest(
             manifest["status"] = "visual_trace_pass"
         elif all(status == "semantic_strict_pass" for status in final_statuses):
             manifest["status"] = "semantic_strict_pass"
+        elif all(status == "semantic_validated_pass" for status in final_statuses):
+            manifest["status"] = "semantic_validated_pass"
         else:
             manifest["status"] = "semantic_near_pass"
     else:
@@ -301,7 +347,7 @@ def main() -> int:
         checksums_path=args.checksums,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0 if result.get("status") in {"semantic_strict_pass", "semantic_near_pass", "visual_trace_pass"} else 2
+    return 0 if result.get("status") in {"semantic_strict_pass", "semantic_validated_pass", "semantic_near_pass", "visual_trace_pass"} else 2
 
 
 if __name__ == "__main__":

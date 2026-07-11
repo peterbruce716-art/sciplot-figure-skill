@@ -72,6 +72,18 @@ def vector_validation_ok(manifest: dict[str, Any], figure: dict[str, Any]) -> bo
     return isinstance(validation, dict) and validation.get("status") == "pass"
 
 
+def source_free_validation_ok(manifest: dict[str, Any], figure: dict[str, Any]) -> bool:
+    return (
+        not figure.get("source")
+        and source_strategy(manifest, figure) == "raw_data"
+        and figure.get("status") == "semantic_validated_pass"
+        and semantic_audit_ok(manifest)
+        and vector_validation_ok(manifest, figure)
+    )
+
+
+
+
 def validate_manifest(manifest_path: Path, *, root: Path | None = None, require_strict: bool = False) -> dict[str, Any]:
     root = (root or manifest_path.parent).resolve()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -115,17 +127,20 @@ def validate_manifest(manifest_path: Path, *, root: Path | None = None, require_
                 failures.append({"code": "output_not_found", "figure": fig_id, "output": key, "path": str(figure_value(figure, key))})
 
         score = figure_score(figure)
-        if not isinstance(score, dict):
+        source_free_validated = source_free_validation_ok(manifest, figure)
+        if not isinstance(score, dict) and not source_free_validated:
             failures.append({"code": "missing_score", "figure": fig_id})
             continue
         qa = figure.get("qa")
         if isinstance(qa, dict):
             if qa.get("execution_status") not in {"completed", "not_run", "failed"}:
                 failures.append({"code": "invalid_qa_execution_status", "figure": fig_id})
-            if qa.get("result") not in {"strict_pass", "near_pass", "not_strict", "not_applicable"}:
+            if qa.get("result") not in {"strict_pass", "validated_pass", "near_pass", "not_strict", "not_applicable"}:
                 failures.append({"code": "invalid_qa_result", "figure": fig_id})
             if figure.get("status") == "semantic_strict_pass" and qa.get("result") != "strict_pass":
                 failures.append({"code": "strict_figure_has_non_strict_qa", "figure": fig_id})
+            if figure.get("status") == "semantic_validated_pass" and qa.get("result") != "validated_pass":
+                failures.append({"code": "validated_figure_has_wrong_qa", "figure": fig_id})
 
         strategy = source_strategy(manifest, figure)
         profile = qa_profile(manifest, figure)
@@ -137,7 +152,9 @@ def validate_manifest(manifest_path: Path, *, root: Path | None = None, require_
             if strategy == "pixel_trace" and manifest.get("status") in {old_visual_strict, "semantic_strict_pass"}:
                 failures.append({"code": "pixel_trace_cannot_claim_semantic_strict", "figure": fig_id})
             is_trace = profile == "trace" or strategy == "pixel_trace"
-            if is_trace:
+            if not isinstance(score, dict):
+                failures.append({"code": "strict_requires_reference_score", "figure": fig_id})
+            elif is_trace:
                 if score.get("exact_pixel_match") is not True:
                     failures.append({"code": "not_exact_pixel_match", "figure": fig_id})
                 if float(score.get("mae_0_1", 1.0)) != 0.0:

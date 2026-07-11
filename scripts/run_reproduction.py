@@ -446,6 +446,8 @@ def main() -> int:
     parser.add_argument("--require-strict", action="store_true")
     parser.add_argument("--project-root", type=Path, help="Deprecated in v2.2; out-dir is the portable project root.")
     args = parser.parse_args()
+    if args.require_strict and args.source is None:
+        parser.error("--require-strict requires --source because strict visual fidelity needs a reference image")
 
     script_dir = Path(__file__).resolve().parent
     project_root = args.out_dir.resolve()

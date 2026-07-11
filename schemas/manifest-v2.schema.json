@@ -15,10 +15,10 @@
     "resolved_fonts": {"type": "object", "additionalProperties": true},
     "exports": {"$ref": "#/$defs/exports"},
     "status": {"$ref": "#/$defs/final_status"},
-    "overall_status": {"enum": ["strict_pass", "near_pass", "render_only", "not_strict", "not_applicable", "failed", "incomplete", "pass"]},
+    "overall_status": {"enum": ["strict_pass", "pass", "near_pass", "render_only", "not_strict", "not_applicable", "failed", "incomplete"]},
     "run_status": {"enum": ["not_run", "completed", "failed"]},
     "qa_execution_status": {"enum": ["not_run", "completed", "failed"]},
-    "quality_status": {"enum": ["strict_pass", "near_pass", "render_only", "not_strict", "not_applicable", "failed"]},
+    "quality_status": {"enum": ["strict_pass", "validated_pass", "near_pass", "render_only", "not_strict", "not_applicable", "failed"]},
     "source_code_status": {"type": "string"},
     "render_status": {"type": "string"},
     "raster_export_status": {"type": "string"},
@@ -52,7 +52,7 @@
   },
   "$defs": {
     "final_status": {
-      "enum": ["semantic_strict_pass", "semantic_near_pass", "visual_trace_pass", "render_only", "not_strict", "failed"]
+      "enum": ["semantic_strict_pass", "semantic_validated_pass", "semantic_near_pass", "visual_trace_pass", "render_only", "not_strict", "failed"]
     },
     "exports": {
       "type": "object",
@@ -70,7 +70,7 @@
       "required": ["execution_status", "result"],
       "properties": {
         "execution_status": {"enum": ["not_run", "completed", "failed"]},
-        "result": {"enum": ["strict_pass", "near_pass", "not_strict", "not_applicable"]},
+        "result": {"enum": ["strict_pass", "validated_pass", "near_pass", "not_strict", "not_applicable"]},
         "profile": {"enum": ["semantic", "visual", "trace"]},
         "score_report": {"type": ["string", "null"]},
         "score": {"type": "object"}

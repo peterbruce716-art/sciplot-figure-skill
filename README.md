@@ -4,122 +4,128 @@ A reproducible scientific figure generation and validation framework for AI-assi
 
 ## Overview
 
-SciPlot Figure Skill provides a structured workflow for creating scientific figures with reproducibility, semantic validation, and vector-output verification.
+SciPlot Figure Skill uses a VisualSpec JSON description to generate deterministic scientific figures and package the result as a portable, verifiable bundle.
 
-Core ideas:
+Core capabilities:
 
-- VisualSpec-based figure description
-- deterministic rendering
+- VisualSpec-based figure descriptions
+- deterministic Matplotlib rendering
+- PNG, SVG, and PDF export
 - semantic figure auditing
 - SVG/PDF vector validation
-- reproduction bundles
-- portable verification workflow
+- portable reproduction bundles
+- checksums, environment records, and offline verification
 
-## Supported Outputs
+## Validation Levels
 
-- PNG
-- SVG
-- PDF
+The workflow reports different statuses depending on the evidence available:
 
-## Features
-
-### Figure Specification
-
-Figures are described using VisualSpec JSON rather than scattered plotting scripts.
-
-### Validation
-
-The framework can validate:
-
-- rendered image existence
-- semantic consistency
-- vector output integrity
-- bundle reproducibility
-- environment information
-
-### Reproduction Bundle
-
-Generated packages contain the information required to reproduce and verify a figure on another machine.
-
-## Validation Status
-
-Version: v2.5
-
-Tested workflow:
-
-- strict line plot reproduction
-- semantic audit
-- SVG vector validation
-- PDF export validation
-- reproduction bundle verification
-
-Example status:
-
-```
-semantic_strict_pass
-vector_validation_pass
-verify.py pass
-```
+- `semantic_strict_pass`: a reference image was supplied and visual, semantic, panel, and vector checks passed.
+- `semantic_validated_pass`: no reference image was supplied, but a raw-data figure passed semantic and vector validation. This is a successful generated-figure workflow, not a visual-fidelity claim.
+- `semantic_near_pass`: comparison evidence exists but does not meet the strict threshold.
+- `render_only`: rendering completed, but the evidence needed for semantic validation was not available.
 
 ## Installation
 
+Python 3.10 or newer is recommended.
+
 ```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Quick Start
+## Quick Start: Generate From Data Without a Reference Image
 
-Example:
+This path renders the example, audits its semantics, validates SVG/PDF structure, writes checksums, and creates a portable verification bundle.
 
 ```bash
-python scripts/run_reproduction.py examples/line_plot/visualspec_v2.json
+python scripts/run_reproduction.py \
+  --spec examples/line_plot/visualspec_v2.json \
+  --out-dir out/line_plot
+
+python out/line_plot/verify.py
 ```
+
+Expected final manifest status:
+
+```text
+semantic_validated_pass
+```
+
+## Strict Reference-Image Reproduction
+
+Use this path when a source or reference image is available and visual fidelity must be measured.
+
+```bash
+python scripts/run_reproduction.py \
+  --spec examples/line_plot/visualspec_v2.json \
+  --source path/to/reference.png \
+  --out-dir out/line_plot_strict \
+  --qa-profile semantic \
+  --require-strict
+
+python out/line_plot_strict/verify.py
+```
+
+`--require-strict` requires `--source`; the command fails early when no reference image is supplied.
+
+## Supported Plot and Annotation Types
+
+The generic renderer currently supports:
+
+- plots: line, scatter, errorbar, fill_between, grouped bar, stacked bar, heatmap, and contour
+- annotations: text, arrow, rectangle, and polygon
+
+Project-specific renderers can be supplied with `--script`, but custom command renderers cannot self-certify a semantic strict pass.
+
+## Bundle Contents
+
+A completed output directory includes:
+
+- `visualspec.json` and copied input data
+- `render.py`, `reproduce.py`, and `verify.py`
+- `outputs/render.png`, `outputs/render.svg`, and `outputs/render.pdf`
+- semantic, vector, portability, and checksum reports
+- environment metadata and a bundle lock
+- `reproduction_manifest.json` and `run_report.json`
+
+## Tests
+
+```bash
+python -m unittest discover -s scripts/tests -p "test_fast_*.py"
+python -m unittest discover -s scripts/tests -p "test_integration_*.py"
+python scripts/release_acceptance.py
+```
+
+GitHub Actions runs the fast suite, integration suite, source-free bundle test, and official release acceptance path.
 
 ## Repository Structure
 
-```
+```text
 sciplot-figure-skill/
+├── .github/workflows/
+├── agents/
 ├── examples/
 ├── references/
 ├── schemas/
 ├── scripts/
-├── tests/
-├── requirements.txt
-└── CHANGELOG.md
+│   └── tests/
+├── CHANGELOG.md
+├── SKILL.md
+├── VERSION
+└── requirements.txt
 ```
 
-## Design Philosophy
+## Version
 
-This project focuses on reproducible scientific graphics rather than simple plotting.
+Current version: **v2.5.1**
 
-The goal is:
+## Scope and Limitations
 
-```
-Figure specification
-        ↓
-Deterministic rendering
-        ↓
-Semantic validation
-        ↓
-Vector verification
-        ↓
-Reproducible scientific artifact
-```
-
-## Roadmap
-
-### v2.5
-
-- VisualSpec v2
-- semantic QA
-- deterministic bundle workflow
-- vector validation
-
-### Future
-
-- more plot adapters
-- improved source-image reconstruction
-- larger scientific figure benchmarks
+The strict example verifies deterministic reproduction and the integrity of the validation chain. It does not by itself prove high-fidelity reconstruction of arbitrary paper screenshots. Real-paper benchmarks should be used to evaluate that separate capability.
 
 ## License
 
