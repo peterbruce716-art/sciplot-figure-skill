@@ -1,0 +1,54 @@
+{
+  "schema": "scientificfigure.visualspec.v2",
+  "figure": {
+    "size_mm": [120, 80],
+    "dpi": 180,
+    "background": "white",
+    "crop_mode": "fixed_canvas"
+  },
+  "delivery": {
+    "source_code": {"required": true},
+    "raster": {"formats": ["png"]},
+    "vector": {
+      "formats": ["svg", "pdf"],
+      "preserve_text_as_text": true,
+      "forbid_embedded_full_canvas_raster": true
+    }
+  },
+  "panels": [
+    {
+      "id": "panel_a",
+      "bbox_normalized": [0.14, 0.16, 0.78, 0.74],
+      "axes": {
+        "x": {"scale": "linear", "limits": [0, 5], "ticks": [0, 1, 2, 3, 4, 5], "label": "Time"},
+        "y": {"scale": "linear", "limits": [0, 1.2], "ticks": [0, 0.4, 0.8, 1.2], "label": "Response"}
+      },
+      "plots": [
+        {
+          "id": "curve_1",
+          "type": "line",
+          "label": "sample",
+          "data": {"x": [0, 1, 2, 3, 4, 5], "y": [0.05, 0.25, 0.62, 0.9, 1.02, 1.08]},
+          "style": {"color": "#1f77b4", "line_width_pt": 1.4, "line_style": "solid"}
+        }
+      ],
+      "annotations": [
+        {
+          "id": "label_a",
+          "type": "text",
+          "coordinate_space": "axes_fraction",
+          "coordinates": [0.08, 0.92],
+          "text": "(a)",
+          "style": {"font_size_pt": 10, "ha": "center", "va": "center"}
+        },
+        {
+          "id": "arrow_1",
+          "type": "arrow",
+          "coordinate_space": "axes_fraction",
+          "coordinates": [0.45, 0.75, 0.62, 0.62],
+          "style": {"color": "black", "line_width_pt": 0.9}
+        }
+      ]
+    }
+  ]
+}

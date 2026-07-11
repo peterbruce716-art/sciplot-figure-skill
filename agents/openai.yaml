@@ -1,0 +1,5 @@
+interface:
+  display_name: "Scientific Figure Reproduction"
+  version: "2.5.1"
+  short_description: "Reproduce scientific figures with Python-first open plotting, QA, and portable bundle gates."
+  default_prompt: "Reproduce this scientific figure using Python/Matplotlib first, export PNG/SVG/PDF, compare against the source, keep one script per figure, write a v2 manifest, and verify bundle portability."

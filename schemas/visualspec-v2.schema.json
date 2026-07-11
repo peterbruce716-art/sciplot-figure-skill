@@ -1,0 +1,466 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.visualspec.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "figure", "panels"],
+  "properties": {
+    "schema": {"const": "scientificfigure.visualspec.v2"},
+    "figure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["size_mm", "dpi"],
+      "properties": {
+        "id": {"type": "string"},
+        "size_mm": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {"type": "number", "exclusiveMinimum": 0}
+        },
+        "dpi": {"type": "integer", "exclusiveMinimum": 0},
+        "crop_mode": {"enum": ["fixed_canvas", "content_tight"]},
+        "background": {"type": "string"},
+        "output_dir": {"type": "string"},
+        "source_dir": {"type": "string"}
+      }
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "qa_policy": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "qa_regions": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/qa_region"}
+    },
+    "panels": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "bbox_normalized"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "description": {"type": "string"},
+          "source_crop": {"type": ["string", "null"]},
+          "bbox_normalized": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {"type": "number", "minimum": 0, "maximum": 1}
+          },
+          "source_strategy": {
+            "enum": ["raw_data", "digitized_raster", "manual_measurement", "vector_redraw", "color_region_extraction", "pixel_trace"]
+          },
+          "representation": {
+            "enum": ["semantic_vector", "semantic_raster", "mixed", "pixel_primitives"]
+          },
+          "axes": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "x": {"$ref": "#/$defs/axis"},
+              "y": {"$ref": "#/$defs/axis"}
+            }
+          },
+          "plots": {
+            "type": "array",
+            "items": {"$ref": "#/$defs/plot"}
+          },
+          "annotations": {
+            "type": "array",
+            "items": {"$ref": "#/$defs/annotation"}
+          },
+          "reconstruction_mode": {"type": "string"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "axis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scale": {"enum": ["linear", "log"]},
+        "limits": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {"type": "number"}
+        },
+        "ticks": {
+          "type": "array",
+          "items": {"type": "number"}
+        },
+        "label": {"type": "string"}
+      }
+    },
+    "plot": {
+      "oneOf": [
+        {"$ref": "#/$defs/line_plot"},
+        {"$ref": "#/$defs/scatter_plot"},
+        {"$ref": "#/$defs/errorbar_plot"},
+        {"$ref": "#/$defs/fill_between_plot"},
+        {"$ref": "#/$defs/grouped_bar_plot"},
+        {"$ref": "#/$defs/stacked_bar_plot"},
+        {"$ref": "#/$defs/heatmap_plot"},
+        {"$ref": "#/$defs/contour_plot"}
+      ]
+    },
+    "plot_base": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {"type": "string"},
+        "label": {"type": ["string", "null"]},
+        "allow_empty": {"type": "boolean"},
+        "colorbar": {"type": "boolean"}
+      }
+    },
+    "line_plot": {
+      "allOf": [
+        {"$ref": "#/$defs/plot_base"},
+        {
+          "type": "object",
+          "required": ["type", "data"],
+          "properties": {
+            "type": {"const": "line"},
+            "data": {"$ref": "#/$defs/xy_data"},
+            "style": {"$ref": "#/$defs/line_style"}
+          }
+        }
+      ]
+    },
+    "scatter_plot": {
+      "allOf": [
+        {"$ref": "#/$defs/plot_base"},
+        {
+          "type": "object",
+          "required": ["type", "data"],
+          "properties": {
+            "type": {"const": "scatter"},
+            "data": {"$ref": "#/$defs/xy_data"},
+            "style": {"$ref": "#/$defs/scatter_style"}
+          }
+        }
+      ]
+    },
+    "errorbar_plot": {
+      "allOf": [
+        {"$ref": "#/$defs/plot_base"},
+        {
+          "type": "object",
+          "required": ["type", "data"],
+          "properties": {
+            "type": {"const": "errorbar"},
+            "data": {"$ref": "#/$defs/errorbar_data"},
+            "style": {"$ref": "#/$defs/errorbar_style"}
+          }
+        }
+      ]
+    },
+    "fill_between_plot": {
+      "allOf": [
+        {"$ref": "#/$defs/plot_base"},
+        {
+          "type": "object",
+          "required": ["type", "data"],
+          "properties": {
+            "type": {"const": "fill_between"},
+            "data": {"$ref": "#/$defs/fill_between_data"},
+            "style": {"$ref": "#/$defs/fill_style"}
+          }
+        }
+      ]
+    },
+    "grouped_bar_plot": {
+      "allOf": [
+        {"$ref": "#/$defs/plot_base"},
+        {
+          "type": "object",
+          "required": ["type", "data"],
+          "properties": {
+            "type": {"const": "grouped_bar"},
+            "data": {"$ref": "#/$defs/grouped_bar_data"},
+            "style": {"$ref": "#/$defs/bar_style"}
+          }
+        }
+      ]
+    },
+    "stacked_bar_plot": {
+      "allOf": [
+        {"$ref": "#/$defs/plot_base"},
+        {
+          "type": "object",
+          "required": ["type", "data"],
+          "properties": {
+            "type": {"const": "stacked_bar"},
+            "data": {"$ref": "#/$defs/grouped_bar_data"},
+            "style": {"$ref": "#/$defs/bar_style"}
+          }
+        }
+      ]
+    },
+    "heatmap_plot": {
+      "allOf": [
+        {"$ref": "#/$defs/plot_base"},
+        {
+          "type": "object",
+          "required": ["type", "data"],
+          "properties": {
+            "type": {"const": "heatmap"},
+            "data": {"$ref": "#/$defs/heatmap_data"},
+            "style": {"$ref": "#/$defs/heatmap_style"}
+          }
+        }
+      ]
+    },
+    "contour_plot": {
+      "allOf": [
+        {"$ref": "#/$defs/plot_base"},
+        {
+          "type": "object",
+          "required": ["type", "data"],
+          "properties": {
+            "type": {"const": "contour"},
+            "data": {"$ref": "#/$defs/contour_data"},
+            "style": {"$ref": "#/$defs/contour_style"}
+          }
+        }
+      ]
+    },
+    "number_array": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "number"}
+    },
+    "number_matrix": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/number_array"}
+    },
+    "source_data": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["source"],
+      "properties": {
+        "source": {"type": "string"},
+        "mapping": {"type": "object", "additionalProperties": {"type": "string"}}
+      }
+    },
+    "xy_data": {
+      "oneOf": [
+        {"$ref": "#/$defs/source_data"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["x", "y"],
+          "properties": {
+            "x": {"$ref": "#/$defs/number_array"},
+            "y": {"$ref": "#/$defs/number_array"}
+          }
+        }
+      ]
+    },
+    "errorbar_data": {
+      "oneOf": [
+        {"$ref": "#/$defs/source_data"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["x", "y", "yerr"],
+          "properties": {
+            "x": {"$ref": "#/$defs/number_array"},
+            "y": {"$ref": "#/$defs/number_array"},
+            "yerr": {"$ref": "#/$defs/number_array"}
+          }
+        }
+      ]
+    },
+    "fill_between_data": {
+      "oneOf": [
+        {"$ref": "#/$defs/source_data"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["x", "y1", "y2"],
+          "properties": {
+            "x": {"$ref": "#/$defs/number_array"},
+            "y1": {"$ref": "#/$defs/number_array"},
+            "y2": {"$ref": "#/$defs/number_array"}
+          }
+        }
+      ]
+    },
+    "bar_group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["y"],
+      "properties": {
+        "label": {"type": ["string", "null"]},
+        "color": {"type": "string"},
+        "y": {"$ref": "#/$defs/number_array"}
+      }
+    },
+    "grouped_bar_data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "groups"],
+      "properties": {
+        "x": {"$ref": "#/$defs/number_array"},
+        "groups": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/bar_group"}
+        }
+      }
+    },
+    "heatmap_data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["z"],
+      "properties": {
+        "z": {"$ref": "#/$defs/number_matrix"}
+      }
+    },
+    "contour_data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": {"$ref": "#/$defs/number_array"},
+        "y": {"$ref": "#/$defs/number_array"},
+        "z": {"$ref": "#/$defs/number_matrix"}
+      }
+    },
+    "line_style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "color": {"type": "string"},
+        "line_width_pt": {"type": "number", "exclusiveMinimum": 0},
+        "line_style": {"enum": ["solid", "dashed", "dashdot", "dotted"]},
+        "marker": {"type": "string"},
+        "alpha": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "scatter_style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "color": {"type": "string"},
+        "marker_size_pt2": {"type": "number", "exclusiveMinimum": 0},
+        "marker": {"type": "string"},
+        "alpha": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "errorbar_style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "color": {"type": "string"},
+        "line_width_pt": {"type": "number", "exclusiveMinimum": 0},
+        "line_style": {"enum": ["solid", "dashed", "dashdot", "dotted"]},
+        "marker": {"type": "string"},
+        "alpha": {"type": "number", "minimum": 0, "maximum": 1},
+        "capsize": {"type": "number", "minimum": 0}
+      }
+    },
+    "fill_style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "color": {"type": "string"},
+        "alpha": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "bar_style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bar_width": {"type": "number", "exclusiveMinimum": 0},
+        "alpha": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "heatmap_style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "aspect": {"type": "string"},
+        "cmap": {"type": "string"},
+        "vmin": {"type": "number"},
+        "vmax": {"type": "number"}
+      }
+    },
+    "contour_style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "levels": {"type": ["integer", "array"]},
+        "cmap": {"type": "string"},
+        "alpha": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "annotation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "id": {"type": "string"},
+        "type": {"enum": ["text", "arrow", "rectangle", "polygon"]},
+        "coordinate_space": {"enum": ["data", "axes_fraction"]},
+        "coordinates": {"type": "array"},
+        "text": {"type": "string"},
+        "style": {"$ref": "#/$defs/annotation_style"}
+      }
+    },
+    "annotation_style": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "font_size_pt": {"type": "number", "exclusiveMinimum": 0},
+        "color": {"type": "string"},
+        "ha": {"enum": ["left", "center", "right"]},
+        "va": {"enum": ["top", "center", "bottom", "baseline"]},
+        "rotation": {"type": "number"},
+        "fontweight": {"type": "string"},
+        "fontstyle": {"type": "string"},
+        "arrowstyle": {"type": "string"},
+        "line_width_pt": {"type": "number", "exclusiveMinimum": 0},
+        "fill": {"type": "boolean"},
+        "facecolor": {"type": "string"},
+        "edgecolor": {"type": "string"},
+        "line_style": {"enum": ["solid", "dashed", "dashdot", "dotted"]},
+        "alpha": {"type": "number", "minimum": 0, "maximum": 1},
+        "hatch": {"type": "string"},
+        "zorder": {"type": "number"}
+      }
+    },
+    "qa_region": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["bbox_normalized"],
+      "properties": {
+        "role": {"type": "string"},
+        "coordinate_system": {
+          "enum": ["image_fraction_top_left", "figure_fraction_bottom_left", "axes_fraction_bottom_left"]
+        },
+        "bbox_normalized": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {"type": "number", "minimum": 0, "maximum": 1}
+        }
+      }
+    }
+  }
+}

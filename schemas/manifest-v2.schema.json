@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.manifest.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "figures", "per_figure_scripts"],
+  "properties": {
+    "schema": {"const": "scientificfigure.manifest.v2"},
+    "project_root": {"type": "string"},
+    "spec_path": {"type": "string"},
+    "output_dir": {"type": "string"},
+    "runner": {"type": "string"},
+    "backend": {"type": "string"},
+    "crop_mode": {"type": "string"},
+    "resolved_fonts": {"type": "object", "additionalProperties": true},
+    "exports": {"$ref": "#/$defs/exports"},
+    "status": {"$ref": "#/$defs/final_status"},
+    "overall_status": {"enum": ["strict_pass", "near_pass", "render_only", "not_strict", "not_applicable", "failed", "incomplete", "pass"]},
+    "run_status": {"enum": ["not_run", "completed", "failed"]},
+    "qa_execution_status": {"enum": ["not_run", "completed", "failed"]},
+    "quality_status": {"enum": ["strict_pass", "near_pass", "render_only", "not_strict", "not_applicable", "failed"]},
+    "source_code_status": {"type": "string"},
+    "render_status": {"type": "string"},
+    "raster_export_status": {"type": "string"},
+    "vector_export_status": {"type": "string"},
+    "export_status": {"type": "string"},
+    "vector_validation_status": {"type": "string"},
+    "semantic_reconstruction_status": {"type": "string"},
+    "visual_qa_status": {"type": "string"},
+    "qa_status": {"type": "string"},
+    "semantic_audit": {"type": "object", "additionalProperties": true},
+    "vector_validation": {"type": "object", "additionalProperties": true},
+    "checksums": {"type": "string"},
+    "semantics": {"type": "string"},
+    "source_strategy": {
+      "enum": ["raw_data", "digitized_raster", "manual_measurement", "vector_redraw", "color_region_extraction", "pixel_trace", "mixed"]
+    },
+    "representation": {
+      "enum": ["semantic_vector", "semantic_raster", "mixed", "pixel_primitives"]
+    },
+    "figures": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/figure_record"}
+    },
+    "per_figure_scripts": {
+      "type": "object",
+      "additionalProperties": {"type": ["string", "null"]}
+    },
+    "errors": {"type": "array"}
+    ,
+    "notes": {"type": "array"}
+  },
+  "$defs": {
+    "final_status": {
+      "enum": ["semantic_strict_pass", "semantic_near_pass", "visual_trace_pass", "render_only", "not_strict", "failed"]
+    },
+    "exports": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["png", "svg", "pdf"],
+      "properties": {
+        "png": {"type": "string"},
+        "svg": {"type": "string"},
+        "pdf": {"type": "string"}
+      }
+    },
+    "qa": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["execution_status", "result"],
+      "properties": {
+        "execution_status": {"enum": ["not_run", "completed", "failed"]},
+        "result": {"enum": ["strict_pass", "near_pass", "not_strict", "not_applicable"]},
+        "profile": {"enum": ["semantic", "visual", "trace"]},
+        "score_report": {"type": ["string", "null"]},
+        "score": {"type": "object"}
+      }
+    },
+    "panel_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bbox_normalized": {"type": "array"},
+        "source": {"type": ["string", "null"]},
+        "source_strategy": {"type": "string"},
+        "representation": {"type": "string"},
+        "qa": {"$ref": "#/$defs/qa"}
+      }
+    },
+    "figure_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["exports", "qa", "status"],
+      "properties": {
+        "source": {"type": ["string", "null"]},
+        "script": {"type": ["string", "null"]},
+        "runner": {"type": ["string", "null"]},
+        "spec": {"type": ["string", "null"]},
+        "source_strategy": {
+          "enum": ["raw_data", "digitized_raster", "manual_measurement", "vector_redraw", "color_region_extraction", "pixel_trace", "mixed"]
+        },
+        "representation": {
+          "enum": ["semantic_vector", "semantic_raster", "mixed", "pixel_primitives"]
+        },
+        "status": {"$ref": "#/$defs/final_status"},
+        "exports": {"$ref": "#/$defs/exports"},
+        "qa": {"$ref": "#/$defs/qa"},
+        "score": {"type": "object"},
+        "panels": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/panel_record"}
+        },
+        "png": {"type": "string"},
+        "svg": {"type": "string"},
+        "pdf": {"type": "string"},
+        "deviation": {"type": "string"}
+      }
+    }
+  }
+}

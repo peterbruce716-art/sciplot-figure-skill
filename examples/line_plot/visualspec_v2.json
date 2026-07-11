@@ -1,0 +1,38 @@
+{
+  "schema": "scientificfigure.visualspec.v2",
+  "figure": {
+    "size_mm": [90, 60],
+    "dpi": 300,
+    "crop_mode": "fixed_canvas",
+    "background": "white"
+  },
+  "theme": {
+    "font": {
+      "family_candidates": ["Arial", "Liberation Sans", "DejaVu Sans"],
+      "size_pt": 8
+    }
+  },
+  "panels": [
+    {
+      "id": "fig1",
+      "bbox_normalized": [0.16, 0.16, 0.78, 0.74],
+      "source_strategy": "raw_data",
+      "representation": "semantic_vector",
+      "axes": {
+        "x": {"limits": [0, 4], "ticks": [0, 1, 2, 3, 4], "label": "Time (s)"},
+        "y": {"limits": [0, 10], "ticks": [0, 5, 10], "label": "Response"}
+      },
+      "plots": [
+        {
+          "type": "line",
+          "label": "sample",
+          "data": {"x": [0, 1, 2, 3, 4], "y": [0, 2, 4, 7, 9]},
+          "style": {"color": "#1f77b4", "line_width_pt": 1.4}
+        }
+      ],
+      "annotations": [
+        {"type": "text", "coordinate_space": "axes_fraction", "coordinates": [0.03, 0.95], "text": "(a)", "style": {"ha": "left", "va": "top", "font_size_pt": 10}}
+      ]
+    }
+  ]
+}
