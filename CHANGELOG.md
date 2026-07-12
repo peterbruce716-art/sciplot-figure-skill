@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-07-13 v2.5.3 Independent Native-Clip QA
+
+- Fixed PDF trace QA so the source-page clip is compared with a fresh rasterization of the exported PDF instead of a duplicate of the same pixmap.
+- Made canvas mismatch a scoring failure without resizing either image.
+- Added explicit comparison-pipeline, independent-render, render-method, and native source-identity fields.
+- Made `visual_trace_pass` contingent on a valid same-canvas independent comparison within the visual MAE gate.
+- Removed an unreachable Matplotlib replay branch and made trace output paths relative to the per-figure output directory.
+
+## 2026-07-13 v2.5.2 Shared Geometry and Native PDF Trace
+
+- Added immutable shared-series and shared-path helpers for continuous curves, visible segments, curve-derived fills, and compound filled boundaries.
+- Added blocking geometry audits for repeated source IDs with conflicting hashes.
+- Added native PDF figure clipping to PNG, SVG, and PDF with exact canvas preservation.
+- Added target-region source classification and hashing for native PDF paths versus embedded raster figures.
+- Added regression tests for shared curve segments, fill boundaries, hash conflicts, and PDF trace export.
+- Kept PDF trace output explicitly classified as `pixel_trace` / `pixel_primitives` / `visual_trace_pass`; it does not claim primary scientific data recovery.
+
 ## 2026-07-12 v2.5.1 Documentation and Source-Free Validation Fix
 
 - Fixed the README Quick Start command to use the required `--spec` and `--out-dir` flags.

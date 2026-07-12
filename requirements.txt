@@ -7,3 +7,4 @@ scikit-image>=0.22
 pydantic>=2.6
 jsonschema>=4.22
 pypdf>=4.2
+PyMuPDF>=1.24

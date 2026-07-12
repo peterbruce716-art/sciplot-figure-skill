@@ -1,0 +1,52 @@
+{
+  "checks": {
+    "build_zip": "pass",
+    "bundle_verify": "pass",
+    "official_example": "semantic_strict_pass",
+    "portability": "pass",
+    "render_baseline": "pass",
+    "root_package": "pass",
+    "run_reproduction": "pass",
+    "zip_package": "pass"
+  },
+  "details": {
+    "build_zip": {
+      "name": "build_zip",
+      "returncode": 0,
+      "status": "pass"
+    },
+    "bundle_verify": {
+      "name": "bundle_verify",
+      "returncode": 0,
+      "status": "pass"
+    },
+    "portability": {
+      "name": "portability",
+      "returncode": 0,
+      "status": "pass"
+    },
+    "render_baseline": {
+      "name": "render_baseline",
+      "returncode": 0,
+      "status": "pass"
+    },
+    "root_package": {
+      "name": "root_package",
+      "returncode": 0,
+      "status": "pass"
+    },
+    "run_reproduction": {
+      "name": "run_reproduction",
+      "returncode": 0,
+      "status": "pass"
+    },
+    "zip_package": {
+      "name": "zip_package",
+      "returncode": 0,
+      "status": "pass"
+    }
+  },
+  "schema": "scientificfigure.release_acceptance.v1",
+  "status": "pass",
+  "version": "2.5.3"
+}

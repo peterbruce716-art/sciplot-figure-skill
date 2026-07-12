@@ -13,6 +13,8 @@ Core capabilities:
 - PNG, SVG, and PDF export
 - semantic figure auditing
 - SVG/PDF vector validation
+- immutable shared sources for split curves and curve-derived fills
+- native PDF figure clipping with target-region path or image hashing
 - portable reproduction bundles
 - checksums, environment records, and offline verification
 
@@ -81,6 +83,12 @@ The generic renderer currently supports:
 
 Project-specific renderers can be supplied with `--script`, but custom command renderers cannot self-certify a semantic strict pass.
 
+## Shared Geometry and PDF Trace
+
+Use `scripts/shared_geometry.py` when one logical curve is drawn in segments or reused as a fill boundary. Every artist derived from that curve retains one source ID and geometry hash; conflicting hashes are a QA failure.
+
+Use `scripts/pdf_vector_trace.py` for exact visual reproduction from a PDF figure region. The tool preserves native clipping and transformations, exports PNG/SVG/PDF, and compares a fresh rasterization of the exported PDF with the source-page clip without resizing either image. It reports whether the visible source is made of PDF compound paths or an embedded raster image. This workflow is always `visual_trace_pass`, never semantic recovery of primary data.
+
 ## Bundle Contents
 
 A completed output directory includes:
@@ -121,7 +129,7 @@ sciplot-figure-skill/
 
 ## Version
 
-Current version: **v2.5.1**
+Current version: **v2.5.3**
 
 ## Scope and Limitations
 

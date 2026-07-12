@@ -7,7 +7,7 @@ description: Use when reproducing, redrawing, auditing, or visually optimizing s
 
 ## Overview
 
-Use this skill to reproduce scientific figures with open Python-first workflows. The v2.5.1 primary deliverable is a self-contained deterministic reproduction bundle with semantic coverage, verifiable attestation, and path-portable delivery JSON: copied inputs, portable runtime, `render.py` for drawing only, `reproduce.py` for complete validate/render/QA/audit/vector/finalize/portability/checksum closure, `verify.py` for no-redraw lock/environment/checksum/manifest/portability integrity checks, PNG/SVG/PDF exports, environment records without host interpreter paths, semantic provenance, visual/panel/semantic/vector QA artifacts, immutable `bundle.lock.json`, checksum-protected `run_attestation.json`, canonical checksums, a finalized portable `scientificfigure.manifest.v2`, and a non-zero exit when strict closure is requested but not met. When no reference image is supplied for a raw-data figure, successful semantic and vector checks produce `semantic_validated_pass`; this is intentionally not a visual strict claim. Do not use proprietary project conversion, desktop GUI automation, or approval-chain-dependent plotting tools in this skill.
+Use this skill to reproduce scientific figures with open Python-first workflows. The v2.5.3 primary deliverable is a self-contained deterministic reproduction bundle with semantic coverage, verifiable attestation, shared-geometry QA, and path-portable delivery JSON: copied inputs, portable runtime, `render.py` for drawing only, `reproduce.py` for complete validate/render/QA/audit/vector/finalize/portability/checksum closure, `verify.py` for no-redraw lock/environment/checksum/manifest/portability integrity checks, PNG/SVG/PDF exports, environment records without host interpreter paths, semantic provenance, visual/panel/semantic/vector QA artifacts, immutable `bundle.lock.json`, checksum-protected `run_attestation.json`, canonical checksums, a finalized portable `scientificfigure.manifest.v2`, and a non-zero exit when strict closure is requested but not met. When no reference image is supplied for a raw-data figure, successful semantic and vector checks produce `semantic_validated_pass`; this is intentionally not a visual strict claim. Do not use proprietary project conversion, desktop GUI automation, or approval-chain-dependent plotting tools in this skill.
 
 ## Workflow
 
@@ -20,8 +20,9 @@ Use this skill to reproduce scientific figures with open Python-first workflows.
 7. Export PNG, SVG, and PDF.
 8. Compare source and render with image metrics that preserve source scale; never stretch the source image to hide canvas errors.
 9. Patch geometry, axes, plots, labels, colors, and typography in that order.
-10. Preserve one runnable script per reproduced figure, or a batch runner plus documented per-figure functions/sections when that is more practical. Record each script path in the manifest or notes.
-11. Record deviations honestly; do not mark the result strict when it still differs.
+10. When a logical curve is split into visible pieces, reused as a fill boundary, or paired with a local fill, load its geometry once and derive every artist from the same immutable source object and hash. Read `references/SHARED_GEOMETRY_PROTOCOL.md` and retain the geometry audit.
+11. Preserve one runnable script per reproduced figure, or a batch runner plus documented per-figure functions/sections when that is more practical. Record each script path in the manifest or notes.
+12. Record deviations honestly; do not mark the result strict when it still differs.
 
 ## Mode Selection
 
@@ -83,6 +84,8 @@ Final manifest status is a separate field. Use only `semantic_strict_pass`, `sem
 - Use `scripts/release_acceptance.py` as the stable release gate. It validates the skill root, builds and validates the ZIP, runs the official line-plot example through `semantic_strict_pass`, executes bundle `verify.py`, and runs portability validation.
 - Treat `scripts/render_visualspec_r.R` as an experimental plugin unless the project already has reliable R plotting code and the output is validated by the same manifest/QA path.
 - Use `scripts/trace_image_primitives.py` only when the user explicitly accepts visual trace mode; label it `pixel_trace` / `visual_trace_pass`, never semantic scientific reconstruction.
+- Use `scripts/pdf_vector_trace.py` when the requested reference is a PDF and exact visual clipping is required. It preserves native PDF paths when present, records target-region raster image hashes when the paper embeds a figure as an image, and scores a fresh rasterization of the exported PDF against the source-page clip. Keep its result at `pixel_primitives` / `visual_trace_pass`; neither path recovery nor image extraction recovers primary scientific data.
+- Use `scripts/shared_geometry.py` in project renderers when continuous curves, visible curve segments, fill boundaries, or filled vector regions must share one source. Run `audit_shared_geometry()` and store its report with QA artifacts.
 - Use `scripts/create_trace_figure_scripts.py` to generate one runnable trace script per target figure instead of hand-writing repeated wrappers.
 - Use `scripts/validate_manifest.py` or `scripts/validate_reproduction_manifest.py` before final response; use `--require-strict` only with the correct QA profile.
 - Use `scripts/estimate_visual_patch.py`, `scripts/apply_visual_patch.py`, `scripts/rollback_iteration.py`, and `scripts/run_visual_optimization_loop.py` only for bounded canvas/layout correction. The loop must fail if any child render, score, patch, application, or candidate step fails.
@@ -90,6 +93,7 @@ Final manifest status is a separate field. Use only `semantic_strict_pass`, `sem
 - Read `references/QA_PROFILES.md`, `references/DIGITIZATION_WORKFLOW.md`, and `references/EXPORT_REQUIREMENTS.md` for QA, raster digitization, and export rules.
 - Read `references/export-backends.md` when choosing PNG/SVG/PDF export settings.
 - Read `references/FREEZE_POLICY.md` before changing VisualSpec, manifest status semantics, default rendering behavior, output structure, or CLI meanings on the stable branch.
+- Read `references/SHARED_GEOMETRY_PROTOCOL.md` before drawing split curves, curve-derived fills, or locally filled vector paths.
 
 ## Rules
 
@@ -114,6 +118,7 @@ Final manifest status is a separate field. Use only `semantic_strict_pass`, `sem
 - Delivery JSON must be path-portable: use bundle-relative POSIX paths, command role/script/arguments structures, and `project_root: "."`; keep raw absolute command lines only in logs.
 - Run manifest validation before final delivery; do not rely on a narrative claim that files exist.
 - Preserve units, log scales, tick locations, legends, panel labels, and captions.
+- Never digitize adjacent pieces of one continuous curve into separate arrays. Never hand-tune a fill boundary independently of the line it follows. A repeated logical `source_id` with different geometry hashes is a QA failure.
 - Keep project-specific scripts in the project until they are reusable across more than one task.
 
 ## Python Quick Start
