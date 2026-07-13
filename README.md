@@ -87,6 +87,8 @@ Project-specific renderers can be supplied with `--script`, but custom command r
 
 Use `scripts/shared_geometry.py` when one logical curve is drawn in segments or reused as a fill boundary. Every artist derived from that curve retains one source ID and geometry hash; conflicting hashes are a QA failure.
 
+For multi-figure benchmarks, use `scripts/score_batch.py` with a `scientificfigure.visual_batch.v1` manifest. The batch command preserves source canvas size, writes per-figure comparison evidence, and fails when any required figure is missing or outside its predeclared visual thresholds.
+
 Use `scripts/pdf_vector_trace.py` for exact visual reproduction from a PDF figure region. The tool preserves native clipping and transformations, exports PNG/SVG/PDF, and compares a fresh rasterization of the exported PDF with the source-page clip without resizing either image. It reports whether the visible source is made of PDF compound paths or an embedded raster image. This workflow is always `visual_trace_pass`, never semantic recovery of primary data.
 
 ## Bundle Contents
@@ -104,6 +106,7 @@ A completed output directory includes:
 
 ```bash
 python -m unittest discover -s scripts/tests -p "test_fast_*.py"
+python -m unittest discover -s scripts/tests -p "test_score_batch.py"
 python -m unittest discover -s scripts/tests -p "test_integration_*.py"
 python scripts/release_acceptance.py
 ```
@@ -129,7 +132,7 @@ sciplot-figure-skill/
 
 ## Version
 
-Current version: **v2.5.3**
+Current version: **v2.5.4**
 
 ## Scope and Limitations
 

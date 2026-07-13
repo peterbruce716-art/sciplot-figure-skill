@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-07-14 v2.5.4 Batch Visual QA
+
+- Added fail-closed visual scoring for declared multi-figure batches.
+- Added per-figure MAE, RMSE, SSIM, edge, layout, color, canvas, and registration gates without changing single-figure scoring semantics.
+- Added duplicate-ID and missing-file rejection plus per-figure comparison evidence.
+- Added batch QA protocol documentation and regression tests.
+- Unified public version metadata and added batch-scorer coverage to the GitHub Actions fast job.
+
 ## 2026-07-13 v2.5.3 Independent Native-Clip QA
 
 - Fixed PDF trace QA so the source-page clip is compared with a fresh rasterization of the exported PDF instead of a duplicate of the same pixmap.
