@@ -29,12 +29,18 @@ The workflow reports different statuses depending on the evidence available:
 
 ## Installation
 
-Python 3.10 or newer is recommended.
+Python 3.14 is required. Do not run this skill with Python 3.10, 3.11, 3.12, or 3.13; the validation and bundle gates are maintained against Python 3.14 only.
 
 ```bash
-python -m venv .venv
+# Windows
+py -3.14 -m venv .venv
+
+# macOS/Linux
+python3.14 -m venv .venv
+
 # Windows: .venv\Scripts\activate
 # macOS/Linux: source .venv/bin/activate
+python --version  # must report Python 3.14.x
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
@@ -104,14 +110,17 @@ A completed output directory includes:
 
 ## Tests
 
+Run tests from an activated Python 3.14 environment only:
+
 ```bash
+python --version  # must report Python 3.14.x
 python -m unittest discover -s scripts/tests -p "test_fast_*.py"
 python -m unittest discover -s scripts/tests -p "test_score_batch.py"
 python -m unittest discover -s scripts/tests -p "test_integration_*.py"
 python scripts/release_acceptance.py
 ```
 
-GitHub Actions runs the fast suite, integration suite, source-free bundle test, and official release acceptance path.
+GitHub Actions is pinned to Python 3.14 and runs the fast suite, integration suite, source-free bundle test, and official release acceptance path.
 
 ## Repository Structure
 

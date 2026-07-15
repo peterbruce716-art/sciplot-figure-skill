@@ -1,3 +1,4 @@
+# Runtime: Python 3.14 only.
 matplotlib>=3.8
 numpy>=1.26
 Pillow>=10

@@ -5,6 +5,10 @@ description: Use when reproducing, redrawing, auditing, or visually optimizing s
 
 # Scientific Figure Reproduction
 
+## Runtime Rule
+
+Run this skill with Python 3.14 only. Use `py -3.14` on Windows or `python3.14` on macOS/Linux before activating a virtual environment. Do not use Python 3.10, 3.11, 3.12, or 3.13 for this skill.
+
 ## Overview
 
 Use this skill to reproduce scientific figures with open Python-first workflows. The v2.5.4 primary deliverable is a self-contained deterministic reproduction bundle with semantic coverage, verifiable attestation, shared-geometry QA, batch visual gates, and path-portable delivery JSON: copied inputs, portable runtime, `render.py` for drawing only, `reproduce.py` for complete validate/render/QA/audit/vector/finalize/portability/checksum closure, `verify.py` for no-redraw lock/environment/checksum/manifest/portability integrity checks, PNG/SVG/PDF exports, environment records without host interpreter paths, semantic provenance, visual/panel/semantic/vector QA artifacts, immutable `bundle.lock.json`, checksum-protected `run_attestation.json`, canonical checksums, a finalized portable `scientificfigure.manifest.v2`, and a non-zero exit when strict closure is requested but not met. When no reference image is supplied for a raw-data figure, successful semantic and vector checks produce `semantic_validated_pass`; this is intentionally not a visual strict claim. Do not use proprietary project conversion, desktop GUI automation, or approval-chain-dependent plotting tools in this skill.
@@ -54,6 +58,18 @@ Final manifest status is a separate field. Use only `semantic_strict_pass`, `sem
 - If a crop edge, baseline, or axis mapping is unreliable, use visible ticks, labeled peaks, plateaus, or stated values only as documented visual calibration. Mark the result as digitized approximation, not primary experimental data.
 - When peak labels are visible, verify extracted maxima against those labels and note any mismatch.
 
+
+## Raster-Only Visual Fidelity Fallback
+
+When the only available source is a raster chart and the user asks for a result that is "fully close", "exact", "completely close to the original", or otherwise prioritizes visual fidelity over editable scientific reconstruction, use a dual-track output:
+
+- Keep or create a semantic reconstruction when it is useful for editable axes, bars, curves, labels, and approximate digitized values, but cap it at semantic_near_pass unless built-in semantic and visual QA genuinely pass.
+- Add a separate pixel_trace / pixel_primitives output for the high-fidelity visual deliverable. This may use vector pixel primitives or other trace primitives, but it must not paste the source raster as the main figure and must not be described as recovered experimental data.
+- Validate the visual trace with fixed-canvas source-scale QA. For exact visual requests, record whether the rendered PNG is pixel-identical to the source or provide the measured residuals and deviation ledger.
+- Validate SVG/PDF outputs for parseability and reject raster-only spoofing: SVG should contain meaningful vector primitives and no full-page raster image fallback for a visual_trace_pass claim.
+- In the manifest or notes, explicitly separate the two artifacts: semantic data/editable reconstruction versus visual trace reproduction. Use visual_trace_pass only for the trace artifact and never upgrade it to semantic_strict_pass.
+
+If repeated geometry, color, typography, antialiasing, or legend tuning fails to materially improve a raster-only semantic redraw after a bounded iteration, stop retuning the semantic renderer and switch to this dual-track route.
 ## Schematic Redrawing
 
 - Rebuild schematics with semantic vector primitives: lines, polygons, circles, arrows, dimension arrows, labels, color regions, and scale/coordinate axes.
@@ -125,10 +141,10 @@ Final manifest status is a separate field. Use only `semantic_strict_pass`, `sem
 ## Python Quick Start
 
 ```powershell
-python scripts\scaffold_figurespec.py --figures fig1 --json-out visualspec.json
-python scripts\check_environment.py --json-out outputs\environment.json
-python scripts\run_reproduction.py --spec visualspec.json --source source.png --out-dir outputs\fig1 --require-strict
-python scripts\release_acceptance.py
+py -3.14 scripts\scaffold_figurespec.py --figures fig1 --json-out visualspec.json
+py -3.14 scripts\check_environment.py --json-out outputs\environment.json
+py -3.14 scripts\run_reproduction.py --spec visualspec.json --source source.png --out-dir outputs\fig1 --require-strict
+py -3.14 scripts\release_acceptance.py
 ```
 
 ## R Quick Start
