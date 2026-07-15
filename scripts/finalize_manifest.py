@@ -160,6 +160,10 @@ def finalize_manifest(
     vector_validation = _load_optional_json(vector_validation_path)
     panel_scores = _load_panel_scores(panel_score_dir)
     manifest["project_root"] = "."
+    companion_path = project_root / "companion_artifacts.json"
+    if companion_path.exists():
+        companion_index = load_json(companion_path)
+        manifest["companion_artifacts"] = companion_index.get("artifacts", {})
     if spec_path:
         manifest["spec_path"] = portable_path(spec_path, project_root)
     elif manifest.get("spec_path"):

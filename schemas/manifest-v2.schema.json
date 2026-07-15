@@ -48,7 +48,19 @@
     },
     "errors": {"type": "array"}
     ,
-    "notes": {"type": "array"}
+    "notes": {"type": "array"},
+    "companion_artifacts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["path", "sha256", "schema"],
+        "properties": {
+          "path": {"type": "string"},
+          "sha256": {"type": "string"},
+          "schema": {"type": "string"}
+        }
+      }
+    }
   },
   "$defs": {
     "final_status": {

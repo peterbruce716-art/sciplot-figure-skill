@@ -48,6 +48,15 @@ Official generic plot types:
 - `heatmap`
 - `contour`
 
+For `grouped_bar`, the default remains side-by-side groups using `bar_width`. The optional style fields support raster-faithful layouts without project-private renderer logic:
+
+- `group_mode`: `side_by_side` or `overlap`.
+- `group_offset`: shared center spacing for side-by-side or overlapping groups.
+- `bar_widths`: per-group widths; its length must match `data.groups`.
+- `group_offsets`: explicit per-group center offsets relative to each `data.x`; when present, it overrides the computed group spacing.
+
+Renderers must preserve these observed widths and offsets in semantic extraction so nested or hybrid overlap remains auditable.
+
 Official generic annotation types:
 
 - `text`

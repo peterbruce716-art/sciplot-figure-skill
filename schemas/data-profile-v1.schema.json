@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.data_profile.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "source", "row_count", "columns", "group_statistics", "distribution", "warnings", "recommended_tasks"],
+  "properties": {
+    "schema": {"const": "scientificfigure.data_profile.v1"},
+    "schema_version": {"const": "1.0"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "sheet": {"type": ["string", "integer", "null"]}
+      }
+    },
+    "row_count": {"type": "integer", "minimum": 0},
+    "columns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["name", "inferred_type", "missing_count", "unique_count", "suspected_id"],
+        "properties": {
+          "name": {"type": "string"},
+          "inferred_type": {"enum": ["continuous", "ordinal", "categorical", "datetime", "boolean", "text", "unknown"]},
+          "missing_count": {"type": "integer", "minimum": 0},
+          "unique_count": {"type": "integer", "minimum": 0},
+          "suspected_id": {"type": "boolean"}
+        }
+      }
+    },
+    "group_statistics": {"type": "array", "items": {"type": "object"}},
+    "distribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skewness", "outliers"],
+      "properties": {
+        "skewness": {"type": "object", "additionalProperties": {"type": ["number", "null"]}},
+        "outliers": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}}
+      }
+    },
+    "warnings": {"type": "array", "items": {"$ref": "#/$defs/message"}},
+    "recommended_tasks": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+  },
+  "$defs": {
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "message"],
+      "properties": {
+        "code": {"type": "string"},
+        "severity": {"enum": ["info", "warning", "error"]},
+        "message": {"type": "string"},
+        "columns": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}

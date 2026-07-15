@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.plot_policy.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "policy_version", "policies"],
+  "properties": {
+    "schema": {"const": "scientificfigure.plot_policy.v1"},
+    "policy_version": {"type": "string"},
+    "policies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["policy_id", "severity", "enabled", "when", "message", "recommended_actions"],
+        "properties": {
+          "policy_id": {"type": "string"},
+          "severity": {"enum": ["info", "warning", "error"]},
+          "enabled": {"type": "boolean"},
+          "when": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["field", "operator", "value"],
+              "properties": {
+                "field": {"type": "string"},
+                "operator": {"enum": ["eq", "ne", "lt", "lte", "gt", "gte", "in", "not_in", "contains", "missing"]},
+                "value": {}
+              }
+            }
+          },
+          "message": {"type": "string"},
+          "recommended_actions": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

@@ -195,6 +195,27 @@ class FastSemanticsTests(ScientificFigureReproductionTestBase):
             bad.write_text(json.dumps(semantics), encoding="utf-8")
             self.assertEqual("failed", auditor.audit_semantics(bar_path, bad)["overall"])
 
+    def test_v26_grouped_bar_supports_nested_widths_and_explicit_offsets(self) -> None:
+        renderer = load_module("render_visualspec_matplotlib", SCRIPTS / "render_visualspec_matplotlib.py")
+        auditor = load_module("audit_semantics", SCRIPTS / "audit_semantics.py")
+        plot = {
+            "type": "grouped_bar",
+            "data": {"x": [1, 2], "groups": [{"label": "wide", "y": [4, 5]}, {"label": "left", "y": [2, 3]}, {"label": "right", "y": [1, 2]}]},
+            "style": {"bar_width": 0.7, "bar_widths": [0.7, 0.25, 0.18], "group_mode": "overlap", "group_offset": 0.0, "group_offsets": [0.0, -0.12, 0.12], "alpha": 1.0},
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec_path = root / "offset_bar.json"
+            spec_path.write_text(json.dumps(self._single_plot_spec(plot)), encoding="utf-8")
+            out = root / "offset_bar"
+            renderer.render_file(spec_path, out)
+            result = auditor.audit_semantics(spec_path, out / "render_semantics.json")
+            self.assertEqual("pass", result["overall"])
+            semantics = json.loads((out / "render_semantics.json").read_text(encoding="utf-8"))
+            style = semantics["figures"]["figure_1"]["panels"]["A"]["plots"][0]["style"]
+            self.assertEqual([0.7, 0.25, 0.18], [round(value, 6) for value in style["bar_widths"]])
+            self.assertEqual([0.0, -0.12, 0.12], [round(value, 6) for value in style["group_offsets"]])
+
     def test_v25_crossing_fill_between_preserves_y1_y2_identity(self) -> None:
         renderer = load_module("render_visualspec_matplotlib", SCRIPTS / "render_visualspec_matplotlib.py")
         auditor = load_module("audit_semantics", SCRIPTS / "audit_semantics.py")
@@ -260,4 +281,3 @@ class FastSemanticsTests(ScientificFigureReproductionTestBase):
             "not_strict",
             finalizer.classify_status(score, profile="semantic", source_strategy="raw_data", representation="semantic_vector", semantic_audit={"overall": "pass"}, vector_validation={"status": "pass"}, panel_scores={}, required_panel_ids={"A"}),
         )
-

@@ -238,6 +238,49 @@ def write_environment_files(out_dir: Path) -> None:
     write_environment_policy(env_dir / "environment_policy.json", mode="exact")
 
 
+COMPANION_SPECS = {
+    "data_profile": ("advisor", "data_profile.json", "data-profile-v1.schema.json"),
+    "figure_intent": ("advisor", "figure_intent.json", "figure-intent-v1.schema.json"),
+    "chart_decision": ("advisor", "chart_decision.json", "chart-decision-v1.schema.json"),
+    "policy_report": ("advisor", "policy_report.json", None),
+    "style_profile": ("style", "resolved_style_profile.json", "style-profile-v1.schema.json"),
+    "font_resolution": ("style", "font_resolution.json", "font-resolution-v1.schema.json"),
+    "ai_review": ("qa", "ai_visual_review.json", "ai-visual-review-v1.schema.json"),
+}
+
+
+def prepare_companion_artifacts(project_root: Path, values: dict[str, Path | None]) -> dict[str, Any]:
+    artifacts: dict[str, Any] = {}
+    for key, (directory, filename, schema_name) in COMPANION_SPECS.items():
+        source = values.get(key)
+        if source is None:
+            continue
+        source = source.resolve()
+        if not source.exists():
+            raise FileNotFoundError(f"companion artifact does not exist: {source}")
+        payload = json.loads(source.read_text(encoding="utf-8-sig"))
+        if not isinstance(payload, dict):
+            raise ValueError(f"companion artifact must be a JSON object: {source}")
+        if schema_name:
+            try:
+                import jsonschema
+                schema_path = Path(__file__).resolve().parents[1] / "schemas" / schema_name
+                schema = json.loads(schema_path.read_text(encoding="utf-8"))
+                failures = sorted(jsonschema.Draft202012Validator(schema).iter_errors(payload), key=lambda item: list(item.absolute_path))
+                if failures:
+                    raise ValueError(f"invalid {key}: {failures[0].message}")
+            except ImportError as exc:
+                raise RuntimeError("jsonschema is required for companion artifact validation") from exc
+        destination = project_root / directory / filename
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if source.resolve() != destination.resolve():
+            shutil.copyfile(source, destination)
+        artifacts[key] = {"path": rel(destination, project_root), "sha256": sha256_file(destination), "schema": str(payload.get("schema", schema_name or "unknown"))}
+    if artifacts:
+        write_json(project_root / "companion_artifacts.json", {"schema": "scientificfigure.companion_artifacts.v1", "artifacts": artifacts})
+    return artifacts
+
+
 def prepare_runtime(script_dir: Path, out_dir: Path, *, custom_renderer: Path | None = None) -> dict[str, Any]:
     package_dir = out_dir / "runtime" / "scientific_figure_reproduction"
     package_dir.mkdir(parents=True, exist_ok=True)
@@ -444,6 +487,13 @@ def main() -> int:
     parser.add_argument("--script", type=Path, help="Renderer command that accepts --spec/--out-dir/--script. It is copied into the bundle.")
     parser.add_argument("--qa-profile", choices=["semantic", "visual", "trace"], default="semantic")
     parser.add_argument("--require-strict", action="store_true")
+    parser.add_argument("--data-profile", type=Path)
+    parser.add_argument("--figure-intent", type=Path)
+    parser.add_argument("--chart-decision", type=Path)
+    parser.add_argument("--policy-report", type=Path)
+    parser.add_argument("--style-profile", type=Path)
+    parser.add_argument("--font-resolution", type=Path)
+    parser.add_argument("--ai-review", type=Path)
     parser.add_argument("--project-root", type=Path, help="Deprecated in v2.2; out-dir is the portable project root.")
     args = parser.parse_args()
     if args.require_strict and args.source is None:
@@ -472,6 +522,16 @@ def main() -> int:
     bundle = prepare_visualspec_bundle(args.spec, project_root, source=args.source)
     bundled_source = bundle["source"]
     write_json(project_root / "source_pointer.json", {"source": rel(bundled_source, project_root) if bundled_source else None})
+    companion = prepare_companion_artifacts(project_root, {
+        "data_profile": args.data_profile,
+        "figure_intent": args.figure_intent,
+        "chart_decision": args.chart_decision,
+        "policy_report": args.policy_report,
+        "style_profile": args.style_profile,
+        "font_resolution": args.font_resolution,
+        "ai_review": args.ai_review,
+    })
+    report["companion_artifacts"] = companion
     write_environment_files(project_root)
     renderer_config = prepare_runtime(script_dir, project_root, custom_renderer=args.script)
     create_bundle_entrypoints(project_root, renderer_config=renderer_config, require_strict=args.require_strict, qa_profile=args.qa_profile)

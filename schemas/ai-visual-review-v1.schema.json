@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.ai_visual_review.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "status", "image", "deterministic_gate", "review_scope", "issues", "overall_readability", "requires_deterministic_rerun"],
+  "properties": {
+    "schema": {"const": "scientificfigure.ai_visual_review.v1"},
+    "schema_version": {"const": "1.0"},
+    "status": {"enum": ["pending_advisory", "advisory", "unavailable"]},
+    "image": {"type": "object", "required": ["path", "sha256", "width_px", "height_px"], "properties": {"path": {"type": "string"}, "sha256": {"type": "string"}, "width_px": {"type": "integer"}, "height_px": {"type": "integer"}}},
+    "visualspec": {"type": ["string", "null"]},
+    "evidence": {"type": "object", "additionalProperties": true},
+    "deterministic_gate": {"enum": ["pass", "warning", "failed", "not_available"]},
+    "review_scope": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["category", "severity", "description", "recommended_change"],
+        "properties": {
+          "category": {"type": "string"},
+          "severity": {"enum": ["info", "warning", "error"]},
+          "panel": {"type": ["string", "null"]},
+          "description": {"type": "string"},
+          "recommended_change": {"type": "string"},
+          "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
+        }
+      }
+    },
+    "overall_readability": {"enum": ["pending", "acceptable", "needs_revision", "unavailable"]},
+    "requires_deterministic_rerun": {"type": "boolean"},
+    "constraints": {"type": "array", "items": {"type": "string"}}
+  }
+}

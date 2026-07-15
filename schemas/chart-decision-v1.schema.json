@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.chart_decision.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "recommended_type", "alternatives", "rejected_types", "reasoning_summary", "required_visual_elements", "warnings"],
+  "properties": {
+    "schema": {"const": "scientificfigure.chart_decision.v1"},
+    "schema_version": {"const": "1.0"},
+    "recommended_type": {"type": "string", "minLength": 1},
+    "alternatives": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "rejected_types": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "reason"],
+        "properties": {"type": {"type": "string"}, "reason": {"type": "string"}}
+      }
+    },
+    "reasoning_summary": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "required_visual_elements": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "warnings": {"type": "array", "items": {"$ref": "#/$defs/message"}},
+    "user_requested_type": {"type": ["string", "null"]},
+    "journal_profile": {"type": ["string", "null"]}
+  },
+  "$defs": {
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "message"],
+      "properties": {
+        "code": {"type": "string"},
+        "severity": {"enum": ["info", "warning", "error"]},
+        "message": {"type": "string"}
+      }
+    }
+  }
+}

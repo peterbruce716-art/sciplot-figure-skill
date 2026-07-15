@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.style_profile.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "profile_id", "basis", "checked_date", "scope", "settings", "user_overrides"],
+  "properties": {
+    "schema": {"const": "scientificfigure.style_profile.v1"},
+    "schema_version": {"const": "1.0"},
+    "profile_id": {"type": "string"},
+    "basis": {"type": "string"},
+    "checked_date": {"type": "string", "format": "date"},
+    "scope": {"type": "string"},
+    "settings": {"type": "object", "additionalProperties": true},
+    "user_overrides": {"type": "object", "additionalProperties": true},
+    "disclaimer": {"type": "string"}
+  }
+}

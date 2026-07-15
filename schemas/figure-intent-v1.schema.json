@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.figure_intent.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "claim", "task_type", "primary_message", "audience", "priority_variables"],
+  "properties": {
+    "schema": {"const": "scientificfigure.figure_intent.v1"},
+    "schema_version": {"const": "1.0"},
+    "claim": {"type": "string", "minLength": 1},
+    "task_type": {"enum": ["trend_comparison", "group_comparison", "distribution_comparison", "correlation", "composition", "temporal_change", "model_vs_experiment", "uncertainty_visualization", "multi_panel_summary", "image_reconstruction"]},
+    "primary_message": {"type": "string", "minLength": 1},
+    "audience": {"type": "string", "minLength": 1},
+    "uncertainty_semantics": {"type": ["string", "null"]},
+    "priority_variables": {"type": "array", "items": {"type": "string"}, "minItems": 1, "uniqueItems": true},
+    "constraints": {"type": "object", "additionalProperties": true}
+  }
+}

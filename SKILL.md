@@ -5,13 +5,28 @@ description: Use when reproducing, redrawing, auditing, or visually optimizing s
 
 # Scientific Figure Reproduction
 
+## Advisor Layer (v2.6)
+
+For CSV/TSV/Excel redraws, think before rendering. The optional Advisor Layer creates deterministic, reviewable artifacts and never replaces the VisualSpec renderer or QA gates:
+
+1. Profile data with `scripts/profile_scientific_data.py` and preserve the source hash.
+2. Record the scientific claim and uncertainty semantics in a `figure-intent-v1` JSON file.
+3. Run `scripts/recommend_scientific_chart.py` to obtain a recommendation, alternatives, rejected choices, reasons, and required disclosures.
+4. Run `scripts/evaluate_scientific_plot_policy.py` for configurable warnings and blockers.
+5. Resolve a journal-like style and actual installed fonts with `resolve_style_profile.py` and `font_resolver.py`.
+6. Prepare an offline visual-review request with `prepare_ai_visual_review.py` after rendering. AI review is advisory only; any accepted suggestion requires the full deterministic rerun.
+
+Use `scripts/scientific_figure_pipeline.py` to resume these stages from one output directory. `--dry-run` stops before rendering; `--disable-advisor` preserves the pre-v2.6 path. Advisor artifacts can be attached to `run_reproduction.py` with `--data-profile`, `--figure-intent`, `--chart-decision`, `--policy-report`, `--style-profile`, `--font-resolution`, and `--ai-review`; they are copied into the bundle and recorded in `companion_artifacts`.
+
+The Advisor is strongest for data-driven redraws. It is auxiliary for screenshot fidelity and does not recover primary data from a raster image. It does not delete outliers, infer causation from correlation, or treat a style preset as an official current journal rule.
+
 ## Runtime Rule
 
 Run this skill with Python 3.14 only. Use `py -3.14` on Windows or `python3.14` on macOS/Linux before activating a virtual environment. Do not use Python 3.10, 3.11, 3.12, or 3.13 for this skill.
 
 ## Overview
 
-Use this skill to reproduce scientific figures with open Python-first workflows. The v2.5.4 primary deliverable is a self-contained deterministic reproduction bundle with semantic coverage, verifiable attestation, shared-geometry QA, batch visual gates, and path-portable delivery JSON: copied inputs, portable runtime, `render.py` for drawing only, `reproduce.py` for complete validate/render/QA/audit/vector/finalize/portability/checksum closure, `verify.py` for no-redraw lock/environment/checksum/manifest/portability integrity checks, PNG/SVG/PDF exports, environment records without host interpreter paths, semantic provenance, visual/panel/semantic/vector QA artifacts, immutable `bundle.lock.json`, checksum-protected `run_attestation.json`, canonical checksums, a finalized portable `scientificfigure.manifest.v2`, and a non-zero exit when strict closure is requested but not met. When no reference image is supplied for a raw-data figure, successful semantic and vector checks produce `semantic_validated_pass`; this is intentionally not a visual strict claim. Do not use proprietary project conversion, desktop GUI automation, or approval-chain-dependent plotting tools in this skill.
+Use this skill to reproduce scientific figures with open Python-first workflows. The v2.6.0 primary deliverable is a self-contained deterministic reproduction bundle with optional Advisor artifacts, semantic coverage, verifiable attestation, shared-geometry QA, batch visual gates, and path-portable delivery JSON: copied inputs, portable runtime, `render.py` for drawing only, `reproduce.py` for complete validate/render/QA/audit/vector/finalize/portability/checksum closure, `verify.py` for no-redraw lock/environment/checksum/manifest/portability integrity checks, PNG/SVG/PDF exports, environment records without host interpreter paths, semantic provenance, visual/panel/semantic/vector QA artifacts, immutable `bundle.lock.json`, checksum-protected `run_attestation.json`, canonical checksums, a finalized portable `scientificfigure.manifest.v2`, and a non-zero exit when strict closure is requested but not met. When no reference image is supplied for a raw-data figure, successful semantic and vector checks produce `semantic_validated_pass`; this is intentionally not a visual strict claim. Do not use proprietary project conversion, desktop GUI automation, or approval-chain-dependent plotting tools in this skill.
 
 ## Workflow
 

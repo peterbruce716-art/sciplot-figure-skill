@@ -1,5 +1,5 @@
 interface:
   display_name: "Scientific Figure Reproduction"
-  version: "2.5.4"
-  short_description: "Reproduce scientific figures with Python-first plotting, shared-geometry QA, and portable bundle gates."
-  default_prompt: "Reproduce this scientific figure using Python 3.14 and Matplotlib first, reuse one immutable data source for continuous curves and their fills, export PNG/SVG/PDF, compare against the source, keep one script per figure, write a v2 manifest, and verify bundle portability."
+  version: "2.6.0"
+  short_description: "Advise, reproduce, and validate scientific figures with deterministic bundle gates."
+  default_prompt: "Use $scientific-figure-reproduction to profile the data, choose a defensible chart, resolve fonts and style, render with VisualSpec, and verify the portable bundle."

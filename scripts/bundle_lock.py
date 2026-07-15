@@ -18,8 +18,9 @@ IMMUTABLE_ROOT_FILES = {
     "reproduce.py",
     "verify.py",
     "source_pointer.json",
+    "companion_artifacts.json",
 }
-IMMUTABLE_DIRS = {"inputs", "runtime", "environment"}
+IMMUTABLE_DIRS = {"inputs", "runtime", "environment", "advisor", "style"}
 EXCLUDED_DIR_PARTS = {"__pycache__", "mplconfig"}
 EXCLUDED_SUFFIXES = {".pyc", ".pyo"}
 

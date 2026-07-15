@@ -8,6 +8,8 @@ SciPlot Figure Skill uses a VisualSpec JSON description to generate deterministi
 
 Core capabilities:
 
+- advisor-first data profiling, chart selection, plotting-policy checks, journal-style and CJK font records, and an offline AI visual-review contract
+
 - VisualSpec-based figure descriptions
 - deterministic Matplotlib rendering
 - PNG, SVG, and PDF export
@@ -46,6 +48,19 @@ pip install -r requirements.txt
 ```
 
 ## Quick Start: Generate From Data Without a Reference Image
+
+### Advisor-first data workflow
+
+```bash
+py -3.14 scripts/scientific_figure_pipeline.py \
+  --data examples/data/trend_comparison.csv \
+  --intent examples/intents/trend_comparison.json \
+  --x temperature --y response \
+  --style generic_sci \
+  --output-dir out/advisor --dry-run
+```
+
+The pipeline writes `advisor/`, `style/`, and optional `qa/` artifacts. These are advisory and traceable; deterministic VisualSpec, semantic, vector, and bundle checks remain the final gates.
 
 This path renders the example, audits its semantics, validates SVG/PDF structure, writes checksums, and creates a portable verification bundle.
 
@@ -129,10 +144,12 @@ sciplot-figure-skill/
 ├── .github/workflows/
 ├── agents/
 ├── examples/
+├── policies/
 ├── references/
 ├── schemas/
 ├── scripts/
 │   └── tests/
+├── styles/
 ├── CHANGELOG.md
 ├── SKILL.md
 ├── VERSION
@@ -141,7 +158,7 @@ sciplot-figure-skill/
 
 ## Version
 
-Current version: **v2.5.4**
+Current version: **v2.6.0**
 
 ## Scope and Limitations
 

@@ -1,0 +1,10 @@
+{
+  "schema": "scientificfigure.figure_intent.v1",
+  "schema_version": "1.0",
+  "claim": "Compare the response trend across temperature",
+  "task_type": "trend_comparison",
+  "primary_message": "The response changes monotonically with temperature",
+  "audience": "materials_science",
+  "uncertainty_semantics": "standard_deviation",
+  "priority_variables": ["temperature", "response"]
+}

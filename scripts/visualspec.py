@@ -210,6 +210,16 @@ def _style_errors(style: Any, ptype: str, prefix: str) -> list[str]:
         errors.append(f"{prefix}.style.capsize must be a non-negative number")
     if "bar_width" in style and (not _is_finite_number(style["bar_width"]) or float(style["bar_width"]) <= 0):
         errors.append(f"{prefix}.style.bar_width must be a positive number")
+    if "bar_widths" in style:
+        if not isinstance(style["bar_widths"], list) or not style["bar_widths"] or not all(_is_finite_number(item) and float(item) > 0 for item in style["bar_widths"]):
+            errors.append(f"{prefix}.style.bar_widths must be a non-empty list of positive numbers")
+    if "group_offsets" in style:
+        if not isinstance(style["group_offsets"], list) or not style["group_offsets"] or not all(_is_finite_number(item) for item in style["group_offsets"]):
+            errors.append(f"{prefix}.style.group_offsets must be a non-empty list of finite numbers")
+    if "group_mode" in style and style["group_mode"] not in {"side_by_side", "overlap"}:
+        errors.append(f"{prefix}.style.group_mode must be side_by_side or overlap")
+    if "group_offset" in style and (not _is_finite_number(style["group_offset"]) or float(style["group_offset"]) < 0):
+        errors.append(f"{prefix}.style.group_offset must be a non-negative number")
     if "alpha" in style and (not _is_finite_number(style["alpha"]) or not 0 <= float(style["alpha"]) <= 1):
         errors.append(f"{prefix}.style.alpha must be in [0, 1]")
     if "line_style" in style and style["line_style"] not in {"solid", "dashed", "dashdot", "dotted"}:

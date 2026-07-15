@@ -109,11 +109,23 @@ def _draw_plot(ax: Any, plot: dict[str, Any], *, base_dir: Path | None = None, p
         x = np.asarray(_series(data, "x", base_dir=base_dir))
         groups = data.get("groups") or []
         width = float(style.get("bar_width", 0.28))
+        widths = [float(value) for value in style.get("bar_widths", [width] * len(groups))]
+        if len(widths) != len(groups):
+            raise ValueError("grouped_bar style.bar_widths must match the number of groups")
+        mode = style.get("group_mode", "side_by_side")
+        group_step = float(style.get("group_offset", 0.0 if mode == "overlap" else width))
+        explicit_offsets = style.get("group_offsets")
+        if explicit_offsets is not None and len(explicit_offsets) != len(groups):
+            raise ValueError("grouped_bar style.group_offsets must match the number of groups")
         for i, group in enumerate(groups):
             values = [float(v) for v in group.get("y", [])]
-            bars = ax.bar(x + (i - (len(groups) - 1) / 2) * width, values, width=width, label=group.get("label"), color=group.get("color"), alpha=style.get("alpha", None))
+            center_offset = float(explicit_offsets[i]) if explicit_offsets is not None else (i - (len(groups) - 1) / 2) * group_step
+            bars = ax.bar(x + center_offset, values, width=widths[i], label=group.get("label"), color=group.get("color"), alpha=style.get("alpha", None))
             for bar in bars:
                 _tag_artist(bar, ptype="grouped_bar", index=plot_index, extra={"_visualspec_group_index": i, "_visualspec_group_count": len(groups)})
+                bar._visualspec_group_offset = group_step
+                bar._visualspec_group_mode = mode
+                bar._visualspec_group_center_offset = center_offset
     elif ptype == "stacked_bar":
         x = np.asarray(_series(data, "x", base_dir=base_dir))
         bottom = np.zeros_like(x, dtype=float)

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.font_resolution.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "requested", "resolved", "matplotlib", "warnings"],
+  "properties": {
+    "schema": {"const": "scientificfigure.font_resolution.v1"},
+    "schema_version": {"const": "1.0"},
+    "requested": {"type": "object", "required": ["latin", "cjk"], "properties": {"latin": {"type": ["string", "null"]}, "cjk": {"type": ["string", "null"]}}},
+    "resolved": {
+      "type": "object",
+      "required": ["latin_family", "cjk_family", "fallback_used"],
+      "properties": {
+        "latin_family": {"type": ["string", "null"]},
+        "cjk_family": {"type": ["string", "null"]},
+        "latin_file": {"type": ["object", "null"]},
+        "cjk_file": {"type": ["object", "null"]},
+        "fallback_used": {"type": "boolean"}
+      }
+    },
+    "platform": {"type": "string"},
+    "matplotlib": {
+      "type": "object",
+      "required": ["pdf_fonttype", "ps_fonttype", "svg_fonttype", "axes_unicode_minus"],
+      "properties": {
+        "pdf_fonttype": {"const": 42},
+        "ps_fonttype": {"const": 42},
+        "svg_fonttype": {"const": "none"},
+        "axes_unicode_minus": {"type": "boolean"}
+      }
+    },
+    "warnings": {"type": "array", "items": {"type": "object"}}
+  }
+}

@@ -88,8 +88,12 @@ def _expected_style(ptype: str, style: dict[str, Any]) -> dict[str, Any]:
             result[key] = _normalize_color(value)
         elif key == "line_style":
             result[key] = _normalize_linestyle(value)
-        elif key in {"line_width_pt", "marker_size_pt2", "alpha", "bar_width", "capsize", "vmin", "vmax"}:
+        elif key in {"line_width_pt", "marker_size_pt2", "alpha", "bar_width", "group_offset", "capsize", "vmin", "vmax"}:
             result[key] = float(value)
+        elif key == "bar_widths":
+            result[key] = [float(item) for item in value]
+        elif key == "group_offsets":
+            result[key] = [float(item) for item in value]
         elif key == "aspect":
             result[key] = _normalize_aspect(value)
         else:
@@ -375,10 +379,25 @@ def extract_bar_semantics(patches: list[Any], ptype: str, *, patch_labels: dict[
         if not centers:
             group_count = max(1, int(getattr(bars[0], "_visualspec_group_count", len(groups))))
             width = float(bars[0].get_width())
-            offset = (group_index - (group_count - 1) / 2.0) * width if ptype == "grouped_bar" else 0.0
-            centers = [float(bar.get_x() + bar.get_width() / 2.0 - offset) for bar in bars]
+            if hasattr(bars[0], "_visualspec_group_center_offset"):
+                center_offset = float(getattr(bars[0], "_visualspec_group_center_offset"))
+                centers = [float(bar.get_x() + bar.get_width() / 2.0 - center_offset) for bar in bars]
+            else:
+                group_step = float(getattr(bars[0], "_visualspec_group_offset", width))
+                offset = (group_index - (group_count - 1) / 2.0) * group_step if ptype == "grouped_bar" else 0.0
+                centers = [float(bar.get_x() + bar.get_width() / 2.0 - offset) for bar in bars]
         group_items.append(group_item)
     style = {"bar_width": float(patches[0].get_width())} if patches else {}
+    if groups:
+        style["bar_widths"] = [float(group_bars[0].get_width()) for _, group_bars in sorted(groups.items())]
+        first = next(iter(groups.values()))[0]
+        group_mode = getattr(first, "_visualspec_group_mode", None)
+        if group_mode is not None:
+            style["group_mode"] = str(group_mode)
+        if hasattr(first, "_visualspec_group_offset"):
+            style["group_offset"] = float(getattr(first, "_visualspec_group_offset"))
+        if all(hasattr(group_bars[0], "_visualspec_group_center_offset") for _, group_bars in sorted(groups.items())):
+            style["group_offsets"] = [float(group_bars[0]._visualspec_group_center_offset) for _, group_bars in sorted(groups.items())]
     alpha = patches[0].get_alpha() if patches else None
     if alpha is not None:
         style["alpha"] = float(alpha)

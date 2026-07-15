@@ -95,6 +95,14 @@ def validate_manifest(manifest_path: Path, *, root: Path | None = None, require_
     scripts = manifest.get("per_figure_scripts")
     schema = manifest.get("schema")
 
+    for artifact_id, artifact in (manifest.get("companion_artifacts") or {}).items():
+        if not isinstance(artifact, dict) or not artifact.get("path"):
+            failures.append({"code": "invalid_companion_artifact", "artifact": str(artifact_id)})
+            continue
+        artifact_path = resolve_path(root, str(artifact["path"]))
+        if artifact_path is None or not artifact_path.exists():
+            failures.append({"code": "missing_companion_artifact", "artifact": str(artifact_id), "path": str(artifact["path"])})
+
     if not isinstance(figures, dict) or not figures:
         failures.append({"code": "missing_figures", "message": "manifest must contain a non-empty figures object"})
         figures = {}

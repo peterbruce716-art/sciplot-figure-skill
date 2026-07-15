@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-07-16 Grouped-Bar Geometry Fidelity
+
+- Added audited `group_mode`, `group_offset`, `bar_widths`, and `group_offsets` support for side-by-side, nested, and hybrid overlapping grouped bars.
+- Added regression coverage for per-group widths and explicit center offsets.
+- Preserved per-group widths and explicit center offsets in renderer semantics so nested and hybrid overlap layouts remain auditable.
+
+## 2026-07-16 v2.6.0 Advisor and Review Contracts
+
+- Added deterministic DataProfile, FigureIntent, ChartDecision, configurable plotting-policy, style-profile, font-resolution, and AI visual-review schemas.
+- Added advisor CLIs for profiling CSV/TSV/Excel data, selecting charts with rationale, evaluating warnings, resolving installed fonts, and preparing offline visual-review requests.
+- Added journal-like style presets with explicit provenance and disclaimers; no fonts are bundled.
+- Added `scientific_figure_pipeline.py` with dry-run, resume-friendly output directories, optional VisualSpec generation, and optional bundle QA.
+- Added optional companion artifacts to `run_reproduction.py`; they are copied into portable bundles and listed in the final manifest without changing legacy VisualSpec behavior.
+
 ## 2026-07-14 v2.5.4 Batch Visual QA
 
 - Added fail-closed visual scoring for declared multi-figure batches.
