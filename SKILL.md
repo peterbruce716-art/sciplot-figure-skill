@@ -20,13 +20,35 @@ Use `scripts/scientific_figure_pipeline.py` to resume these stages from one outp
 
 The Advisor is strongest for data-driven redraws. It is auxiliary for screenshot fidelity and does not recover primary data from a raster image. It does not delete outliers, infer causation from correlation, or treat a style preset as an official current journal rule.
 
+## Object Reconstruction and Hybrid Delivery
+
+For raster-only or mixed schematics, use the object reconstruction protocol rather than treating the whole canvas as one editable object:
+
+1. Scaffold or author `object-manifest-v1` with stable element IDs, normalized geometry, semantic roles, z-order, provenance, and confidence.
+2. Classify each element into `editable_vector`, `preserved_raster`, or `background` with `classify_reconstruction_elements.py`; record the policy and rationale.
+3. Validate preserved-raster crops with `crop_preserved_assets.py` and `validate_preserved_geometry.py`. A preserved asset must keep its source hash, crop rectangle, aspect ratio, alpha behavior, and placement contract.
+4. Audit connector anchors before rendering. Connector endpoints must reference stable element IDs and semantic sides or named anchors; pixel-only guesses are not accepted as complete geometry.
+5. Run `object_reconstruction_pipeline.py` in its two stages. The geometry stage writes a skeleton and must pass the geometry gate before the final PNG/SVG/PDF stage. Masks, region scores, and diff-to-object mapping are emitted for QA.
+6. Use `export_office_vba.py` only as an optional delivery artifact. It produces a ratio-safe VBA skeleton and reports whether runtime verification was performed. No Office dependency is required for reconstruction or deterministic QA.
+
+The pipeline supports `--dry-run`, `--manifest-only`, `--run-geometry-stage`, `--run-final-stage`, `--export-office`, and `--create-bundle`. Do not claim full editability when a whole-canvas raster is preserved; the editability report is a required companion artifact.
+
+## Advisor P0/P1 Invariants
+
+- Default `FigureIntent.priority_variables` is built from x, y, grouping, and uncertainty columns and is never an empty placeholder.
+- A trend receives error bands only when repeated observations or explicit uncertainty semantics support them. Otherwise the recommendation uses markers or a scatter representation with a disclosure.
+- `ChartDecision` must be materialized into a `VisualSpec` by `chart_decision_to_visualspec.py`; unsupported mappings fail explicitly instead of silently falling back to a line plot.
+- Resolved style settings are applied to the renderer theme and recorded in `style_application.v1`.
+- Policy context can be generated from the actual rendered artist tree with `build_policy_context_from_render.py`.
+- AI review is advisory. Any accepted patch requires explicit approval and a deterministic rerun.
+
 ## Runtime Rule
 
 Run this skill with Python 3.14 only. Use `py -3.14` on Windows or `python3.14` on macOS/Linux before activating a virtual environment. Do not use Python 3.10, 3.11, 3.12, or 3.13 for this skill.
 
 ## Overview
 
-Use this skill to reproduce scientific figures with open Python-first workflows. The v2.6.0 primary deliverable is a self-contained deterministic reproduction bundle with optional Advisor artifacts, semantic coverage, verifiable attestation, shared-geometry QA, batch visual gates, and path-portable delivery JSON: copied inputs, portable runtime, `render.py` for drawing only, `reproduce.py` for complete validate/render/QA/audit/vector/finalize/portability/checksum closure, `verify.py` for no-redraw lock/environment/checksum/manifest/portability integrity checks, PNG/SVG/PDF exports, environment records without host interpreter paths, semantic provenance, visual/panel/semantic/vector QA artifacts, immutable `bundle.lock.json`, checksum-protected `run_attestation.json`, canonical checksums, a finalized portable `scientificfigure.manifest.v2`, and a non-zero exit when strict closure is requested but not met. When no reference image is supplied for a raw-data figure, successful semantic and vector checks produce `semantic_validated_pass`; this is intentionally not a visual strict claim. Do not use proprietary project conversion, desktop GUI automation, or approval-chain-dependent plotting tools in this skill.
+Use this skill to reproduce scientific figures with open Python-first workflows. The v2.7.1 primary deliverable is a self-contained deterministic reproduction bundle with optional Advisor artifacts, semantic coverage, verifiable attestation, shared-geometry QA, batch visual gates, object-level reconstruction, and path-portable delivery JSON: copied inputs, portable runtime, `render.py` for drawing only, `reproduce.py` for complete validate/render/QA/audit/vector/finalize/portability/checksum closure, `verify.py` for no-redraw lock/environment/checksum/manifest/portability integrity checks, PNG/SVG/PDF exports, environment records without host interpreter paths, semantic provenance, visual/panel/semantic/vector QA artifacts, immutable `bundle.lock.json`, checksum-protected `run_attestation.json`, canonical checksums, a finalized portable `scientificfigure.manifest.v2`, and a non-zero exit when strict closure is requested but not met. When no reference image is supplied for a raw-data figure, successful semantic and vector checks produce `semantic_validated_pass`; this is intentionally not a visual strict claim. Do not use proprietary project conversion, desktop GUI automation, or approval-chain-dependent plotting tools in this skill.
 
 ## Workflow
 
@@ -102,6 +124,7 @@ If repeated geometry, color, typography, antialiasing, or legend tuning fails to
 - Use `scripts/render_matplotlib.py` or `scripts/render_visualspec_matplotlib.py` for line, scatter, errorbar, grouped bar, stacked bar, fill-between, heatmap, contour, multi-panel layouts, legends, colorbars, text, arrows, rectangles, and polygons. It defaults to fixed canvas export.
 - Validator and renderer capabilities come from the single source of truth in `scripts/capability_model.py`, surfaced through `scripts/capabilities.py`. The declared generic renderer plot types are line, scatter, errorbar, fill_between, grouped_bar, stacked_bar, heatmap, and contour; annotation types are text, arrow, rectangle, and polygon. v2.5 capability entries include strict audited fields such as contour x/y/z hashes and levels, heatmap aspect, bar group color mapping, fill_between boundary identity, and annotation geometry/style. Types not listed there are unsupported by the generic renderer and must fail validation or be routed to a project script.
 - Use `scripts/data_resolver.py` through the renderer for CSV, TSV, JSON, NPY, NPZ, and optional Excel data sources.
+- Use `scripts/digitize_grouped_bar_raster.py` for raster-only grouped bars after explicitly calibrating each panel rectangle, y-axis mapping, category centers, group offsets, widths, and fill colors. Keep its CSV and audit JSON as companion evidence; the extracted values remain `digitized_raster`, not raw data.
 - Use `scripts/finalize_manifest.py` to write score reports, source paths, script paths, QA profile, and final status into `reproduction_manifest.json`.
 - Use `scripts/score_visual.py` or `scripts/score_iteration.py` to score without resizing source images and to write comparison artifacts. Pass `--spec` so `qa_regions` and `ignore` masks enter the one-command closure.
 - Use `scripts/score_batch.py` when all figures in a declared set must pass their own fixed visual gates. It rejects missing figures, duplicate IDs, canvas mismatch, and threshold regressions; read `references/BATCH_VISUAL_QA_PROTOCOL.md` before authoring the batch manifest.

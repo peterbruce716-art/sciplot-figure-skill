@@ -44,7 +44,15 @@
       }
     },
     "warnings": {"type": "array", "items": {"$ref": "#/$defs/message"}},
-    "recommended_tasks": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+    "recommended_tasks": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "uncertainty_columns": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "repeated_x": {"type": ["object", "null"], "additionalProperties": false, "properties": {
+      "x": {"type": "string"},
+      "unique_x": {"type": "integer", "minimum": 0},
+      "max_replicates_per_x": {"type": "integer", "minimum": 0},
+      "repeated_x_count": {"type": "integer", "minimum": 0},
+      "has_repeated_observations": {"type": "boolean"}
+    }}
   },
   "$defs": {
     "message": {

@@ -44,6 +44,31 @@ def _apply_axes(ax: Any, panel: dict[str, Any]) -> None:
             (ax.set_xlabel if axis_name == "x" else ax.set_ylabel)(axis["label"])
 
 
+def _apply_legend(ax: Any, panel: dict[str, Any]) -> None:
+    config = panel.get("legend") or {}
+    if config.get("visible", True) is False:
+        return
+    kwargs: dict[str, Any] = {
+        "frameon": bool(config.get("frameon", False)),
+        "fontsize": float(config.get("font_size_pt", 8)),
+        "loc": config.get("loc", "best"),
+        "ncol": int(config.get("ncol", 1)),
+    }
+    for source_key, matplotlib_key in (
+        ("handle_length", "handlelength"),
+        ("handle_height", "handleheight"),
+        ("column_spacing", "columnspacing"),
+        ("label_spacing", "labelspacing"),
+        ("border_pad", "borderpad"),
+        ("handle_text_pad", "handletextpad"),
+    ):
+        if source_key in config:
+            kwargs[matplotlib_key] = float(config[source_key])
+    if "bbox_to_anchor" in config:
+        kwargs["bbox_to_anchor"] = tuple(float(value) for value in config["bbox_to_anchor"])
+    ax.legend(**kwargs)
+
+
 def _tag_artist(artist: Any, *, ptype: str, index: int, extra: dict[str, Any] | None = None) -> None:
     try:
         setattr(artist, "_visualspec_plot_type", ptype)
@@ -119,13 +144,26 @@ def _draw_plot(ax: Any, plot: dict[str, Any], *, base_dir: Path | None = None, p
             raise ValueError("grouped_bar style.group_offsets must match the number of groups")
         for i, group in enumerate(groups):
             values = [float(v) for v in group.get("y", [])]
+            yerr = [float(v) for v in group["yerr"]] if group.get("yerr") is not None else None
             center_offset = float(explicit_offsets[i]) if explicit_offsets is not None else (i - (len(groups) - 1) / 2) * group_step
-            bars = ax.bar(x + center_offset, values, width=widths[i], label=group.get("label"), color=group.get("color"), alpha=style.get("alpha", None))
+            error_kw = None
+            if yerr is not None:
+                error_kw = {
+                    "ecolor": style.get("errorbar_color", "#606060"),
+                    "elinewidth": style.get("errorbar_line_width_pt", 0.6),
+                    "capsize": style.get("errorbar_capsize", 1.5),
+                }
+            bars = ax.bar(x + center_offset, values, width=widths[i], label=group.get("label"), color=group.get("color"), alpha=style.get("alpha", None), yerr=yerr, error_kw=error_kw)
             for bar in bars:
                 _tag_artist(bar, ptype="grouped_bar", index=plot_index, extra={"_visualspec_group_index": i, "_visualspec_group_count": len(groups)})
                 bar._visualspec_group_offset = group_step
                 bar._visualspec_group_mode = mode
                 bar._visualspec_group_center_offset = center_offset
+                if yerr is not None:
+                    bar._visualspec_group_yerr = yerr
+                    bar._visualspec_errorbar_color = style.get("errorbar_color", "#606060")
+                    bar._visualspec_errorbar_line_width_pt = float(style.get("errorbar_line_width_pt", 0.6))
+                    bar._visualspec_errorbar_capsize = float(style.get("errorbar_capsize", 1.5))
     elif ptype == "stacked_bar":
         x = np.asarray(_series(data, "x", base_dir=base_dir))
         bottom = np.zeros_like(x, dtype=float)
@@ -274,7 +312,7 @@ def render_visualspec(spec: dict[str, Any], output_dir: Path, spec_path: str = "
         for annotation in panel.get("annotations", []):
             _draw_annotation(ax, annotation)
         if any(plot.get("label") for plot in panel.get("plots", [])) or any(group.get("label") for plot in panel.get("plots", []) for group in (plot.get("data") or {}).get("groups", [])):
-            ax.legend(frameon=False, fontsize=8)
+            _apply_legend(ax, panel)
     png = output_dir / "render.png"
     svg = output_dir / "render.svg"
     pdf = output_dir / "render.pdf"

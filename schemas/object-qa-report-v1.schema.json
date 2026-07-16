@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.object_qa_report.v1",
+  "type": "object",
+  "required": ["schema", "canvas_match", "status", "elements", "worst_elements"],
+  "properties": {"schema": {"const": "scientificfigure.object_qa_report.v1"}, "canvas_match": {"const": true}, "status": {"enum": ["pass", "pass_with_warnings", "failed"]}, "elements": {"type": "array"}, "worst_elements": {"type": "array", "items": {"type": "string"}}}
+}

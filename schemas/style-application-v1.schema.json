@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.style_application.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "profile_id", "applied_keys", "applied", "status"],
+  "properties": {
+    "schema": {"const": "scientificfigure.style_application.v1"},
+    "schema_version": {"const": "1.0"},
+    "profile_id": {"type": ["string", "null"]},
+    "source_profile_sha256": {"type": ["string", "null"]},
+    "applied_keys": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "applied": {"type": "object", "additionalProperties": true},
+    "visualspec_hash_before": {"type": ["string", "null"]},
+    "status": {"enum": ["applied", "no_compatible_settings"]}
+  }
+}

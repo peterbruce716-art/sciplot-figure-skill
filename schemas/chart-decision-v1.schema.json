@@ -22,7 +22,10 @@
     "required_visual_elements": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "warnings": {"type": "array", "items": {"$ref": "#/$defs/message"}},
     "user_requested_type": {"type": ["string", "null"]},
-    "journal_profile": {"type": ["string", "null"]}
+    "journal_profile": {"type": ["string", "null"]},
+    "uncertainty_source": {"type": ["string", "null"]},
+    "data_columns": {"type": "object", "additionalProperties": true},
+    "requires_user_confirmation": {"type": "boolean"}
   },
   "$defs": {
     "message": {

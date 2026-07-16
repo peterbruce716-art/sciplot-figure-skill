@@ -34,10 +34,31 @@ def recommend_chart(
     rejected: list[dict[str, str]] = []
     reasons: list[str] = []
     required: list[str] = []
+    uncertainty_source: str | None = None
+    data_columns: dict[str, Any] = {"x": x, "y": y, "group": group}
+    requires_user_confirmation = False
 
     if task in {"trend_comparison", "temporal_change"}:
         if x_info and x_info.get("inferred_type") in {"continuous", "datetime", "ordinal"}:
-            recommended = "line_with_error_band" if y_info and y_info.get("outlier_count_iqr", 0) >= 0 else "line_or_scatter"
+            repeated = profile.get("repeated_x") or {}
+            has_repeats = bool(repeated.get("has_repeated_observations"))
+            uncertainty_columns = list(profile.get("uncertainty_columns") or [])
+            explicit_uncertainty = bool(intent.get("uncertainty_semantics")) or bool(uncertainty_columns)
+            if uncertainty_columns:
+                recommended = "line_with_error_bars"
+                uncertainty_source = uncertainty_columns[0]
+                data_columns["error"] = uncertainty_columns[0]
+                required.extend(["uncertainty_definition", "sample_count"])
+                requires_user_confirmation = not bool(intent.get("uncertainty_semantics"))
+            elif has_repeats:
+                recommended = "line_with_error_band"
+                uncertainty_source = "repeated_observations"
+                required.extend(["uncertainty_definition", "sample_count"])
+                requires_user_confirmation = not bool(intent.get("uncertainty_semantics"))
+            elif x_info.get("inferred_type") == "ordinal":
+                recommended = "line_with_markers"
+            else:
+                recommended = "line_with_markers" if y else "scatter"
             reasons.append("横轴具有连续、时间或有序物理意义，趋势图保留了顺序信息")
             required.extend(["axis_units", "sample_count"])
         else:
@@ -89,7 +110,7 @@ def recommend_chart(
             recommended = requested_type
             reasons.insert(0, "用户明确指定图型，以下建议优先保留该约束并附带风险提示")
 
-    if recommended in {"line_with_error_band", "line_with_errorbar", "errorbar"} and not intent.get("uncertainty_semantics"):
+    if recommended in {"line_with_error_band", "line_with_error_bars", "line_with_errorbar", "errorbar"} and not intent.get("uncertainty_semantics"):
         warnings.append({"code": "error_semantics_required", "severity": "warning", "message": "误差带/误差棒必须标明 SD、SEM、95% CI 或其他定义。"})
     if x_info and x_info.get("inferred_type") == "categorical" and task in {"trend_comparison", "temporal_change"}:
         warnings.append({"code": "categorical_x_trend", "severity": "warning", "message": "分类横轴不应被折线连接来暗示连续趋势。"})
@@ -108,6 +129,9 @@ def recommend_chart(
         "warnings": warnings,
         "user_requested_type": requested_type,
         "journal_profile": journal_profile,
+        "uncertainty_source": uncertainty_source,
+        "data_columns": data_columns,
+        "requires_user_confirmation": requires_user_confirmation,
     }
     validate_payload(payload, "chart-decision-v1.schema.json")
     return payload

@@ -80,6 +80,7 @@
             "type": "array",
             "items": {"$ref": "#/$defs/annotation"}
           },
+          "legend": {"$ref": "#/$defs/legend"},
           "reconstruction_mode": {"type": "string"}
         }
       }
@@ -308,7 +309,8 @@
       "properties": {
         "label": {"type": ["string", "null"]},
         "color": {"type": "string"},
-        "y": {"$ref": "#/$defs/number_array"}
+        "y": {"$ref": "#/$defs/number_array"},
+        "yerr": {"$ref": "#/$defs/number_array"}
       }
     },
     "grouped_bar_data": {
@@ -369,10 +371,33 @@
       "properties": {
         "color": {"type": "string"},
         "line_width_pt": {"type": "number", "exclusiveMinimum": 0},
-        "line_style": {"enum": ["solid", "dashed", "dashdot", "dotted"]},
+        "line_style": {"enum": ["solid", "dashed", "dashdot", "dotted", "none"]},
         "marker": {"type": "string"},
         "alpha": {"type": "number", "minimum": 0, "maximum": 1},
         "capsize": {"type": "number", "minimum": 0}
+      }
+    },
+    "legend": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "visible": {"type": "boolean"},
+        "frameon": {"type": "boolean"},
+        "font_size_pt": {"type": "number", "exclusiveMinimum": 0},
+        "loc": {"type": "string"},
+        "ncol": {"type": "integer", "minimum": 1},
+        "bbox_to_anchor": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 4,
+          "items": {"type": "number"}
+        },
+        "handle_length": {"type": "number", "minimum": 0},
+        "handle_height": {"type": "number", "minimum": 0},
+        "column_spacing": {"type": "number", "minimum": 0},
+        "label_spacing": {"type": "number", "minimum": 0},
+        "border_pad": {"type": "number", "minimum": 0},
+        "handle_text_pad": {"type": "number", "minimum": 0}
       }
     },
     "fill_style": {
@@ -392,7 +417,10 @@
         "group_mode": {"type": "string", "enum": ["side_by_side", "overlap"]},
         "group_offset": {"type": "number", "minimum": 0},
         "group_offsets": {"type": "array", "minItems": 1, "items": {"type": "number"}},
-        "alpha": {"type": "number", "minimum": 0, "maximum": 1}
+        "alpha": {"type": "number", "minimum": 0, "maximum": 1},
+        "errorbar_color": {"type": "string"},
+        "errorbar_line_width_pt": {"type": "number", "exclusiveMinimum": 0},
+        "errorbar_capsize": {"type": "number", "minimum": 0}
       }
     },
     "heatmap_style": {

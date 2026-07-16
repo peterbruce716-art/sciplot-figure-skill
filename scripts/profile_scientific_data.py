@@ -13,7 +13,8 @@ import pandas as pd
 from advisor_common import sha256_file, validate_payload, write_json
 
 
-ID_NAME = re.compile(r"(^id$|_id$|^id_|identifier|uuid|编号$|序号$)", re.IGNORECASE)
+ID_NAME = re.compile(r"(^id$|_id$|^id_|identifier|uuid|sample|specimen|编号$|序号$)", re.IGNORECASE)
+UNCERTAINTY_NAME = re.compile(r"(sd|std|sem|se|ci|error|uncert|sigma|误差|标准差|置信)", re.IGNORECASE)
 
 
 def read_table(path: Path, *, sheet: str | int | None = None) -> pd.DataFrame:
@@ -100,17 +101,28 @@ def profile_dataframe(
         inferred_by_name[str(name)] = inferred
         non_null = series.dropna()
         unique = int(non_null.nunique(dropna=True))
+        id_name_match = bool(ID_NAME.search(str(name)))
         suspected_id = bool(
             len(non_null) > 1
             and unique == len(non_null)
-            and (ID_NAME.search(str(name)) or inferred in {"text", "ordinal"})
+            and (id_name_match or inferred in {"text", "ordinal"})
         )
+        id_reasons: list[str] = []
+        if unique == len(non_null) and len(non_null) > 1:
+            id_reasons.append("all_values_unique")
+        if id_name_match:
+            id_reasons.append("column_name_contains_identifier_hint")
+        if inferred in {"text", "ordinal"}:
+            id_reasons.append("identifier_like_type")
         record: dict[str, Any] = {
             "name": str(name),
             "inferred_type": inferred,
             "missing_count": int(series.isna().sum()),
             "unique_count": unique,
             "suspected_id": suspected_id,
+            "suspected_id_confidence": round(min(1.0, 0.45 * bool(unique == len(non_null)) + 0.35 * bool(id_name_match) + 0.2 * bool(inferred in {"text", "ordinal"})), 3),
+            "suspected_id_reasons": id_reasons,
+            "uncertainty_candidate": bool(UNCERTAINTY_NAME.search(str(name))),
         }
         if pd.api.types.is_numeric_dtype(series.dtype) and not non_null.empty:
             numeric = pd.to_numeric(non_null, errors="coerce").dropna()
@@ -165,6 +177,17 @@ def profile_dataframe(
     if y and inferred_by_name.get(y) == "continuous":
         recommended_tasks.append("distribution_comparison")
 
+    uncertainty_columns = [str(item["name"]) for item in columns if item.get("uncertainty_candidate")]
+    repeated_x: dict[str, Any] | None = None
+    if x and x in frame.columns:
+        counts = frame.groupby([x], dropna=False, sort=True).size()
+        repeated_x = {
+            "x": x,
+            "unique_x": int(len(counts)),
+            "max_replicates_per_x": int(counts.max()) if len(counts) else 0,
+            "repeated_x_count": int((counts > 1).sum()),
+            "has_repeated_observations": bool((counts > 1).any()),
+        }
     payload = {
         "schema": "scientificfigure.data_profile.v1",
         "schema_version": "1.0",
@@ -173,6 +196,8 @@ def profile_dataframe(
         "columns": columns,
         "group_statistics": group_statistics,
         "distribution": {"skewness": skewness, "outliers": outliers},
+        "uncertainty_columns": uncertainty_columns,
+        "repeated_x": repeated_x,
         "warnings": warnings,
         "recommended_tasks": sorted(set(recommended_tasks)),
     }

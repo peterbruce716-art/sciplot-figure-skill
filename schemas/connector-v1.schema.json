@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.connector.v1",
+  "type": "object",
+  "required": ["schema", "status", "connectors"],
+  "properties": {"schema": {"const": "scientificfigure.connector_audit.v1"}, "endpoint_tolerance_px": {"type": "number", "minimum": 0}, "status": {"enum": ["pass", "failed", "not_applicable"]}, "connectors": {"type": "array", "items": {"type": "object", "required": ["id", "status", "issues"], "properties": {"id": {"type": "string"}, "status": {"enum": ["pass", "failed"]}, "issues": {"type": "array"}, "computed_endpoints_px": {"type": "array"}, "endpoint_error_px": {"type": "object"}}}}}
+}

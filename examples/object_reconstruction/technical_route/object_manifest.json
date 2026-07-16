@@ -1,0 +1,146 @@
+{
+  "schema": "scientificfigure.object_manifest.v1",
+  "schema_version": "1.0",
+  "source": {
+    "path": "source.png",
+    "width_px": 640,
+    "height_px": 360,
+    "sha256": "sha256:22c9ce874f4e0e3df11647f74bd7fa4e0e72717acfd82de3c584156ae8ece7f8"
+  },
+  "canvas": {
+    "coordinate_space": "source_pixel",
+    "origin": "top_left"
+  },
+  "manifest_completeness_status": "complete",
+  "elements": [
+    {
+      "id": "input",
+      "semantic_role": "process_box",
+      "primitive": "rectangle",
+      "bucket": "editable_vector",
+      "bbox_px": [
+        60,
+        55,
+        190,
+        70
+      ],
+      "bbox_norm": [
+        0.09375,
+        0.1527777777777778,
+        0.296875,
+        0.19444444444444445
+      ],
+      "z_order": 1,
+      "provenance": "generated",
+      "confidence": 1.0
+    },
+    {
+      "id": "analysis",
+      "semantic_role": "process_box",
+      "primitive": "rectangle",
+      "bucket": "editable_vector",
+      "bbox_px": [
+        390,
+        55,
+        190,
+        70
+      ],
+      "bbox_norm": [
+        0.609375,
+        0.1527777777777778,
+        0.296875,
+        0.19444444444444445
+      ],
+      "z_order": 2,
+      "provenance": "generated",
+      "confidence": 1.0
+    },
+    {
+      "id": "result",
+      "semantic_role": "process_box",
+      "primitive": "rectangle",
+      "bucket": "editable_vector",
+      "bbox_px": [
+        225,
+        235,
+        190,
+        70
+      ],
+      "bbox_norm": [
+        0.3515625,
+        0.6527777777777778,
+        0.296875,
+        0.19444444444444445
+      ],
+      "z_order": 3,
+      "provenance": "generated",
+      "confidence": 1.0
+    },
+    {
+      "id": "route-a",
+      "semantic_role": "connector",
+      "primitive": "connector",
+      "bucket": "editable_vector",
+      "bbox_px": [
+        250,
+        89,
+        140,
+        2
+      ],
+      "bbox_norm": [
+        0.390625,
+        0.24722222222222223,
+        0.21875,
+        0.005555555555555556
+      ],
+      "z_order": 4,
+      "provenance": "generated",
+      "confidence": 1.0,
+      "source_anchor": {
+        "element_id": "input",
+        "side": "right",
+        "offset": 0.5
+      },
+      "target_anchor": {
+        "element_id": "analysis",
+        "side": "left",
+        "offset": 0.5
+      },
+      "routing": "direct",
+      "arrowhead": "triangle"
+    },
+    {
+      "id": "route-b",
+      "semantic_role": "connector",
+      "primitive": "connector",
+      "bucket": "editable_vector",
+      "bbox_px": [
+        320,
+        125,
+        165,
+        110
+      ],
+      "bbox_norm": [
+        0.5,
+        0.3472222222222222,
+        0.2578125,
+        0.3055555555555556
+      ],
+      "z_order": 5,
+      "provenance": "generated",
+      "confidence": 1.0,
+      "source_anchor": {
+        "element_id": "analysis",
+        "side": "bottom",
+        "offset": 0.5
+      },
+      "target_anchor": {
+        "element_id": "result",
+        "side": "top",
+        "offset": 0.5
+      },
+      "routing": "direct",
+      "arrowhead": "triangle"
+    }
+  ]
+}

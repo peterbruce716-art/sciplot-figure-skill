@@ -1,0 +1,66 @@
+{
+  "schema": "scientificfigure.object_manifest.v1",
+  "schema_version": "1.0",
+  "source": {
+    "path": "source.png",
+    "width_px": 640,
+    "height_px": 360,
+    "sha256": "sha256:b42aea6297f6c185b4b5c0c9dab9231edd6993aaf54b3702af8d55900c78a9eb"
+  },
+  "canvas": {
+    "coordinate_space": "source_pixel",
+    "origin": "top_left"
+  },
+  "manifest_completeness_status": "complete",
+  "elements": [
+    {
+      "id": "texture",
+      "semantic_role": "micrograph",
+      "primitive": "image",
+      "bucket": "preserved_raster",
+      "bbox_px": [
+        0,
+        0,
+        640,
+        360
+      ],
+      "bbox_norm": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "z_order": 0,
+      "provenance": "generated",
+      "confidence": 1.0,
+      "asset_path": "source.png",
+      "asset_sha256": "sha256:b42aea6297f6c185b4b5c0c9dab9231edd6993aaf54b3702af8d55900c78a9eb",
+      "preserve_reason": "synthetic texture"
+    },
+    {
+      "id": "scale-bar",
+      "semantic_role": "dimension_line",
+      "primitive": "rectangle",
+      "bucket": "editable_vector",
+      "bbox_px": [
+        450,
+        315,
+        120,
+        7
+      ],
+      "bbox_norm": [
+        0.703125,
+        0.875,
+        0.1875,
+        0.019444444444444445
+      ],
+      "z_order": 2,
+      "provenance": "generated",
+      "confidence": 1.0,
+      "style": {
+        "fill": "#FFFFFF",
+        "stroke": "#FFFFFF"
+      }
+    }
+  ]
+}

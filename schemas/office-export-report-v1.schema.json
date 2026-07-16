@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.office_export_report.v1",
+  "type": "object",
+  "required": ["schema", "backend", "exported_elements", "editable_elements", "preserved_raster_elements", "unsupported_elements", "materialization_attempted", "status"],
+  "properties": {"schema": {"const": "scientificfigure.office_export_report.v1"}, "backend": {"type": "string"}, "pptx": {"type": ["string", "null"]}, "vba": {"type": ["string", "null"]}, "exported_elements": {"type": "integer", "minimum": 0}, "editable_elements": {"type": "integer", "minimum": 0}, "preserved_raster_elements": {"type": "integer", "minimum": 0}, "unsupported_elements": {"type": "array"}, "materialization_attempted": {"type": "boolean"}, "reason": {"type": "string"}, "status": {"enum": ["not_requested", "generated_not_runtime_verified", "runtime_verified", "runtime_verified_with_warnings", "failed"]}}
+}

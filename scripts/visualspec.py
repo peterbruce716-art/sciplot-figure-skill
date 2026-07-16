@@ -208,6 +208,10 @@ def _style_errors(style: Any, ptype: str, prefix: str) -> list[str]:
         errors.append(f"{prefix}.style.marker_size_pt2 must be a positive number")
     if "capsize" in style and (not _is_finite_number(style["capsize"]) or float(style["capsize"]) < 0):
         errors.append(f"{prefix}.style.capsize must be a non-negative number")
+    if "errorbar_capsize" in style and (not _is_finite_number(style["errorbar_capsize"]) or float(style["errorbar_capsize"]) < 0):
+        errors.append(f"{prefix}.style.errorbar_capsize must be a non-negative number")
+    if "errorbar_line_width_pt" in style and (not _is_finite_number(style["errorbar_line_width_pt"]) or float(style["errorbar_line_width_pt"]) <= 0):
+        errors.append(f"{prefix}.style.errorbar_line_width_pt must be a positive number")
     if "bar_width" in style and (not _is_finite_number(style["bar_width"]) or float(style["bar_width"]) <= 0):
         errors.append(f"{prefix}.style.bar_width must be a positive number")
     if "bar_widths" in style:
@@ -222,7 +226,8 @@ def _style_errors(style: Any, ptype: str, prefix: str) -> list[str]:
         errors.append(f"{prefix}.style.group_offset must be a non-negative number")
     if "alpha" in style and (not _is_finite_number(style["alpha"]) or not 0 <= float(style["alpha"]) <= 1):
         errors.append(f"{prefix}.style.alpha must be in [0, 1]")
-    if "line_style" in style and style["line_style"] not in {"solid", "dashed", "dashdot", "dotted"}:
+    supported_line_styles = {"solid", "dashed", "dashdot", "dotted", "none"} if ptype == "errorbar" else {"solid", "dashed", "dashdot", "dotted"}
+    if "line_style" in style and style["line_style"] not in supported_line_styles:
         errors.append(f"{prefix}.style.line_style is not supported: {style['line_style']}")
     return errors
 
@@ -293,6 +298,11 @@ def _plot_data_errors(data: Any, ptype: str, prefix: str, *, allow_empty: bool =
                     errors.append(f"{prefix}.data.groups[{group_index}].y must be a non-empty finite number array")
                 elif x_len and len(group["y"]) != x_len:
                     errors.append(f"{prefix}.data.groups[{group_index}].y must match data.x length")
+                if "yerr" in group:
+                    if not _nonempty_number_list(group.get("yerr")):
+                        errors.append(f"{prefix}.data.groups[{group_index}].yerr must be a non-empty finite number array")
+                    elif x_len and len(group["yerr"]) != x_len:
+                        errors.append(f"{prefix}.data.groups[{group_index}].yerr must match data.x length")
     elif ptype == "heatmap":
         if not _matrix(data.get("z")):
             errors.append(f"{prefix}.data.z must be a non-empty finite 2D matrix")

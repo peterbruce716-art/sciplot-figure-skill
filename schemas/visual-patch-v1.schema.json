@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.visual_patch.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "status", "base_visualspec_sha256", "patches", "approval"],
+  "properties": {
+    "schema": {"const": "scientificfigure.visual_patch.v1"},
+    "schema_version": {"const": "1.0"},
+    "status": {"enum": ["draft", "approved", "rejected", "applied", "blocked"]},
+    "base_visualspec_sha256": {"type": "string", "minLength": 8},
+    "patches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "target", "operation", "reason", "approved"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"},
+          "target": {"type": "string", "minLength": 1},
+          "operation": {"enum": ["set", "merge", "remove"]},
+          "value": {},
+          "reason": {"type": "string", "minLength": 1},
+          "approved": {"type": "boolean"},
+          "review_issue": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approved_by_user", "approval_note"],
+      "properties": {
+        "approved_by_user": {"type": "boolean"},
+        "approval_note": {"type": "string"},
+        "approved_patch_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      }
+    },
+    "deterministic_rerun": {"type": ["object", "null"], "additionalProperties": true}
+  }
+}

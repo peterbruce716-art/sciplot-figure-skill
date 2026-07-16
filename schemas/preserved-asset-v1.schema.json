@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.preserved_asset.v1",
+  "type": "object",
+  "required": ["schema", "status", "assets"],
+  "properties": {"schema": {"const": "scientificfigure.preserved_asset_report.v1"}, "status": {"enum": ["pass", "failed", "not_applicable"]}, "assets": {"type": "array", "items": {"type": "object", "required": ["element_id", "status"], "properties": {"element_id": {"type": "string"}, "status": {"enum": ["pass", "failed"]}, "asset_path": {"type": "string"}, "asset_sha256": {"type": "string"}, "source_bbox_px": {"type": "array"}, "crop_size_px": {"type": "array"}, "alpha_preserved": {"type": "boolean"}}}}}
+}

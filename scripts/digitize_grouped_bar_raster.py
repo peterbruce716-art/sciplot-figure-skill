@@ -1,0 +1,217 @@
+from __future__ import annotations
+
+import argparse
+import csv
+import hashlib
+import json
+import math
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+from PIL import Image
+
+
+SCHEMA = "scientificfigure.grouped_bar_digitization.v1"
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _runs(values: list[int]) -> list[tuple[int, int]]:
+    if not values:
+        return []
+    result: list[tuple[int, int]] = []
+    start = previous = values[0]
+    for value in values[1:]:
+        if value != previous + 1:
+            result.append((start, previous))
+            start = value
+        previous = value
+    result.append((start, previous))
+    return result
+
+
+def _require_number(value: Any, name: str) -> float:
+    if not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(float(value)):
+        raise ValueError(f"{name} must be a finite number")
+    return float(value)
+
+
+def _validate_config(config: dict[str, Any]) -> None:
+    if config.get("schema") != SCHEMA:
+        raise ValueError(f"config.schema must be {SCHEMA}")
+    panels = config.get("panels")
+    if not isinstance(panels, list) or not panels:
+        raise ValueError("config.panels must be a non-empty list")
+    for panel_index, panel in enumerate(panels):
+        prefix = f"panels[{panel_index}]"
+        if not isinstance(panel, dict) or not panel.get("id"):
+            raise ValueError(f"{prefix}.id must be a non-empty string")
+        bbox = panel.get("plot_bbox_px")
+        if not isinstance(bbox, list) or len(bbox) != 4:
+            raise ValueError(f"{prefix}.plot_bbox_px must contain left, top, right, bottom")
+        left, top, right, bottom = [_require_number(value, f"{prefix}.plot_bbox_px") for value in bbox]
+        if not (left < right and top < bottom):
+            raise ValueError(f"{prefix}.plot_bbox_px must have positive width and height")
+        centers = panel.get("category_centers_px")
+        if not isinstance(centers, list) or not centers:
+            raise ValueError(f"{prefix}.category_centers_px must be a non-empty list")
+        for value in centers:
+            _require_number(value, f"{prefix}.category_centers_px")
+        axis = panel.get("y_axis")
+        if not isinstance(axis, dict):
+            raise ValueError(f"{prefix}.y_axis must be an object")
+        baseline = _require_number(axis.get("pixel_baseline"), f"{prefix}.y_axis.pixel_baseline")
+        pixel_top = _require_number(axis.get("pixel_top"), f"{prefix}.y_axis.pixel_top")
+        value_min = _require_number(axis.get("value_min"), f"{prefix}.y_axis.value_min")
+        value_max = _require_number(axis.get("value_max"), f"{prefix}.y_axis.value_max")
+        if not (pixel_top < baseline and value_min < value_max):
+            raise ValueError(f"{prefix}.y_axis calibration must be increasing")
+        groups = panel.get("groups")
+        if not isinstance(groups, list) or not groups:
+            raise ValueError(f"{prefix}.groups must be a non-empty list")
+        for group_index, group in enumerate(groups):
+            group_prefix = f"{prefix}.groups[{group_index}]"
+            if not isinstance(group, dict) or not group.get("label"):
+                raise ValueError(f"{group_prefix}.label must be a non-empty string")
+            color = group.get("color_rgb")
+            if not isinstance(color, list) or len(color) != 3 or not all(isinstance(item, int) and 0 <= item <= 255 for item in color):
+                raise ValueError(f"{group_prefix}.color_rgb must contain three integers in [0, 255]")
+            _require_number(group.get("offset_px"), f"{group_prefix}.offset_px")
+            width = _require_number(group.get("width_px"), f"{group_prefix}.width_px")
+            if width < 1:
+                raise ValueError(f"{group_prefix}.width_px must be at least 1")
+
+
+def digitize(source: Path, config: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    _validate_config(config)
+    image = np.asarray(Image.open(source).convert("RGB"), dtype=np.float64)
+    height, width = image.shape[:2]
+    rows: list[dict[str, Any]] = []
+    failures: list[dict[str, Any]] = []
+
+    default_tolerance = float(config.get("color_tolerance", 28.0))
+    default_coverage = float(config.get("min_row_coverage", 0.45))
+    default_baseline_tolerance = int(config.get("baseline_tolerance_px", 4))
+    if default_tolerance <= 0 or not 0 < default_coverage <= 1 or default_baseline_tolerance < 0:
+        raise ValueError("color_tolerance, min_row_coverage, and baseline_tolerance_px are invalid")
+
+    for panel in config["panels"]:
+        panel_id = str(panel["id"])
+        left, top, right, bottom = [int(round(value)) for value in panel["plot_bbox_px"]]
+        if left < 0 or top < 0 or right >= width or bottom >= height:
+            raise ValueError(f"panel {panel_id} plot_bbox_px is outside the source image")
+        axis = panel["y_axis"]
+        baseline = float(axis["pixel_baseline"])
+        pixel_top = float(axis["pixel_top"])
+        value_min = float(axis["value_min"])
+        value_max = float(axis["value_max"])
+        units_per_pixel = (value_max - value_min) / (baseline - pixel_top)
+        category_labels = panel.get("category_labels") or [str(index + 1) for index in range(len(panel["category_centers_px"]))]
+        if len(category_labels) != len(panel["category_centers_px"]):
+            raise ValueError(f"panel {panel_id} category_labels must match category_centers_px")
+        tolerance = float(panel.get("color_tolerance", default_tolerance))
+        coverage = float(panel.get("min_row_coverage", default_coverage))
+        baseline_tolerance = int(panel.get("baseline_tolerance_px", default_baseline_tolerance))
+
+        for category_index, (category_label, category_center) in enumerate(zip(category_labels, panel["category_centers_px"], strict=True), start=1):
+            for group in panel["groups"]:
+                bar_width = max(1, int(round(float(group["width_px"]))))
+                bar_center = float(category_center) + float(group["offset_px"])
+                x0 = int(round(bar_center - (bar_width - 1) / 2.0))
+                x1 = x0 + bar_width - 1
+                if x0 < left or x1 > right:
+                    raise ValueError(f"panel {panel_id} category {category_label} group {group['label']} window is outside plot_bbox_px")
+                prototype = np.asarray(group["color_rgb"], dtype=np.float64)
+                crop = image[top : int(round(baseline)) + 1, x0 : x1 + 1]
+                distance = np.linalg.norm(crop - prototype, axis=2)
+                mask = distance <= tolerance
+                row_counts = mask.sum(axis=1)
+                group_coverage = float(group.get("min_row_coverage", coverage))
+                if not 0 < group_coverage <= 1:
+                    raise ValueError(f"group {group['label']} min_row_coverage must be in (0, 1]")
+                minimum_count = max(1, int(math.ceil(bar_width * group_coverage)))
+                qualifying = [top + index for index, count in enumerate(row_counts) if int(count) >= minimum_count]
+                candidate_runs = _runs(qualifying)
+                baseline_floor = int(round(baseline)) - baseline_tolerance
+                touching = [run for run in candidate_runs if run[1] >= baseline_floor]
+                if not touching:
+                    failures.append({"panel": panel_id, "category": str(category_label), "group": str(group["label"]), "reason": "no_color_component_near_baseline"})
+                    continue
+                run_top, run_bottom = max(touching, key=lambda item: (item[1] - item[0] + 1, item[1]))
+                value = value_min + (baseline - run_top) * units_per_pixel
+                run_mask = mask[run_top - top : run_bottom - top + 1]
+                run_pixels = crop[run_top - top : run_bottom - top + 1][run_mask]
+                mean_rgb = [round(float(item), 3) for item in run_pixels.mean(axis=0)] if run_pixels.size else [float(item) for item in prototype]
+                median_coverage = float(np.median(row_counts[run_top - top : run_bottom - top + 1]) / bar_width)
+                bottom_contact = max(0.0, 1.0 - max(0.0, baseline - run_bottom) / max(1.0, baseline_tolerance + 1.0))
+                confidence = round(max(0.0, min(1.0, 0.7 * median_coverage + 0.3 * bottom_contact)), 4)
+                rows.append(
+                    {
+                        "panel": panel_id,
+                        "category": str(category_label),
+                        "category_index": category_index,
+                        "group": str(group["label"]),
+                        "category_center_px": round(float(category_center), 3),
+                        "bar_center_px": round(bar_center, 3),
+                        "bar_left_px": x0,
+                        "bar_right_px": x1,
+                        "top_y_px": run_top,
+                        "bottom_y_px": run_bottom,
+                        "baseline_y_px": baseline,
+                        "value": round(value, 6),
+                        "pixel_uncertainty": 1.0,
+                        "value_uncertainty_from_pixels": round(units_per_pixel, 6),
+                        "mean_r": mean_rgb[0],
+                        "mean_g": mean_rgb[1],
+                        "mean_b": mean_rgb[2],
+                        "confidence": confidence,
+                        "source_strategy": "digitized_raster",
+                    }
+                )
+
+    audit = {
+        "schema": SCHEMA,
+        "source": {"path": source.name, "sha256": _sha256(source), "width_px": width, "height_px": height},
+        "status": "pass" if rows and not failures else "partial" if rows else "failed",
+        "row_count": len(rows),
+        "failures": failures,
+        "calibration": config,
+        "uncertainty_note": "Central values use the detected fill top; value_uncertainty_from_pixels is the mapped magnitude of plus/minus one source pixel.",
+    }
+    return rows, audit
+
+
+def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = list(rows[0]) if rows else ["panel", "category", "group", "value", "source_strategy"]
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Digitize calibrated grouped bars from a raster image.")
+    parser.add_argument("--source", type=Path, required=True)
+    parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument("--csv-out", type=Path, required=True)
+    parser.add_argument("--audit-out", type=Path, required=True)
+    args = parser.parse_args()
+    config = json.loads(args.config.read_text(encoding="utf-8-sig"))
+    rows, audit = digitize(args.source, config)
+    write_csv(args.csv_out, rows)
+    args.audit_out.parent.mkdir(parents=True, exist_ok=True)
+    args.audit_out.write_text(json.dumps(audit, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps({"status": audit["status"], "rows": len(rows), "csv": str(args.csv_out), "audit": str(args.audit_out)}, ensure_ascii=False, indent=2))
+    return 0 if audit["status"] == "pass" else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

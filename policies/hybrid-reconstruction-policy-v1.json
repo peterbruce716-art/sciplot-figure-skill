@@ -1,0 +1,17 @@
+{
+  "schema": "scientificfigure.hybrid_reconstruction_policy.v1",
+  "version": "1.0",
+  "preserved_raster_threshold": 0.62,
+  "primitive_count_scale": 40,
+  "hard_preserve_roles": ["micrograph", "simulation_result"],
+  "weights": {
+    "primitive_count": 0.18,
+    "texture_entropy": 0.22,
+    "color_complexity": 0.12,
+    "ocr_density": 0.08,
+    "irregularity": 0.16,
+    "edit_value": 0.14,
+    "reconstruction_cost": 0.10
+  },
+  "aspect_ratio_tolerance": 0.02
+}

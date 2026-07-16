@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-07-16 v2.7.1 Grouped-Bar Raster Reproduction
+
+- Added explicit-calibration raster digitization for side-by-side, concentric nested, and hybrid nested grouped bars, with CSV and audit JSON outputs.
+- Added optional panel-level legend layout controls and disconnected error-bar rendering through `line_style: none`.
+- Added group-bound `yerr` rendering so grouped-bar uncertainty markers share the exact bar-center geometry.
+- Added schema, semantic-validation, documentation, and regression coverage for the new grouped-bar workflow.
+- Restored the documented `generic_sci` style profile so advisor resolution and package regression remain complete.
+
+## 2026-07-16 v2.7.0 Object Reconstruction and Advisor Closure
+
+- Added object-manifest classification, preserved-raster geometry contracts, semantic connector anchors, two-stage rendering, object masks, region QA, diff mapping, and optional VBA delivery reports.
+- Added chart-decision materialization, non-empty default FigureIntent variables, uncertainty-aware trend recommendations, render-derived policy context, and applied-style reports.
+- Added explicit AI-review patch approval and deterministic-rerun contracts, examples, version checks, and regression tests.
+
 ## 2026-07-16 Grouped-Bar Geometry Fidelity
 
 - Added audited `group_mode`, `group_offset`, `bar_widths`, and `group_offsets` support for side-by-side, nested, and hybrid overlapping grouped bars.

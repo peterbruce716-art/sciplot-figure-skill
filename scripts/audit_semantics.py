@@ -84,11 +84,11 @@ def _expected_style(ptype: str, style: dict[str, Any]) -> dict[str, Any]:
         if key not in style:
             continue
         value = style[key]
-        if key in {"color", "facecolor", "edgecolor"}:
+        if key in {"color", "facecolor", "edgecolor", "errorbar_color"}:
             result[key] = _normalize_color(value)
         elif key == "line_style":
             result[key] = _normalize_linestyle(value)
-        elif key in {"line_width_pt", "marker_size_pt2", "alpha", "bar_width", "group_offset", "capsize", "vmin", "vmax"}:
+        elif key in {"line_width_pt", "marker_size_pt2", "alpha", "bar_width", "group_offset", "capsize", "errorbar_line_width_pt", "errorbar_capsize", "vmin", "vmax"}:
             result[key] = float(value)
         elif key == "bar_widths":
             result[key] = [float(item) for item in value]
@@ -134,6 +134,8 @@ def _plot_semantics(plot: dict[str, Any], *, base_dir: Path | None = None) -> di
             group_item = {"label": group.get("label"), "y_hash": _hash_values(values), "point_count": len(values)}
             if group.get("color") is not None:
                 group_item["color"] = _normalize_color(group.get("color"))
+            if group.get("yerr") is not None:
+                group_item["yerr_hash"] = _hash_values([float(value) for value in group.get("yerr", [])])
             if style.get("alpha") is not None:
                 group_item["alpha"] = float(style["alpha"])
             groups.append(group_item)
@@ -370,6 +372,8 @@ def extract_bar_semantics(patches: list[Any], ptype: str, *, patch_labels: dict[
         first_bar = bars[0]
         group_item: dict[str, Any] = {"label": labels[0] if labels else None, "y_hash": _hash_values(values), "point_count": len(values)}
         group_item["color"] = _normalize_color(first_bar.get_facecolor())
+        if hasattr(first_bar, "_visualspec_group_yerr"):
+            group_item["yerr_hash"] = _hash_values(getattr(first_bar, "_visualspec_group_yerr"))
         edge = _normalize_color(first_bar.get_edgecolor())
         if edge:
             group_item["edgecolor"] = edge
@@ -398,6 +402,10 @@ def extract_bar_semantics(patches: list[Any], ptype: str, *, patch_labels: dict[
             style["group_offset"] = float(getattr(first, "_visualspec_group_offset"))
         if all(hasattr(group_bars[0], "_visualspec_group_center_offset") for _, group_bars in sorted(groups.items())):
             style["group_offsets"] = [float(group_bars[0]._visualspec_group_center_offset) for _, group_bars in sorted(groups.items())]
+        if hasattr(first, "_visualspec_errorbar_color"):
+            style["errorbar_color"] = _normalize_color(first._visualspec_errorbar_color)
+            style["errorbar_line_width_pt"] = float(first._visualspec_errorbar_line_width_pt)
+            style["errorbar_capsize"] = float(first._visualspec_errorbar_capsize)
     alpha = patches[0].get_alpha() if patches else None
     if alpha is not None:
         style["alpha"] = float(alpha)

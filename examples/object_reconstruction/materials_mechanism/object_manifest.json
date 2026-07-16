@@ -1,0 +1,158 @@
+{
+  "schema": "scientificfigure.object_manifest.v1",
+  "schema_version": "1.0",
+  "source": {
+    "path": "source.png",
+    "width_px": 640,
+    "height_px": 360,
+    "sha256": "sha256:5c9d02d5bee788ec0e2dccb82015edf00a3cb0cf1bf66eae830272a48a205c47"
+  },
+  "canvas": {
+    "coordinate_space": "source_pixel",
+    "origin": "top_left"
+  },
+  "manifest_completeness_status": "complete",
+  "elements": [
+    {
+      "id": "step-1",
+      "semantic_role": "process_box",
+      "primitive": "rounded_rectangle",
+      "bucket": "editable_vector",
+      "bbox_px": [
+        50,
+        125,
+        150,
+        95
+      ],
+      "bbox_norm": [
+        0.078125,
+        0.3472222222222222,
+        0.234375,
+        0.2638888888888889
+      ],
+      "z_order": 1,
+      "provenance": "generated",
+      "confidence": 1.0,
+      "style": {
+        "fill": "#DCEAF7",
+        "stroke": "#222222"
+      }
+    },
+    {
+      "id": "step-2",
+      "semantic_role": "process_box",
+      "primitive": "rounded_rectangle",
+      "bucket": "editable_vector",
+      "bbox_px": [
+        245,
+        125,
+        150,
+        95
+      ],
+      "bbox_norm": [
+        0.3828125,
+        0.3472222222222222,
+        0.234375,
+        0.2638888888888889
+      ],
+      "z_order": 2,
+      "provenance": "generated",
+      "confidence": 1.0,
+      "style": {
+        "fill": "#E5F2E0",
+        "stroke": "#222222"
+      }
+    },
+    {
+      "id": "step-3",
+      "semantic_role": "process_box",
+      "primitive": "rounded_rectangle",
+      "bucket": "editable_vector",
+      "bbox_px": [
+        440,
+        125,
+        150,
+        95
+      ],
+      "bbox_norm": [
+        0.6875,
+        0.3472222222222222,
+        0.234375,
+        0.2638888888888889
+      ],
+      "z_order": 3,
+      "provenance": "generated",
+      "confidence": 1.0,
+      "style": {
+        "fill": "#F8E5D5",
+        "stroke": "#222222"
+      }
+    },
+    {
+      "id": "arrow-1",
+      "semantic_role": "connector",
+      "primitive": "connector",
+      "bucket": "editable_vector",
+      "bbox_px": [
+        200,
+        172,
+        45,
+        1
+      ],
+      "bbox_norm": [
+        0.3125,
+        0.4777777777777778,
+        0.0703125,
+        0.002777777777777778
+      ],
+      "z_order": 4,
+      "provenance": "generated",
+      "confidence": 1.0,
+      "source_anchor": {
+        "element_id": "step-1",
+        "side": "right",
+        "offset": 0.5
+      },
+      "target_anchor": {
+        "element_id": "step-2",
+        "side": "left",
+        "offset": 0.5
+      },
+      "routing": "direct",
+      "arrowhead": "triangle"
+    },
+    {
+      "id": "arrow-2",
+      "semantic_role": "connector",
+      "primitive": "connector",
+      "bucket": "editable_vector",
+      "bbox_px": [
+        395,
+        172,
+        45,
+        1
+      ],
+      "bbox_norm": [
+        0.6171875,
+        0.4777777777777778,
+        0.0703125,
+        0.002777777777777778
+      ],
+      "z_order": 5,
+      "provenance": "generated",
+      "confidence": 1.0,
+      "source_anchor": {
+        "element_id": "step-2",
+        "side": "right",
+        "offset": 0.5
+      },
+      "target_anchor": {
+        "element_id": "step-3",
+        "side": "left",
+        "offset": 0.5
+      },
+      "routing": "direct",
+      "arrowhead": "triangle"
+    }
+  ]
+}

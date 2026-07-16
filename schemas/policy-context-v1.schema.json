@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.policy_context.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "source", "panel_count", "artist_count", "has_dual_y", "has_3d", "text_artist_count"],
+  "properties": {
+    "schema": {"const": "scientificfigure.policy_context.v1"},
+    "schema_version": {"const": "1.0"},
+    "source": {"const": "rendered_visualspec"},
+    "panel_count": {"type": "integer", "minimum": 0},
+    "artist_count": {"type": "integer", "minimum": 0},
+    "has_dual_y": {"type": "boolean"},
+    "y_axes": {"type": "array", "items": {"type": "string"}},
+    "has_3d": {"type": "boolean"},
+    "text_artist_count": {"type": "integer", "minimum": 0},
+    "font_family": {"type": ["string", "null"]},
+    "font_size": {"type": ["number", "null"]},
+    "uncertainty_semantics": {},
+    "deterministic_qa": {"type": "object", "additionalProperties": true}
+  }
+}

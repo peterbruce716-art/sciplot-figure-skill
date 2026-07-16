@@ -57,3 +57,26 @@ def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]
         else:
             merged[key] = value
     return merged
+
+
+def build_priority_variables(
+    x: str | None,
+    y: str | None,
+    group: str | list[str] | None = None,
+    uncertainty_columns: list[str] | None = None,
+) -> list[str]:
+    """Build a non-empty, stable FigureIntent variable order without inventing columns."""
+    values: list[str] = []
+    for value in [x, y]:
+        if value and value not in values:
+            values.append(value)
+    groups = [group] if isinstance(group, str) else (group or [])
+    for value in groups:
+        if value and value not in values:
+            values.append(value)
+    for value in uncertainty_columns or []:
+        if value and value not in values:
+            values.append(value)
+    if not values:
+        raise ValueError("FigureIntent requires at least one priority variable; provide --x and --y or an intent file")
+    return values

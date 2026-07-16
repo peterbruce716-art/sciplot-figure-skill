@@ -57,6 +57,12 @@ For `grouped_bar`, the default remains side-by-side groups using `bar_width`. Th
 
 Renderers must preserve these observed widths and offsets in semantic extraction so nested or hybrid overlap remains auditable.
 
+For bar-top uncertainty, add separate `errorbar` plots at the bar centers and set `style.line_style` to `none`; this prevents Matplotlib from connecting independent bar uncertainties with a misleading trend line.
+
+When the uncertainties belong directly to grouped bars, prefer a `yerr` array inside each group. The grouped-bar style accepts `errorbar_color`, `errorbar_line_width_pt`, and `errorbar_capsize`; the renderer then shares the exact side-by-side, concentric, or hybrid bar centers with the uncertainty markers.
+
+Panels may define an optional `legend` object for raster-faithful placement without changing plot semantics. Supported fields are `visible`, `frameon`, `font_size_pt`, `loc`, `ncol`, `bbox_to_anchor`, `handle_length`, `handle_height`, `column_spacing`, `label_spacing`, `border_pad`, and `handle_text_pad`. Omitted fields preserve the previous renderer defaults.
+
 Official generic annotation types:
 
 - `text`

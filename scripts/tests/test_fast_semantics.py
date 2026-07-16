@@ -216,6 +216,36 @@ class FastSemanticsTests(ScientificFigureReproductionTestBase):
             self.assertEqual([0.7, 0.25, 0.18], [round(value, 6) for value in style["bar_widths"]])
             self.assertEqual([0.0, -0.12, 0.12], [round(value, 6) for value in style["group_offsets"]])
 
+    def test_grouped_bar_errorbars_can_disable_connecting_line_and_configure_legend(self) -> None:
+        renderer = load_module("render_visualspec_matplotlib", SCRIPTS / "render_visualspec_matplotlib.py")
+        auditor = load_module("audit_semantics", SCRIPTS / "audit_semantics.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = self._single_plot_spec({
+                "type": "grouped_bar",
+                "data": {"x": [1, 2], "groups": [{"label": "B", "y": [4, 5], "yerr": [0.2, 0.3], "color": "#cc9966"}]},
+                "style": {"bar_width": 0.25, "errorbar_color": "#444444", "errorbar_line_width_pt": 0.5, "errorbar_capsize": 1.5},
+            })
+            spec["panels"][0]["plots"].append({
+                "type": "errorbar",
+                "data": {"x": [1, 2], "y": [4, 5], "yerr": [0.2, 0.2]},
+                "style": {"color": "#444444", "line_width_pt": 0.5, "line_style": "none", "capsize": 1.5},
+            })
+            spec["panels"][0]["legend"] = {
+                "loc": "upper center", "ncol": 1, "font_size_pt": 6,
+                "bbox_to_anchor": [0.5, 1.0], "handle_length": 1.0,
+            }
+            spec_path = root / "bar_errorbar.json"
+            spec_path.write_text(json.dumps(spec), encoding="utf-8")
+            out = root / "rendered"
+            renderer.render_file(spec_path, out)
+            self.assertEqual("pass", auditor.audit_semantics(spec_path, out / "render_semantics.json")["overall"])
+            semantics = json.loads((out / "render_semantics.json").read_text(encoding="utf-8"))
+            bar = semantics["figures"]["figure_1"]["panels"]["A"]["plots"][0]
+            self.assertIn("yerr_hash", bar["groups"][0])
+            errorbar = semantics["figures"]["figure_1"]["panels"]["A"]["plots"][1]
+            self.assertEqual("none", errorbar["style"]["line_style"])
+
     def test_v25_crossing_fill_between_preserves_y1_y2_identity(self) -> None:
         renderer = load_module("render_visualspec_matplotlib", SCRIPTS / "render_visualspec_matplotlib.py")
         auditor = load_module("audit_semantics", SCRIPTS / "audit_semantics.py")

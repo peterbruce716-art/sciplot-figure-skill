@@ -1,5 +1,5 @@
 interface:
   display_name: "Scientific Figure Reproduction"
-  version: "2.6.0"
+  version: "2.7.1"
   short_description: "Advise, reproduce, and validate scientific figures with deterministic bundle gates."
   default_prompt: "Use $scientific-figure-reproduction to profile the data, choose a defensible chart, resolve fonts and style, render with VisualSpec, and verify the portable bundle."

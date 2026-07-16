@@ -1,0 +1,35 @@
+{
+  "schema": "scientificfigure.reconstruction_benchmark.v1",
+  "version": "2.7.0",
+  "date": "2026-07-16",
+  "runtime": "Python 3.14",
+  "cases": [
+    {
+      "id": "materials_mechanism",
+      "manifest_validation": "pass",
+      "geometry_gate": "pass",
+      "object_qa": "pass",
+      "raster_vector_export": "pass",
+      "office_source_generation": "generated_not_runtime_verified"
+    },
+    {
+      "id": "technical_route",
+      "manifest_validation": "pass",
+      "geometry_gate": "not_executed_in_release_check",
+      "object_qa": "not_executed_in_release_check"
+    },
+    {
+      "id": "micrograph_annotation",
+      "manifest_validation": "pass",
+      "geometry_gate": "pass",
+      "preserved_geometry": "pass",
+      "object_qa": "pass",
+      "raster_vector_export": "pass"
+    }
+  ],
+  "limitations": [
+    "The sources are synthetic and do not measure generalization to arbitrary paper figures.",
+    "Office runtime verification was not performed.",
+    "No model-based visual review provider was invoked."
+  ]
+}

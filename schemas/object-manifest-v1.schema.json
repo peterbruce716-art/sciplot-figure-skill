@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.object_manifest.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "source", "canvas", "elements", "manifest_completeness_status"],
+  "properties": {
+    "schema": {"const": "scientificfigure.object_manifest.v1"},
+    "schema_version": {"const": "1.0"},
+    "source": {"type": "object", "additionalProperties": false, "required": ["path", "width_px", "height_px", "sha256"], "properties": {"path": {"type": "string"}, "width_px": {"type": "integer", "minimum": 1}, "height_px": {"type": "integer", "minimum": 1}, "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}},
+    "canvas": {"type": "object", "additionalProperties": false, "required": ["coordinate_space", "origin"], "properties": {"coordinate_space": {"const": "source_pixel"}, "origin": {"const": "top_left"}}},
+    "manifest_completeness_status": {"enum": ["complete", "complete_with_warnings", "incomplete"]},
+    "elements": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/element"}}
+  },
+  "$defs": {
+    "bbox": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "number"}},
+    "anchor": {"type": "object", "additionalProperties": false, "required": ["element_id", "side", "offset"], "properties": {"element_id": {"type": ["string", "null"]}, "side": {"enum": ["left", "right", "top", "bottom", "center", "custom"]}, "offset": {"type": "number", "minimum": 0, "maximum": 1}, "point_px": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}}}},
+    "element": {"type": "object", "additionalProperties": false, "required": ["id", "semantic_role", "primitive", "bucket", "bbox_px", "bbox_norm", "z_order", "provenance", "confidence"], "properties": {
+      "id": {"type": "string", "minLength": 1},
+      "panel_id": {"type": ["string", "null"]},
+      "semantic_role": {"type": "string"},
+      "primitive": {"type": "string"},
+      "bucket": {"enum": ["editable_vector", "preserved_raster", "background"]},
+      "bbox_px": {"$ref": "#/$defs/bbox"},
+      "bbox_norm": {"$ref": "#/$defs/bbox"},
+      "style": {"type": "object", "additionalProperties": true},
+      "text": {"type": ["object", "null"], "additionalProperties": true},
+      "points_px": {"type": "array", "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}}},
+      "source_anchor": {"$ref": "#/$defs/anchor"},
+      "target_anchor": {"$ref": "#/$defs/anchor"},
+      "observed_endpoints_px": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}}},
+      "via_points_px": {"type": "array", "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}}},
+      "routing": {"enum": ["direct", "orthogonal", "polyline"]},
+      "arrowhead": {"type": "string"},
+      "self_connection_reason": {"type": "string"},
+      "z_order": {"type": "integer"},
+      "provenance": {"enum": ["observed", "inferred", "user_confirmed", "generated"]},
+      "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+      "preserve_reason": {"type": "string"},
+      "asset_path": {"type": "string"},
+      "asset_sha256": {"type": "string"},
+      "rotation_deg": {"type": "number"},
+      "classification_features": {"type": "object", "additionalProperties": true},
+      "classification_override": {"enum": ["editable_vector", "preserved_raster", "background"]}
+    }}
+  }
+}

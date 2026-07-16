@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.editability_report.v1",
+  "type": "object",
+  "required": ["schema", "total_elements", "editable_vector_count", "preserved_raster_count", "background_count", "editable_ratio", "status"],
+  "properties": {"schema": {"const": "scientificfigure.editability_report.v1"}, "total_elements": {"type": "integer", "minimum": 0}, "editable_vector_count": {"type": "integer", "minimum": 0}, "preserved_raster_count": {"type": "integer", "minimum": 0}, "background_count": {"type": "integer", "minimum": 0}, "editable_ratio": {"type": "number", "minimum": 0, "maximum": 1}, "preserved_elements": {"type": "array"}, "structural_not_editable": {"type": "array"}, "whole_canvas_rasters": {"type": "array"}, "blockers": {"type": "array"}, "status": {"enum": ["pass", "pass_with_warnings", "failed"]}}
+}
