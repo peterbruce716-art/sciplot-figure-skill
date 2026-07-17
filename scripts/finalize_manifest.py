@@ -149,6 +149,9 @@ def finalize_manifest(
     runner_path: Path | None = None,
     semantic_audit_path: Path | None = None,
     vector_validation_path: Path | None = None,
+    canvas_safety_path: Path | None = None,
+    boxed_text_safety_path: Path | None = None,
+    plot_geometry_safety_path: Path | None = None,
     panel_score_dir: Path | None = None,
     checksums_path: Path | None = None,
 ) -> dict[str, Any]:
@@ -158,6 +161,9 @@ def finalize_manifest(
     score = make_score_portable(raw_score, project_root) if raw_score else None
     semantic_audit = _load_optional_json(semantic_audit_path)
     vector_validation = _load_optional_json(vector_validation_path)
+    canvas_safety = _load_optional_json(canvas_safety_path)
+    boxed_text_safety = _load_optional_json(boxed_text_safety_path)
+    plot_geometry_safety = _load_optional_json(plot_geometry_safety_path)
     panel_scores = _load_panel_scores(panel_score_dir)
     manifest["project_root"] = "."
     companion_path = project_root / "companion_artifacts.json"
@@ -291,6 +297,15 @@ def finalize_manifest(
     if vector_validation:
         manifest["vector_validation"] = vector_validation
         manifest["vector_validation_status"] = "pass" if vector_validation.get("status") == "pass" else "failed"
+    if canvas_safety:
+        manifest["canvas_safety"] = canvas_safety
+        manifest["canvas_safety_status"] = "pass" if canvas_safety.get("status") == "pass" else "failed"
+    if boxed_text_safety:
+        manifest["boxed_text_safety"] = boxed_text_safety
+        manifest["boxed_text_safety_status"] = "pass" if boxed_text_safety.get("status") == "pass" else "failed"
+    if plot_geometry_safety:
+        manifest["plot_geometry_safety"] = plot_geometry_safety
+        manifest["plot_geometry_safety_status"] = "pass" if plot_geometry_safety.get("status") == "pass" else "failed"
     if checksums_path:
         manifest["checksums"] = portable_path(checksums_path, project_root)
 
@@ -332,6 +347,9 @@ def main() -> int:
     parser.add_argument("--runner", type=Path)
     parser.add_argument("--semantic-audit", type=Path)
     parser.add_argument("--vector-validation", type=Path)
+    parser.add_argument("--canvas-safety", type=Path)
+    parser.add_argument("--boxed-text-safety", type=Path)
+    parser.add_argument("--plot-geometry-safety", type=Path)
     parser.add_argument("--panel-score-dir", type=Path)
     parser.add_argument("--checksums", type=Path)
     args = parser.parse_args()
@@ -347,6 +365,9 @@ def main() -> int:
         runner_path=args.runner,
         semantic_audit_path=args.semantic_audit,
         vector_validation_path=args.vector_validation,
+        canvas_safety_path=args.canvas_safety,
+        boxed_text_safety_path=args.boxed_text_safety,
+        plot_geometry_safety_path=args.plot_geometry_safety,
         panel_score_dir=args.panel_score_dir,
         checksums_path=args.checksums,
     )

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-07-18 v2.7.1 Safety-Gate Update
+
+- Added fail-closed boxed-text checks for clipped legend and annotation glyphs, including top-edge clipping.
+- Added canvas-edge checks that require declared margins around rendered content.
+- Added plot-geometry checks for complete bottom and left axis spines, target plot bounds, and axis-origin alignment.
+- Integrated all three reports into reproduction bundles and final manifests, with regression tests for incomplete axes and shifted plot geometry.
+- Aligned GitHub Actions with the package's Python 3.14 runtime contract.
+
 ## 2026-07-16 v2.7.1 Grouped-Bar Raster Reproduction
 
 - Added explicit-calibration raster digitization for side-by-side, concentric nested, and hybrid nested grouped bars, with CSV and audit JSON outputs.

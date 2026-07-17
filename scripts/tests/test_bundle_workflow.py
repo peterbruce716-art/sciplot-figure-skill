@@ -8,6 +8,16 @@ class BundleWorkflowTests(ScientificFigureReproductionTestBase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             spec = self._line_spec()
+            spec["panels"][0]["bbox_normalized"] = [0.22, 0.18, 0.68, 0.72]
+            spec["qa_policy"] = {
+                "canvas_safety": {
+                    "enabled": True,
+                    "margin_px": 5,
+                    "background": "#ffffff",
+                    "tolerance": 10,
+                    "required_edges": ["top", "right", "bottom", "left"],
+                }
+            }
             spec_path = root / "visualspec.json"
             spec_path.write_text(json.dumps(spec), encoding="utf-8")
             baseline = root / "baseline"
@@ -33,6 +43,9 @@ class BundleWorkflowTests(ScientificFigureReproductionTestBase):
             self.assertEqual("strict_pass", manifest["quality_status"])
             self.assertEqual("pass", manifest["vector_validation_status"])
             self.assertEqual("pass", manifest["semantic_reconstruction_status"])
+            self.assertEqual("pass", manifest["canvas_safety_status"])
+            self.assertEqual("pass", manifest["canvas_safety"]["status"])
+            self.assertTrue((out_dir / "qa" / "canvas_safety.json").exists())
             self.assertIn("figure_1", manifest["per_figure_scripts"])
             self.assertFalse(Path(manifest["per_figure_scripts"]["figure_1"]).is_absolute())
             self.assertFalse(Path(manifest["figures"]["figure_1"]["exports"]["png"]).is_absolute())
@@ -42,6 +55,240 @@ class BundleWorkflowTests(ScientificFigureReproductionTestBase):
             self.assertTrue((out_dir / "runtime" / "scientific_figure_reproduction" / "render.py").exists())
             self.assertTrue((out_dir / "outputs" / "render.png").exists())
             self.assertTrue((out_dir / "comparison" / "difference.png").exists())
+
+    def test_canvas_safety_fails_bundle_before_manifest_finalization(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = self._line_spec()
+            spec["qa_policy"] = {
+                "canvas_safety": {
+                    "enabled": True,
+                    "margin_px": 150,
+                    "background": "#ffffff",
+                    "tolerance": 10,
+                    "required_edges": ["top", "right", "bottom", "left"],
+                }
+            }
+            spec_path = root / "visualspec.json"
+            spec_path.write_text(json.dumps(spec), encoding="utf-8")
+            out_dir = root / "out"
+            completed = subprocess.run(
+                [sys.executable, str(SCRIPTS / "run_reproduction.py"), "--spec", str(spec_path), "--out-dir", str(out_dir)],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertNotEqual(0, completed.returncode)
+            report = json.loads((out_dir / "run_report.json").read_text(encoding="utf-8"))
+            canvas_report = json.loads((out_dir / "qa" / "canvas_safety.json").read_text(encoding="utf-8"))
+            self.assertEqual("canvas_safety", report["stage"])
+            self.assertEqual("required_canvas_margin_not_clear", report["failure_type"])
+            self.assertEqual("failed", canvas_report["status"])
+            self.assertFalse((out_dir / "reproduction_manifest.json").exists())
+
+    def test_boxed_text_safety_fails_bundle_before_manifest_finalization(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = self._line_spec()
+            spec["qa_policy"] = {
+                "boxed_text_safety": {
+                    "enabled": True,
+                    "regions": [
+                        {
+                            "id": "missing_legend_row",
+                            "bbox_px": [1, 1, 20, 20],
+                            "text_color": "#000000",
+                            "color_tolerance": 30,
+                            "border_inset_px": 1,
+                            "min_ink_height_px": 8,
+                        }
+                    ],
+                }
+            }
+            spec_path = root / "visualspec.json"
+            spec_path.write_text(json.dumps(spec), encoding="utf-8")
+            out_dir = root / "out"
+            completed = subprocess.run(
+                [sys.executable, str(SCRIPTS / "run_reproduction.py"), "--spec", str(spec_path), "--out-dir", str(out_dir)],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertNotEqual(0, completed.returncode)
+            report = json.loads((out_dir / "run_report.json").read_text(encoding="utf-8"))
+            boxed_report = json.loads((out_dir / "qa" / "boxed_text_safety.json").read_text(encoding="utf-8"))
+            self.assertEqual("boxed_text_safety", report["stage"])
+            self.assertEqual("boxed_text_ink_or_padding_failed", report["failure_type"])
+            self.assertEqual("failed", boxed_report["status"])
+            self.assertEqual(["missing_legend_row"], boxed_report["failed_regions"])
+            self.assertFalse((out_dir / "reproduction_manifest.json").exists())
+
+    def test_boxed_text_safety_pass_is_recorded_in_final_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = self._line_spec()
+            spec["qa_policy"] = {
+                "boxed_text_safety": {
+                    "enabled": True,
+                    "regions": [
+                        {
+                            "id": "declared_dark_ink",
+                            "bbox_px": [40, 30, 560, 370],
+                            "text_color": "#000000",
+                            "color_tolerance": 100,
+                            "border_inset_px": 1,
+                            "min_ink_height_px": 1,
+                        }
+                    ],
+                }
+            }
+            spec_path = root / "visualspec.json"
+            spec_path.write_text(json.dumps(spec), encoding="utf-8")
+            out_dir = root / "out"
+            completed = subprocess.run(
+                [sys.executable, str(SCRIPTS / "run_reproduction.py"), "--spec", str(spec_path), "--out-dir", str(out_dir)],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
+            boxed_report = json.loads((out_dir / "qa" / "boxed_text_safety.json").read_text(encoding="utf-8"))
+            manifest = json.loads((out_dir / "reproduction_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual("pass", boxed_report["status"])
+            self.assertEqual("pass", manifest["boxed_text_safety_status"])
+            self.assertEqual("pass", manifest["boxed_text_safety"]["status"])
+
+    def test_plot_geometry_safety_fails_bundle_before_manifest_finalization(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = self._line_spec()
+            spec["qa_policy"] = {
+                "plot_geometry_safety": {
+                    "enabled": True,
+                    "regions": [
+                        {
+                            "id": "wrong_panel_bbox",
+                            "expected_bbox_px": [0, 0, 1, 1],
+                            "max_edge_error_px": 1,
+                            "selector": {
+                                "min_rgb": [0, 0, 0],
+                                "max_rgb": [100, 100, 100],
+                                "background": "#ffffff",
+                                "min_background_distance": 10,
+                            },
+                        }
+                    ],
+                }
+            }
+            spec_path = root / "visualspec.json"
+            spec_path.write_text(json.dumps(spec), encoding="utf-8")
+            out_dir = root / "out"
+            completed = subprocess.run(
+                [sys.executable, str(SCRIPTS / "run_reproduction.py"), "--spec", str(spec_path), "--out-dir", str(out_dir)],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertNotEqual(0, completed.returncode)
+            report = json.loads((out_dir / "run_report.json").read_text(encoding="utf-8"))
+            geometry = json.loads((out_dir / "qa" / "plot_geometry_safety.json").read_text(encoding="utf-8"))
+            self.assertEqual("plot_geometry_safety", report["stage"])
+            self.assertEqual("plot_region_bbox_mismatch", report["failure_type"])
+            self.assertEqual("failed", geometry["status"])
+            self.assertFalse((out_dir / "reproduction_manifest.json").exists())
+
+    def test_plot_geometry_safety_pass_is_recorded_in_final_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = self._line_spec()
+            spec["qa_policy"] = {
+                "plot_geometry_safety": {
+                    "enabled": True,
+                    "regions": [
+                        {
+                            "id": "broad_geometry_contract",
+                            "expected_bbox_px": [0, 0, 0, 0],
+                            "max_edge_error_px": 1000,
+                            "selector": {
+                                "min_rgb": [0, 0, 0],
+                                "max_rgb": [100, 100, 100],
+                                "background": "#ffffff",
+                                "min_background_distance": 10,
+                            },
+                        }
+                    ],
+                }
+            }
+            spec_path = root / "visualspec.json"
+            spec_path.write_text(json.dumps(spec), encoding="utf-8")
+            out_dir = root / "out"
+            completed = subprocess.run(
+                [sys.executable, str(SCRIPTS / "run_reproduction.py"), "--spec", str(spec_path), "--out-dir", str(out_dir)],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
+            geometry = json.loads((out_dir / "qa" / "plot_geometry_safety.json").read_text(encoding="utf-8"))
+            manifest = json.loads((out_dir / "reproduction_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual("pass", geometry["status"])
+            self.assertEqual("pass", manifest["plot_geometry_safety_status"])
+            self.assertEqual("pass", manifest["plot_geometry_safety"]["status"])
+
+    def test_incomplete_axis_spines_fail_bundle_before_manifest_finalization(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = self._line_spec()
+            spec["qa_policy"] = {
+                "plot_geometry_safety": {
+                    "enabled": True,
+                    "regions": [
+                        {
+                            "id": "axis_spine_contract",
+                            "expected_bbox_px": [0, 0, 0, 0],
+                            "max_edge_error_px": 1000,
+                            "selector": {
+                                "min_rgb": [0, 0, 0],
+                                "max_rgb": [100, 100, 100],
+                                "background": "#ffffff",
+                                "min_background_distance": 10,
+                            },
+                            "axis_spines": {
+                                "expected_origin_px": [0, 0],
+                                "expected_horizontal_end_px": 1,
+                                "expected_vertical_top_px": 0,
+                                "search_radius_px": 0,
+                                "max_position_error_px": 0,
+                                "max_rgb": [100, 100, 100],
+                                "min_horizontal_coverage_ratio": 1.0,
+                                "min_vertical_coverage_ratio": 1.0,
+                            },
+                        }
+                    ],
+                }
+            }
+            spec_path = root / "visualspec.json"
+            spec_path.write_text(json.dumps(spec), encoding="utf-8")
+            out_dir = root / "out"
+            completed = subprocess.run(
+                [sys.executable, str(SCRIPTS / "run_reproduction.py"), "--spec", str(spec_path), "--out-dir", str(out_dir)],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            self.assertNotEqual(0, completed.returncode)
+            report = json.loads((out_dir / "run_report.json").read_text(encoding="utf-8"))
+            geometry = json.loads((out_dir / "qa" / "plot_geometry_safety.json").read_text(encoding="utf-8"))
+            self.assertEqual("plot_geometry_safety", report["stage"])
+            self.assertEqual("failed", geometry["status"])
+            self.assertIn("axis_spines_failed", geometry["regions"][0]["failure_reasons"])
+            self.assertFalse((out_dir / "reproduction_manifest.json").exists())
 
     def test_run_reproduction_strict_failure_is_incomplete(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -321,4 +568,3 @@ if __name__ == "__main__":
             payload["environment"]["python"] = "0.0.0"
             policy.write_text(json.dumps(payload), encoding="utf-8")
             self.assertEqual("failed", env_policy.verify_environment_policy(policy)["status"])
-

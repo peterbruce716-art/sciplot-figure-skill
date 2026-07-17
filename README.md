@@ -15,6 +15,9 @@ Core capabilities:
 - PNG, SVG, and PDF export
 - semantic figure auditing
 - SVG/PDF vector validation
+- fixed-canvas edge safety validation for labels, legends, and callouts
+- fixed-canvas plot-region and visible axis-spine validation for edges, coverage, and origin placement
+- boxed-text glyph and padding validation for legend rows and callouts
 - immutable shared sources for split curves and curve-derived fills
 - native PDF figure clipping with target-region path or image hashing
 - portable reproduction bundles
@@ -120,6 +123,9 @@ A completed output directory includes:
 - `render.py`, `reproduce.py`, and `verify.py`
 - `outputs/render.png`, `outputs/render.svg`, and `outputs/render.pdf`
 - semantic, vector, portability, and checksum reports
+- optional `qa/canvas_safety.json` when `qa_policy.canvas_safety.enabled` is true
+- optional `qa/plot_geometry_safety.json` when `qa_policy.plot_geometry_safety.enabled` is true
+- optional `qa/boxed_text_safety.json` when `qa_policy.boxed_text_safety.enabled` is true
 - environment metadata and a bundle lock
 - `reproduction_manifest.json` and `run_report.json`
 

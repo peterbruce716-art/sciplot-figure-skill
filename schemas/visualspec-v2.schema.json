@@ -35,7 +35,12 @@
     },
     "qa_policy": {
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": true,
+      "properties": {
+        "canvas_safety": {"$ref": "#/$defs/canvas_safety_policy"},
+        "boxed_text_safety": {"$ref": "#/$defs/boxed_text_safety_policy"},
+        "plot_geometry_safety": {"$ref": "#/$defs/plot_geometry_safety_policy"}
+      }
     },
     "qa_regions": {
       "type": "object",
@@ -87,6 +92,168 @@
     }
   },
   "$defs": {
+    "plot_geometry_safety_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "regions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/plot_geometry_region"}
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"enabled": {"const": true}}},
+          "then": {"required": ["regions"]}
+        }
+      ]
+    },
+    "plot_geometry_region": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "expected_bbox_px", "selector"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "expected_bbox_px": {"$ref": "#/$defs/pixel_quad"},
+        "search_bbox_px": {"$ref": "#/$defs/pixel_quad"},
+        "max_edge_error_px": {"type": "integer", "minimum": 0},
+        "axis_spines": {"$ref": "#/$defs/axis_spines_guard"},
+        "selector": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "min_rgb": {"$ref": "#/$defs/rgb_triplet"},
+            "max_rgb": {"$ref": "#/$defs/rgb_triplet"},
+            "min_channel_spread": {"type": "integer", "minimum": 0, "maximum": 255},
+            "background": {"type": "string", "minLength": 1},
+            "min_background_distance": {"type": "integer", "minimum": 0, "maximum": 255},
+            "min_column_matches": {"type": "integer", "minimum": 1},
+            "min_row_matches": {"type": "integer", "minimum": 1}
+          }
+        }
+      }
+    },
+    "axis_spines_guard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expected_origin_px",
+        "expected_horizontal_end_px",
+        "expected_vertical_top_px"
+      ],
+      "properties": {
+        "expected_origin_px": {"$ref": "#/$defs/pixel_pair"},
+        "expected_horizontal_end_px": {"type": "integer", "minimum": 0},
+        "expected_vertical_top_px": {"type": "integer", "minimum": 0},
+        "search_radius_px": {"type": "integer", "minimum": 0},
+        "max_position_error_px": {"type": "integer", "minimum": 0},
+        "max_rgb": {"$ref": "#/$defs/rgb_triplet"},
+        "min_horizontal_coverage_ratio": {"type": "number", "minimum": 0, "maximum": 1},
+        "min_vertical_coverage_ratio": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "pixel_pair": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {"type": "number"}
+    },
+    "pixel_quad": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {"type": "number"}
+    },
+    "rgb_triplet": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"type": "integer", "minimum": 0, "maximum": 255}
+    },
+    "boxed_text_safety_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "regions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/boxed_text_region"}
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"enabled": {"const": true}}},
+          "then": {"required": ["regions"]}
+        }
+      ]
+    },
+    "boxed_text_region": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text_color", "min_ink_height_px"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "bbox_px": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {"type": "number"}
+        },
+        "bbox_normalized": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {"type": "number", "minimum": 0, "maximum": 1}
+        },
+        "text_color": {"type": "string", "minLength": 1},
+        "color_tolerance": {"type": "integer", "minimum": 0, "maximum": 255},
+        "border_inset_px": {"type": "integer", "minimum": 1},
+        "min_ink_height_px": {"type": "integer", "minimum": 1},
+        "min_top_padding_px": {"type": "integer", "minimum": 0},
+        "min_bottom_padding_px": {"type": "integer", "minimum": 0},
+        "reference_glyph_check": {"type": "boolean"},
+        "text": {"type": "string", "minLength": 1},
+        "font_family": {"type": "string", "minLength": 1},
+        "font_size_px": {"type": "integer", "minimum": 1},
+        "font_weight": {"enum": ["normal", "bold"]},
+        "min_reference_height_ratio": {"type": "number", "minimum": 0, "maximum": 2},
+        "min_upper_ink_profile_ratio": {"type": "number", "minimum": 0, "maximum": 2}
+      },
+      "oneOf": [
+        {"required": ["bbox_px"]},
+        {"required": ["bbox_normalized"]}
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {"reference_glyph_check": {"const": true}},
+            "required": ["reference_glyph_check"]
+          },
+          "then": {"required": ["text", "font_family", "font_size_px"]}
+        }
+      ]
+    },
+    "canvas_safety_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "margin_px": {"type": "integer", "minimum": 1},
+        "background": {"type": "string", "minLength": 1},
+        "tolerance": {"type": "integer", "minimum": 0, "maximum": 255},
+        "required_edges": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["top", "right", "bottom", "left"]}
+        }
+      }
+    },
     "axis": {
       "type": "object",
       "additionalProperties": false,

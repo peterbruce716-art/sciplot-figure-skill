@@ -45,6 +45,13 @@ def build_spec(figures: list[str], output_dir: str, source_dir: str) -> dict[str
             "visual_backend": "python_matplotlib",
             "completion_without_visual_pass": "forbidden",
             "pixel_trace_default": "forbidden",
+            "canvas_safety": {
+                "enabled": True,
+                "margin_px": 5,
+                "background": "#ffffff",
+                "tolerance": 10,
+                "required_edges": ["top", "right", "bottom", "left"],
+            },
         },
     }
 

@@ -83,6 +83,12 @@ Use separate QA fields:
 
 Root manifests use `run_status`, `qa_execution_status`, `quality_status`, and final `status`; `qa_status` is compatibility only.
 
+For fixed canvases that require a blank border, declare `qa_policy.canvas_safety` with `enabled`, `margin_px`, `background`, `tolerance`, and `required_edges`. The bundle runner fails before manifest finalization if non-background pixels enter a required edge band and records passing evidence as root-level `canvas_safety` / `canvas_safety_status`. Intentional full bleed must disable the policy or omit those edges from `required_edges`.
+
+For fixed-canvas reproductions whose axes rectangle must match a reference, declare `qa_policy.plot_geometry_safety.enabled` plus one or more regions. Each region requires an inclusive `expected_bbox_px`, may narrow detection with `search_bbox_px`, and sets `max_edge_error_px`. The RGB selector identifies the plot background; `min_column_matches` and `min_row_matches` prevent thin arrows or annotations from expanding the measured bbox. When visible axes matter, add `axis_spines` with `expected_origin_px`, horizontal/vertical extents, a dark-pixel threshold, and minimum coverage ratios. This separately proves that the bottom and left axes actually meet; a matching background bbox is insufficient. Passing evidence is recorded as root-level `plot_geometry_safety` / `plot_geometry_safety_status`.
+
+For boxed annotations and legends, declare `qa_policy.boxed_text_safety.enabled` plus one `regions` entry per text item. A region uses either `[left, top, right, bottom]` pixel coordinates or normalized `[left, top, width, height]` coordinates. Minimum ink height and vertical padding are deterministic; `reference_glyph_check` additionally requires `text`, `font_family`, and `font_size_px` and fails closed when the font cannot be resolved. Passing evidence is recorded as root-level `boxed_text_safety` / `boxed_text_safety_status`.
+
 Final manifests should use project-root-relative paths for sources, specs, scripts, runtime, QA reports, checksums, and exports when those files are inside the project. `run_reproduction.py` treats `--out-dir` as a portable bundle root and copies external source/spec/data dependencies into it unless the dependency is intentionally external and documented.
 
 ## Strict Semantic Gate

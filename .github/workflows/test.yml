@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.14"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -34,12 +34,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt
       - run: python -m unittest discover -s scripts/tests -p "test_integration_*.py"
       - run: python -m unittest discover -s scripts/tests -p "test_source_free_bundle.py"
+      - run: python -m unittest discover -s scripts/tests -p "test_bundle_workflow.py"
 
   acceptance:
     runs-on: ubuntu-latest
@@ -48,7 +49,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt

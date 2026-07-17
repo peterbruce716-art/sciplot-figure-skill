@@ -24,6 +24,9 @@ DEFAULT_TIMEOUTS = {
     "score": 60,
     "semantic_audit": 30,
     "vector_validation": 30,
+    "canvas_safety": 30,
+    "boxed_text_safety": 30,
+    "plot_geometry_safety": 30,
     "finalize_manifest": 30,
     "checksums": 30,
     "validate_manifest": 30,
@@ -128,6 +131,42 @@ def command_renderer_config(bundle_root: Path) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) and payload.get("type") == "command" else None
 
 
+def canvas_safety_config(spec_path: Path) -> dict[str, Any] | None:
+    try:
+        spec = json.loads(spec_path.read_text(encoding="utf-8-sig"))
+    except Exception:
+        return None
+    policy = spec.get("qa_policy", {})
+    config = policy.get("canvas_safety") if isinstance(policy, dict) else None
+    if not isinstance(config, dict) or not config.get("enabled", False):
+        return None
+    return config
+
+
+def boxed_text_safety_config(spec_path: Path) -> dict[str, Any] | None:
+    try:
+        spec = json.loads(spec_path.read_text(encoding="utf-8-sig"))
+    except Exception:
+        return None
+    policy = spec.get("qa_policy", {})
+    config = policy.get("boxed_text_safety") if isinstance(policy, dict) else None
+    if not isinstance(config, dict) or not config.get("enabled", False):
+        return None
+    return config
+
+
+def plot_geometry_safety_config(spec_path: Path) -> dict[str, Any] | None:
+    try:
+        spec = json.loads(spec_path.read_text(encoding="utf-8-sig"))
+    except Exception:
+        return None
+    policy = spec.get("qa_policy", {})
+    config = policy.get("plot_geometry_safety") if isinstance(policy, dict) else None
+    if not isinstance(config, dict) or not config.get("enabled", False):
+        return None
+    return config
+
+
 def cap_command_renderer_manifest(manifest_path: Path) -> None:
     if not manifest_path.exists():
         return
@@ -208,6 +247,112 @@ def bundle_reproduce(bundle_root: Path, *, require_strict: bool = False, qa_prof
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return 2
 
+    canvas_safety_json = qa_dir / "canvas_safety.json"
+    canvas_config = canvas_safety_config(work_spec)
+    if canvas_config:
+        required_edges = canvas_config.get("required_edges", ["top", "right", "bottom", "left"])
+        if not isinstance(required_edges, list):
+            required_edges = ["top", "right", "bottom", "left"]
+        canvas_safety_cmd = [
+            sys.executable,
+            str(script_dir / "check_canvas_safety.py"),
+            "--image",
+            str(outputs_dir / "render.png"),
+            "--margin-px",
+            str(int(canvas_config.get("margin_px", 5))),
+            "--background",
+            str(canvas_config.get("background", "#ffffff")),
+            "--tolerance",
+            str(int(canvas_config.get("tolerance", 10))),
+            "--require-edges",
+            ",".join(str(edge) for edge in required_edges),
+            "--json-out",
+            str(canvas_safety_json),
+            "--project-root",
+            str(bundle_root),
+        ]
+        canvas_safety = run(
+            canvas_safety_cmd,
+            log_path=logs_dir / "canvas_safety.log",
+            timeout=DEFAULT_TIMEOUTS["canvas_safety"],
+            bundle_root=bundle_root,
+            env=env,
+        )
+        steps["canvas_safety"] = canvas_safety
+        if canvas_safety["status"] == "failed":
+            report["stage"] = "canvas_safety"
+            report["failure_type"] = "required_canvas_margin_not_clear"
+            write_json(bundle_root / "run_report.json", report)
+            write_run_attestation(bundle_root, status="failed", steps=steps)
+            print(json.dumps(report, ensure_ascii=False, indent=2))
+            return 2
+    else:
+        steps["canvas_safety"] = {"status": "skipped", "reason": "qa_policy.canvas_safety not enabled"}
+
+    plot_geometry_safety_json = qa_dir / "plot_geometry_safety.json"
+    plot_geometry_config = plot_geometry_safety_config(work_spec)
+    if plot_geometry_config:
+        plot_geometry_safety = run(
+            [
+                sys.executable,
+                str(script_dir / "check_plot_geometry_safety.py"),
+                "--image",
+                str(outputs_dir / "render.png"),
+                "--spec",
+                str(work_spec),
+                "--json-out",
+                str(plot_geometry_safety_json),
+                "--project-root",
+                str(bundle_root),
+            ],
+            log_path=logs_dir / "plot_geometry_safety.log",
+            timeout=DEFAULT_TIMEOUTS["plot_geometry_safety"],
+            bundle_root=bundle_root,
+            env=env,
+        )
+        steps["plot_geometry_safety"] = plot_geometry_safety
+        if plot_geometry_safety["status"] == "failed":
+            report["stage"] = "plot_geometry_safety"
+            report["failure_type"] = "plot_region_bbox_mismatch"
+            write_json(bundle_root / "run_report.json", report)
+            write_run_attestation(bundle_root, status="failed", steps=steps)
+            print(json.dumps(report, ensure_ascii=False, indent=2))
+            return 2
+    else:
+        steps["plot_geometry_safety"] = {"status": "skipped", "reason": "qa_policy.plot_geometry_safety not enabled"}
+
+    boxed_text_safety_json = qa_dir / "boxed_text_safety.json"
+    boxed_text_config = boxed_text_safety_config(work_spec)
+    if boxed_text_config:
+        boxed_text_safety = run(
+            [
+                sys.executable,
+                str(script_dir / "check_boxed_text_safety.py"),
+                "--image",
+                str(outputs_dir / "render.png"),
+                "--spec",
+                str(work_spec),
+                "--json-out",
+                str(boxed_text_safety_json),
+                "--project-root",
+                str(bundle_root),
+            ],
+            log_path=logs_dir / "boxed_text_safety.log",
+            timeout=DEFAULT_TIMEOUTS["boxed_text_safety"],
+            bundle_root=bundle_root,
+            env=env,
+        )
+        steps["boxed_text_safety"] = boxed_text_safety
+        if boxed_text_safety["status"] == "failed":
+            report["stage"] = "boxed_text_safety"
+            report["failure_type"] = "boxed_text_ink_or_padding_failed"
+            write_json(bundle_root / "run_report.json", report)
+            write_run_attestation(bundle_root, status="failed", steps=steps)
+            print(json.dumps(report, ensure_ascii=False, indent=2))
+            return 2
+    else:
+        steps["boxed_text_safety"] = {"status": "skipped", "reason": "qa_policy.boxed_text_safety not enabled"}
+
     score_json = bundle_root / "visual_score.json"
     comparison_dir = bundle_root / "comparison"
     if bundled_source:
@@ -280,6 +425,12 @@ def bundle_reproduce(bundle_root: Path, *, require_strict: bool = False, qa_prof
     ]
     if bundled_source:
         finalize_cmd.extend(["--source", str(bundled_source), "--score", str(score_json)])
+    if canvas_config:
+        finalize_cmd.extend(["--canvas-safety", str(canvas_safety_json)])
+    if plot_geometry_config:
+        finalize_cmd.extend(["--plot-geometry-safety", str(plot_geometry_safety_json)])
+    if boxed_text_config:
+        finalize_cmd.extend(["--boxed-text-safety", str(boxed_text_safety_json)])
     finalize = run(finalize_cmd, log_path=logs_dir / "finalize_manifest.log", timeout=DEFAULT_TIMEOUTS["finalize_manifest"], bundle_root=bundle_root, env=env)
     steps["finalize_manifest"] = finalize
     if command_renderer_config(bundle_root):

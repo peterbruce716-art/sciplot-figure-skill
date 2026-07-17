@@ -25,11 +25,17 @@
     "vector_export_status": {"type": "string"},
     "export_status": {"type": "string"},
     "vector_validation_status": {"type": "string"},
+    "canvas_safety_status": {"enum": ["pass", "failed"]},
+    "boxed_text_safety_status": {"enum": ["pass", "failed"]},
+    "plot_geometry_safety_status": {"enum": ["pass", "failed"]},
     "semantic_reconstruction_status": {"type": "string"},
     "visual_qa_status": {"type": "string"},
     "qa_status": {"type": "string"},
     "semantic_audit": {"type": "object", "additionalProperties": true},
     "vector_validation": {"type": "object", "additionalProperties": true},
+    "canvas_safety": {"$ref": "#/$defs/canvas_safety_report"},
+    "boxed_text_safety": {"$ref": "#/$defs/boxed_text_safety_report"},
+    "plot_geometry_safety": {"$ref": "#/$defs/plot_geometry_safety_report"},
     "checksums": {"type": "string"},
     "semantics": {"type": "string"},
     "source_strategy": {
@@ -63,6 +69,51 @@
     }
   },
   "$defs": {
+    "plot_geometry_safety_report": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema", "status"],
+      "properties": {
+        "schema": {"const": "scientificfigure.plot_geometry_safety.v1"},
+        "status": {"enum": ["pass", "failed"]},
+        "image": {"type": "string"},
+        "failed_regions": {"type": "array", "items": {"type": "string"}},
+        "regions": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "boxed_text_safety_report": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema", "status"],
+      "properties": {
+        "schema": {"const": "scientificfigure.boxed_text_safety.v1"},
+        "status": {"enum": ["pass", "failed"]},
+        "image": {"type": "string"},
+        "failed_regions": {"type": "array", "items": {"type": "string"}},
+        "regions": {"type": "array", "items": {"type": "object"}}
+      }
+    },
+    "canvas_safety_report": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema", "status"],
+      "properties": {
+        "schema": {"const": "scientificfigure.canvas_safety.v1"},
+        "status": {"enum": ["pass", "failed"]},
+        "image": {"type": "string"},
+        "margin_px": {"type": "integer", "minimum": 1},
+        "required_edges": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["top", "right", "bottom", "left"]}
+        },
+        "failed_edges": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["top", "right", "bottom", "left"]}
+        }
+      }
+    },
     "final_status": {
       "enum": ["semantic_strict_pass", "semantic_validated_pass", "semantic_near_pass", "visual_trace_pass", "render_only", "not_strict", "failed"]
     },
