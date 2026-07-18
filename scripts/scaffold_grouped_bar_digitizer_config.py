@@ -197,18 +197,43 @@ def _detect_color_layer_bars(
             )
         bars_by_category.append(category_bars)
 
+    median_centers = [
+        _median(
+            [
+                float(category[prototype_index]["center_px"] - _center(category_runs[index]))
+                for index, category in enumerate(bars_by_category)
+            ]
+        )
+        for prototype_index in range(group_count)
+    ]
+    median_widths = [
+        _median(
+            [float(category[prototype_index]["width_px"]) for category in bars_by_category]
+        )
+        for prototype_index in range(group_count)
+    ]
+    covered_front_counts: list[int] = []
+    for candidate_index in range(group_count):
+        candidate_left = median_centers[candidate_index] - median_widths[candidate_index] / 2.0
+        candidate_right = median_centers[candidate_index] + median_widths[candidate_index] / 2.0
+        covered = 0
+        for other_index in range(group_count):
+            if other_index == candidate_index or median_widths[candidate_index] <= median_widths[other_index]:
+                continue
+            other_left = median_centers[other_index] - median_widths[other_index] / 2.0
+            other_right = median_centers[other_index] + median_widths[other_index] / 2.0
+            overlap = max(0.0, min(candidate_right, other_right) - max(candidate_left, other_left))
+            substantially_wider = median_widths[candidate_index] >= 1.25 * median_widths[other_index]
+            if substantially_wider and overlap >= 0.5:
+                covered += 1
+        covered_front_counts.append(covered)
     prototype_order = sorted(
         range(group_count),
         key=lambda prototype_index: (
-            _median(
-                [
-                    float(category[prototype_index]["left_px"] - category_runs[index][0])
-                    for index, category in enumerate(bars_by_category)
-                ]
-            ),
-            -_median(
-                [float(category[prototype_index]["width_px"]) for category in bars_by_category]
-            ),
+            -covered_front_counts[prototype_index],
+            median_centers[prototype_index],
+            -median_widths[prototype_index],
+            prototype_index,
         ),
     )
     return [
@@ -232,7 +257,11 @@ def _baseline_visibility(groups: list[dict[str, Any]]) -> list[str]:
         for front_left, front_right in intervals[back_index + 1 :]:
             overlap = max(0.0, min(back_right, front_right) - max(back_left, front_left))
             front_width = front_right - front_left
-            if overlap / max(1.0, min(back_width, front_width)) >= 0.25:
+            substantial_width_difference = back_width >= 1.25 * front_width
+            if (
+                overlap / max(1.0, min(back_width, front_width)) >= 0.25
+                or (substantial_width_difference and overlap >= 0.5)
+            ):
                 visibility[back_index] = "occluded_by_front_groups"
                 break
     return visibility
@@ -444,6 +473,8 @@ def scaffold_config(
         if bar.get("segmentation_method") == "equal_width_fallback"
     ]
     audit_status = "review_required" if fallback_segments else "pass"
+    config["calibration_status"] = audit_status
+    config["unresolved_segments"] = fallback_segments
     audit = {
         "schema": "scientificfigure.grouped_bar_config_scaffold.v1",
         "source": {"path": source.name, "width_px": int(image.shape[1]), "height_px": int(image.shape[0])},

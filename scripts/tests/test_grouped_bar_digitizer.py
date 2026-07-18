@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 try:
     from common import *
 except ModuleNotFoundError:
@@ -156,8 +158,14 @@ class GroupedBarDigitizerTests(ScientificFigureReproductionTestBase):
                 if row["panel"] == "P3" and row["category"] == "5" and row["group"] == "B"
             )
             self.assertIn("D", panel_3_background["occlusion_evidence_groups"])
+            evidence = json.loads(panel_3_background["occlusion_evidence"])
+            self.assertIn(evidence[0]["evidence_type"], {
+                "current_color_edge_to_baseline",
+                "front_group_vertical_bridge",
+            })
+            self.assertIn("candidate_bottom_y_px", evidence[0])
 
-    def test_rejects_disconnected_swatch_without_front_occlusion_evidence(self) -> None:
+    def test_rejects_compact_swatch_adjacent_to_front_bar(self) -> None:
         digitizer = load_module("digitize_grouped_bar_raster", SCRIPTS / "digitize_grouped_bar_raster.py")
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "missing_background_bar.png"
@@ -166,10 +174,10 @@ class GroupedBarDigitizerTests(ScientificFigureReproductionTestBase):
             background_color = (230, 200, 250)
             foreground_color = (150, 70, 175)
             for x in range(39, 63):
-                for y in range(20, 25):
+                for y in range(18, 25):
                     pixels[x, y] = background_color
             for x in range(46, 56):
-                for y in range(60, 91):
+                for y in range(25, 91):
                     pixels[x, y] = foreground_color
             image.save(source)
             config = {
@@ -217,6 +225,203 @@ class GroupedBarDigitizerTests(ScientificFigureReproductionTestBase):
                 "unverified_front_group_occlusion",
                 audit["failures"][0]["reason"],
             )
+
+    def test_accepts_short_cap_with_same_color_edge_to_baseline(self) -> None:
+        digitizer = load_module(
+            "digitize_grouped_bar_raster_short_cap_edge",
+            SCRIPTS / "digitize_grouped_bar_raster.py",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "near_equal_nested_bars.png"
+            image = Image.new("RGB", (100, 100), "white")
+            pixels = image.load()
+            background_color = (230, 200, 250)
+            foreground_color = (150, 70, 175)
+            for x in range(39, 63):
+                for y in range(20, 91):
+                    pixels[x, y] = background_color
+            for x in range(46, 56):
+                for y in range(25, 91):
+                    pixels[x, y] = foreground_color
+            image.save(source)
+            config = {
+                "schema": "scientificfigure.grouped_bar_digitization.v1",
+                "color_tolerance": 4,
+                "min_row_coverage": 0.6,
+                "baseline_tolerance_px": 3,
+                "panels": [
+                    {
+                        "id": "A",
+                        "plot_bbox_px": [10, 10, 90, 90],
+                        "category_centers_px": [50.5],
+                        "category_labels": ["1"],
+                        "y_axis": {
+                            "pixel_baseline": 90,
+                            "pixel_top": 10,
+                            "value_min": 0,
+                            "value_max": 80,
+                        },
+                        "groups": [
+                            {
+                                "label": "B",
+                                "color_rgb": list(background_color),
+                                "offset_px": 0,
+                                "width_px": 24,
+                                "baseline_visibility": "occluded_by_front_groups",
+                            },
+                            {
+                                "label": "F",
+                                "color_rgb": list(foreground_color),
+                                "offset_px": 0,
+                                "width_px": 10,
+                                "baseline_visibility": "visible",
+                            },
+                        ],
+                    }
+                ],
+            }
+
+            rows, audit = digitizer.digitize(source, config)
+
+            self.assertEqual("pass", audit["status"], audit["failures"])
+            self.assertEqual(["B", "F"], [row["group"] for row in rows])
+            background = rows[0]
+            evidence = json.loads(background["occlusion_evidence"])
+            self.assertEqual("current_color_edge_to_baseline", evidence[0]["evidence_type"])
+
+    def test_scaffold_preserves_review_required_status_for_digitizer(self) -> None:
+        scaffolder = load_module(
+            "scaffold_grouped_bar_digitizer_config_propagation",
+            SCRIPTS / "scaffold_grouped_bar_digitizer_config.py",
+        )
+        digitizer = load_module(
+            "digitize_grouped_bar_raster_review_gate",
+            SCRIPTS / "digitize_grouped_bar_raster.py",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "ambiguous_groups.png"
+            image = Image.new("RGB", (100, 100), "white")
+            pixels = image.load()
+            for x in range(10, 91):
+                pixels[x, 10] = (35, 35, 35)
+                pixels[x, 90] = (35, 35, 35)
+            for y in range(10, 91):
+                pixels[10, y] = (35, 35, 35)
+                pixels[90, y] = (35, 35, 35)
+            for x in range(35, 66):
+                for y in range(30, 90):
+                    pixels[x, y] = (180, 120, 210)
+            image.save(source)
+
+            config, audit = scaffolder.scaffold_config(
+                source,
+                panel_count=1,
+                panel_ids=["A"],
+                category_count=1,
+                group_labels=["B", "D", "F"],
+                y_min=0,
+                y_max=80,
+            )
+
+            self.assertEqual("review_required", audit["status"])
+            self.assertEqual("review_required", config.get("calibration_status"))
+            self.assertEqual(3, len(config.get("unresolved_segments", [])))
+            with self.assertRaisesRegex(ValueError, "manual review"):
+                digitizer.digitize(source, config)
+
+    def test_scaffold_orders_wide_background_before_offset_foregrounds(self) -> None:
+        scaffolder = load_module(
+            "scaffold_grouped_bar_digitizer_config_layer_order",
+            SCRIPTS / "scaffold_grouped_bar_digitizer_config.py",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "wide_background.png"
+            image = Image.new("RGB", (100, 100), "white")
+            pixels = image.load()
+            for x in range(10, 91):
+                pixels[x, 10] = (35, 35, 35)
+                pixels[x, 90] = (35, 35, 35)
+            for y in range(10, 91):
+                pixels[10, y] = (35, 35, 35)
+                pixels[90, y] = (35, 35, 35)
+
+            layers = [
+                ((230, 200, 250), 40, 59, 30),
+                ((205, 135, 230), 32, 41, 50),
+                ((150, 70, 175), 60, 69, 60),
+            ]
+            for color, left, right, top in layers:
+                for x in range(left, right + 1):
+                    for y in range(top, 90):
+                        pixels[x, y] = color
+            image.save(source)
+
+            config, audit = scaffolder.scaffold_config(
+                source,
+                panel_count=1,
+                panel_ids=["A"],
+                category_count=1,
+                group_labels=["B", "D", "F"],
+                y_min=0,
+                y_max=80,
+                color_tolerance=8,
+                min_row_coverage=0.75,
+            )
+
+            self.assertEqual("pass", audit["status"])
+            groups = config["panels"][0]["groups"]
+            self.assertGreater(groups[0]["width_px"], groups[1]["width_px"])
+            self.assertGreater(groups[0]["width_px"], groups[2]["width_px"])
+            self.assertAlmostEqual(0.0, groups[0]["offset_px"], delta=1.0)
+            self.assertLess(groups[1]["offset_px"], 0.0)
+            self.assertGreater(groups[2]["offset_px"], 0.0)
+            self.assertEqual("occluded_by_front_groups", groups[0]["baseline_visibility"])
+
+    def test_scaffold_keeps_unequal_width_side_by_side_order(self) -> None:
+        scaffolder = load_module(
+            "scaffold_grouped_bar_digitizer_config_unequal_side_by_side",
+            SCRIPTS / "scaffold_grouped_bar_digitizer_config.py",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "unequal_side_by_side.png"
+            image = Image.new("RGB", (100, 100), "white")
+            pixels = image.load()
+            for x in range(10, 91):
+                pixels[x, 10] = (35, 35, 35)
+                pixels[x, 90] = (35, 35, 35)
+            for y in range(10, 91):
+                pixels[10, y] = (35, 35, 35)
+                pixels[90, y] = (35, 35, 35)
+
+            layers = [
+                ((230, 200, 250), 30, 39, 45),
+                ((205, 135, 230), 40, 59, 35),
+                ((150, 70, 175), 60, 69, 55),
+            ]
+            for color, left, right, top in layers:
+                for x in range(left, right + 1):
+                    for y in range(top, 90):
+                        pixels[x, y] = color
+            image.save(source)
+
+            config, audit = scaffolder.scaffold_config(
+                source,
+                panel_count=1,
+                panel_ids=["A"],
+                category_count=1,
+                group_labels=["B", "D", "F"],
+                y_min=0,
+                y_max=80,
+                color_tolerance=8,
+                min_row_coverage=0.75,
+            )
+
+            self.assertEqual("pass", audit["status"])
+            groups = config["panels"][0]["groups"]
+            self.assertEqual([list(item[0]) for item in layers], [group["color_rgb"] for group in groups])
+            self.assertLess(groups[0]["offset_px"], groups[1]["offset_px"])
+            self.assertLess(groups[1]["offset_px"], groups[2]["offset_px"])
+            self.assertTrue(all(group["baseline_visibility"] == "visible" for group in groups))
 
     def test_scaffold_marks_unresolved_equal_width_split_for_review(self) -> None:
         scaffolder = load_module(

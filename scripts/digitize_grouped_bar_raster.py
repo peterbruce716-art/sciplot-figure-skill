@@ -46,6 +46,16 @@ def _require_number(value: Any, name: str) -> float:
 def _validate_config(config: dict[str, Any]) -> None:
     if config.get("schema") != SCHEMA:
         raise ValueError(f"config.schema must be {SCHEMA}")
+    calibration_status = config.get("calibration_status")
+    unresolved_segments = config.get("unresolved_segments", [])
+    if calibration_status is not None and calibration_status != "pass":
+        raise ValueError(
+            f"config requires manual review before digitization: calibration_status={calibration_status}"
+        )
+    if not isinstance(unresolved_segments, list):
+        raise ValueError("config.unresolved_segments must be a list when provided")
+    if unresolved_segments:
+        raise ValueError("config requires manual review before digitization: unresolved_segments is not empty")
     panels = config.get("panels")
     if not isinstance(panels, list) or not panels:
         raise ValueError("config.panels must be a non-empty list")
@@ -92,6 +102,9 @@ def _validate_config(config: dict[str, Any]) -> None:
                 raise ValueError(
                     f"{group_prefix}.baseline_visibility must be visible or occluded_by_front_groups"
                 )
+            allow_front_group_bridge = group.get("allow_front_group_bridge", False)
+            if not isinstance(allow_front_group_bridge, bool):
+                raise ValueError(f"{group_prefix}.allow_front_group_bridge must be a boolean")
 
 
 def _bar_window(category_center: float, group: dict[str, Any]) -> tuple[int, int]:
@@ -110,7 +123,7 @@ def _front_occlusion_evidence(
     baseline: float,
     tolerance: float,
     baseline_tolerance: int,
-) -> list[str]:
+) -> list[dict[str, Any]]:
     groups = panel["groups"]
     current_left, current_right = _bar_window(category_center, groups[group_index])
     current_width = current_right - current_left + 1
@@ -119,16 +132,21 @@ def _front_occlusion_evidence(
     current_prototype = np.asarray(groups[group_index]["color_rgb"], dtype=np.float64)
     current_crop = image[: int(round(baseline)) + 1, current_left : current_right + 1]
     current_mask = np.linalg.norm(current_crop - current_prototype, axis=2) <= tolerance
-    narrow_current_contact = False
+    current_contact_run: tuple[int, int] | None = None
     for column in range(current_width):
         column_rows = [int(y) for y in np.flatnonzero(current_mask[:, column])]
-        if any(
-            run[0] <= bridge_limit and run[1] >= baseline_floor
-            for run in _runs(column_rows)
-        ):
-            narrow_current_contact = True
+        matching_run = next(
+            (
+                run
+                for run in _runs(column_rows)
+                if run[0] <= bridge_limit and run[1] >= baseline_floor
+            ),
+            None,
+        )
+        if matching_run is not None:
+            current_contact_run = matching_run
             break
-    evidence: list[str] = []
+    evidence: list[dict[str, Any]] = []
     for front_group in groups[group_index + 1 :]:
         front_left, front_right = _bar_window(category_center, front_group)
         overlap_left = max(current_left, front_left)
@@ -137,8 +155,18 @@ def _front_occlusion_evidence(
         front_width = front_right - front_left + 1
         if overlap_width <= 0 or overlap_width / min(current_width, front_width) < 0.25:
             continue
-        if narrow_current_contact:
-            evidence.append(str(front_group["label"]))
+        if current_contact_run is not None:
+            evidence.append(
+                {
+                    "group": str(front_group["label"]),
+                    "evidence_type": "current_color_edge_to_baseline",
+                    "candidate_bottom_y_px": run_bottom,
+                    "bridge_top_y_px": current_contact_run[0],
+                    "bridge_bottom_y_px": current_contact_run[1],
+                    "overlap_left_px": overlap_left,
+                    "overlap_right_px": overlap_right,
+                }
+            )
             continue
         prototype = np.asarray(front_group["color_rgb"], dtype=np.float64)
         crop = image[: int(round(baseline)) + 1, overlap_left : overlap_right + 1]
@@ -148,8 +176,22 @@ def _front_occlusion_evidence(
         minimum_count = max(1, int(math.ceil(overlap_width * 0.2)))
         qualifying = [int(y) for y, count in enumerate(mask.sum(axis=1)) if int(count) >= minimum_count]
         touching_runs = [run for run in _runs(qualifying) if run[1] >= baseline_floor]
-        if any(run_bottom < run[0] <= bridge_limit for run in touching_runs):
-            evidence.append(str(front_group["label"]))
+        bridge_run = next(
+            (run for run in touching_runs if run_bottom < run[0] <= bridge_limit),
+            None,
+        )
+        if bridge_run is not None:
+            evidence.append(
+                {
+                    "group": str(front_group["label"]),
+                    "evidence_type": "front_group_vertical_bridge",
+                    "candidate_bottom_y_px": run_bottom,
+                    "bridge_top_y_px": bridge_run[0],
+                    "bridge_bottom_y_px": bridge_run[1],
+                    "overlap_left_px": overlap_left,
+                    "overlap_right_px": overlap_right,
+                }
+            )
     return evidence
 
 
@@ -206,7 +248,21 @@ def digitize(source: Path, config: dict[str, Any]) -> tuple[list[dict[str, Any]]
                 touching = [run for run in candidate_runs if run[1] >= baseline_floor]
                 baseline_visibility = str(group.get("baseline_visibility", "visible"))
                 baseline_contact_observed = bool(touching)
-                occlusion_evidence_groups: list[str] = []
+                occlusion_evidence: list[dict[str, Any]] = []
+                minimum_occluded_component_height = max(
+                    2 * baseline_tolerance + 1,
+                    int(math.ceil((baseline - pixel_top) * 0.04)),
+                )
+                minimum_occluded_component_height = int(
+                    group.get(
+                        "min_occluded_component_height_px",
+                        minimum_occluded_component_height,
+                    )
+                )
+                if minimum_occluded_component_height < 1:
+                    raise ValueError(
+                        f"group {group['label']} min_occluded_component_height_px must be at least 1"
+                    )
                 if touching:
                     run_top, run_bottom = max(
                         touching,
@@ -217,7 +273,8 @@ def digitize(source: Path, config: dict[str, Any]) -> tuple[list[dict[str, Any]]
                         candidate_runs,
                         key=lambda item: (item[1] - item[0] + 1, -item[0]),
                     )
-                    occlusion_evidence_groups = _front_occlusion_evidence(
+                    candidate_height = candidate_bottom - candidate_top + 1
+                    occlusion_evidence = _front_occlusion_evidence(
                         image,
                         panel,
                         group_index,
@@ -227,13 +284,24 @@ def digitize(source: Path, config: dict[str, Any]) -> tuple[list[dict[str, Any]]
                         tolerance,
                         baseline_tolerance,
                     )
-                    if not occlusion_evidence_groups:
+                    if (
+                        candidate_height < minimum_occluded_component_height
+                        or not bool(group.get("allow_front_group_bridge", False))
+                    ):
+                        occlusion_evidence = [
+                            item
+                            for item in occlusion_evidence
+                            if item["evidence_type"] == "current_color_edge_to_baseline"
+                        ]
+                    if not occlusion_evidence:
                         failures.append(
                             {
                                 "panel": panel_id,
                                 "category": str(category_label),
                                 "group": str(group["label"]),
                                 "reason": "unverified_front_group_occlusion",
+                                "candidate_height_px": candidate_height,
+                                "minimum_occluded_component_height_px": minimum_occluded_component_height,
                             }
                         )
                         continue
@@ -270,7 +338,14 @@ def digitize(source: Path, config: dict[str, Any]) -> tuple[list[dict[str, Any]]
                         "confidence": confidence,
                         "baseline_visibility": baseline_visibility,
                         "baseline_contact_observed": baseline_contact_observed,
-                        "occlusion_evidence_groups": "|".join(occlusion_evidence_groups),
+                        "occlusion_evidence_groups": "|".join(
+                            str(item["group"]) for item in occlusion_evidence
+                        ),
+                        "occlusion_evidence": json.dumps(
+                            occlusion_evidence,
+                            ensure_ascii=True,
+                            separators=(",", ":"),
+                        ),
                         "source_strategy": "digitized_raster",
                     }
                 )

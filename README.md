@@ -111,7 +111,11 @@ left/right foreground bars over a wider background bar. Review the emitted per-p
 `offset_px`, `width_px`, and `baseline_visibility` fields instead of imposing one group
 layout across all panels. A non-baseline-connected background run requires positive
 foreground-occlusion evidence; unresolved equal-width scaffold fallback is marked
-`review_required`, not silently accepted.
+`review_required`, propagated into `calibration_status`, and rejected by the
+digitizer until `unresolved_segments` is empty after review. By default, an occluded
+run needs a same-color edge that continues to the baseline; a foreground-only bridge
+is ambiguous with a legend swatch and requires explicit `allow_front_group_bridge` opt-in.
+Occlusion evidence records its evidence type and source-pixel interval.
 
 ## Supported Plot and Annotation Types
 
@@ -182,7 +186,7 @@ sciplot-figure-skill/
 
 ## Version
 
-Current version: **v2.8.1**
+Current version: **v2.8.3**
 
 ## Scope and Limitations
 

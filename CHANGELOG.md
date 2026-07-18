@@ -1,3 +1,18 @@
+## 2026-07-18 v2.8.3 Ambiguous-Occlusion and Edge-Contact Guards
+
+- Changed foreground-only vertical bridges to explicit opt-in evidence because an aligned legend swatch is pixel-indistinguishable from a fully covered background cap.
+- Preserved near-equal nested bars when a short visible cap still has a same-color edge continuing to the baseline; the minimum-height guard now applies only to ambiguous foreground-bridge evidence.
+- Stabilized wide-background ordering and baseline visibility when narrow foreground layers leave only small positive overlap after raster overdraw; edge contact alone remains side-by-side.
+- Strengthened grouped-bar regressions with a threshold-height swatch and a small-overlap/adjacent mixed-layer layout.
+
+## 2026-07-18 v2.8.2 Grouped-Bar Fail-Closed Review Gates
+
+- Propagated unresolved equal-width fallback into `calibration_status` and `unresolved_segments`; the digitizer now rejects unreviewed scaffold configs instead of converting them into a passing audit.
+- Replaced left-edge-only color-layer ordering with overlap-aware back-to-front ordering, preserving a wide background even when a legal foreground bar protrudes beyond its left edge.
+- Rejected compact non-baseline components before foreground-bridge evaluation so adjacent legend swatches cannot borrow a real bar's baseline continuity.
+- Added structured occlusion evidence with evidence type and source-pixel intervals while preserving the existing evidence-group field.
+- Added red-green regressions for the scaffold-to-digitizer review gate, adjacent swatch bridging, and offset foregrounds that protrude beyond a wide background.
+
 ## 2026-07-18 v2.8.1 Panel-Specific Grouped-Bar Geometry
 
 - Detect grouped-bar color layers, widths, and offsets independently for each panel.
