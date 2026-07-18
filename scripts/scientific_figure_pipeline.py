@@ -22,7 +22,7 @@ from validate_figure_contract import validate_contract_payload
 from evaluate_scientific_plot_policy import evaluate_policies
 
 
-def _intent(path: Path | None, *, x: str | None = None, y: str | None = None, group: list[str] | None = None, uncertainty_columns: list[str] | None = None) -> dict[str, Any]:
+def _intent(path: Path | None, *, x: str | None = None, y: str | None = None, group: list[str] | None = None, uncertainty_columns: list[str] | None = None, uncertainty_semantics: str | None = None) -> dict[str, Any]:
     if path:
         payload = load_json(path)
         validate_payload(payload, "figure-intent-v1.schema.json")
@@ -31,7 +31,7 @@ def _intent(path: Path | None, *, x: str | None = None, y: str | None = None, gr
         "schema": "scientificfigure.figure_intent.v1", "schema_version": "1.0",
         "claim": "Describe the dominant relationship in the supplied data",
         "task_type": "trend_comparison", "primary_message": "Expose the data pattern without hiding observations",
-        "audience": "scientific_readers", "priority_variables": build_priority_variables(x, y, group, uncertainty_columns), "uncertainty_semantics": None,
+        "audience": "scientific_readers", "priority_variables": build_priority_variables(x, y, group, uncertainty_columns), "uncertainty_semantics": uncertainty_semantics,
     }
     validate_payload(payload, "figure-intent-v1.schema.json")
     return payload
@@ -55,14 +55,12 @@ def run_pipeline(args: argparse.Namespace) -> dict[str, Any]:
     artifacts: dict[str, Path] = {}
     if not args.disable_advisor:
         frame = read_table(args.data, sheet=args.sheet)
-        profile = profile_dataframe(frame, source_path=args.data, sheet=args.sheet, groups=args.group, x=args.x, y=args.y)
-        missing_uncertainty = [name for name in args.uncertainty if name not in frame.columns]
-        if missing_uncertainty:
-            raise ValueError(f"uncertainty columns are missing: {', '.join(missing_uncertainty)}")
-        profile["uncertainty_columns"] = list(dict.fromkeys([*profile.get("uncertainty_columns", []), *args.uncertainty]))
+        profile = profile_dataframe(frame, source_path=args.data, sheet=args.sheet, groups=args.group, x=args.x, y=args.y, explicit_uncertainty=args.uncertainty)
         artifacts["data_profile"] = output / "advisor" / "data_profile.json"
         write_json(artifacts["data_profile"], profile)
-        intent = _intent(args.intent, x=args.x, y=args.y, group=args.group, uncertainty_columns=profile.get("uncertainty_columns", []))
+        explicit_evidence = next((item for item in profile.get("uncertainty_evidence", []) if item.get("source") == "explicit"), None)
+        inferred_semantics = explicit_evidence.get("semantics") if explicit_evidence else None
+        intent = _intent(args.intent, x=args.x, y=args.y, group=args.group, uncertainty_columns=profile.get("uncertainty_columns", []), uncertainty_semantics=inferred_semantics)
         artifacts["figure_intent"] = output / "advisor" / "figure_intent.json"
         write_json(artifacts["figure_intent"], intent)
         if args.figure_contract:

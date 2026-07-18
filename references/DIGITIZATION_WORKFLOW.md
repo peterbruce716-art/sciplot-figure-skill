@@ -18,7 +18,7 @@ Document any visual calibration, such as using a labeled peak or plateau when a 
 2. Record each panel rectangle, category center, group offset, and bar width in source pixels before mapping values. Detect these values independently per panel; do not assume that adjacent panels share side-by-side or nested geometry.
 3. Segment fill colors only inside each panel. Exclude legend swatches by requiring components to touch or approach the calibrated baseline.
 4. Use the top edge of the filled rectangle for the central value. Treat antialiasing and compression as a pixel uncertainty and record the implied data-unit uncertainty.
-5. Detect error-bar stems and caps separately from fills. If the raster cannot distinguish the uncertainty magnitude reliably, record it as unavailable rather than fabricating a value.
+5. Detect error-bar stems and caps separately from fills. `digitize_grouped_bar_raster.py` records an achromatic or locally contrasting component immediately above a fill as `errorbar_upper_px` and maps that visible extent to `errorbar_value_from_pixels`. This is visual evidence only: do not relabel it as SD, SEM, CI, or another statistical definition unless independent metadata supplies that meaning. If the raster cannot distinguish the extent reliably, leave it unavailable rather than fabricating a value.
 6. In VisualSpec, render bar-top uncertainty with `errorbar` and `line_style: none`; connecting independent bars changes the scientific meaning.
 
 Use the calibrated helper when the bar geometry and colors are known:

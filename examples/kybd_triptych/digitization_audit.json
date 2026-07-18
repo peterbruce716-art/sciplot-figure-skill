@@ -1,0 +1,216 @@
+{
+  "schema": "scientificfigure.grouped_bar_digitization.v1",
+  "source": {
+    "path": "reference.png",
+    "sha256": "03bc9481d1afe2db812ca2ecc148a51bafab251b4bf3ee2de7e1e118f5ba6f63",
+    "width_px": 647,
+    "height_px": 179
+  },
+  "status": "pass",
+  "row_count": 45,
+  "detected_errorbar_count": 45,
+  "failures": [],
+  "calibration": {
+    "schema": "scientificfigure.grouped_bar_digitization.v1",
+    "color_tolerance": 34.0,
+    "min_row_coverage": 0.45,
+    "baseline_tolerance_px": 4,
+    "panels": [
+      {
+        "id": "P1",
+        "plot_bbox_px": [
+          38,
+          9,
+          209,
+          146
+        ],
+        "category_centers_px": [
+          55.333,
+          89.333,
+          123.667,
+          157.833,
+          191.667
+        ],
+        "category_labels": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "y_axis": {
+          "pixel_baseline": 146,
+          "pixel_top": 9,
+          "value_min": 0.0,
+          "value_max": 80.0
+        },
+        "groups": [
+          {
+            "label": "B",
+            "color_rgb": [
+              253,
+              201,
+              151
+            ],
+            "offset_px": -9.167,
+            "width_px": 8,
+            "baseline_visibility": "visible"
+          },
+          {
+            "label": "D",
+            "color_rgb": [
+              157,
+              215,
+              157
+            ],
+            "offset_px": -0.167,
+            "width_px": 8,
+            "baseline_visibility": "visible"
+          },
+          {
+            "label": "F",
+            "color_rgb": [
+              193,
+              181,
+              212
+            ],
+            "offset_px": 9.167,
+            "width_px": 9,
+            "baseline_visibility": "visible"
+          }
+        ]
+      },
+      {
+        "id": "P2",
+        "plot_bbox_px": [
+          249,
+          9,
+          419,
+          146
+        ],
+        "category_centers_px": [
+          265.833,
+          299.833,
+          333.833,
+          368.0,
+          402.167
+        ],
+        "category_labels": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "y_axis": {
+          "pixel_baseline": 146,
+          "pixel_top": 9,
+          "value_min": 0.0,
+          "value_max": 80.0
+        },
+        "groups": [
+          {
+            "label": "B",
+            "color_rgb": [
+              236,
+              214,
+              254
+            ],
+            "offset_px": -0.333,
+            "width_px": 24,
+            "baseline_visibility": "occluded_by_front_groups"
+          },
+          {
+            "label": "D",
+            "color_rgb": [
+              218,
+              164,
+              251
+            ],
+            "offset_px": 0.167,
+            "width_px": 17,
+            "baseline_visibility": "occluded_by_front_groups"
+          },
+          {
+            "label": "F",
+            "color_rgb": [
+              150,
+              66,
+              179
+            ],
+            "offset_px": 0.167,
+            "width_px": 9,
+            "baseline_visibility": "visible"
+          }
+        ]
+      },
+      {
+        "id": "P3",
+        "plot_bbox_px": [
+          459,
+          9,
+          629,
+          146
+        ],
+        "category_centers_px": [
+          477.833,
+          510.333,
+          544.333,
+          578.333,
+          612.333
+        ],
+        "category_labels": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "y_axis": {
+          "pixel_baseline": 146,
+          "pixel_top": 9,
+          "value_min": 0.0,
+          "value_max": 80.0
+        },
+        "groups": [
+          {
+            "label": "B",
+            "color_rgb": [
+              236,
+              214,
+              254
+            ],
+            "offset_px": 0.167,
+            "width_px": 24,
+            "baseline_visibility": "occluded_by_front_groups"
+          },
+          {
+            "label": "D",
+            "color_rgb": [
+              218,
+              166,
+              250
+            ],
+            "offset_px": -4.333,
+            "width_px": 9,
+            "baseline_visibility": "visible"
+          },
+          {
+            "label": "F",
+            "color_rgb": [
+              160,
+              88,
+              180
+            ],
+            "offset_px": 4.167,
+            "width_px": 8,
+            "baseline_visibility": "visible"
+          }
+        ]
+      }
+    ],
+    "calibration_status": "pass",
+    "unresolved_segments": []
+  },
+  "uncertainty_note": "Central values use the detected fill top; value_uncertainty_from_pixels is the mapped magnitude of plus/minus one source pixel. errorbar_value_from_pixels records only the visible upper raster extent and does not infer SD, SEM, CI, or another statistical definition."
+}

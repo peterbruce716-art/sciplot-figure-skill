@@ -32,9 +32,11 @@ SciPlot now adapts the high-value planning ideas from academic-figure-skill with
 The workflow reports different statuses depending on the evidence available:
 
 - `semantic_strict_pass`: a reference image was supplied and visual, semantic, panel, and vector checks passed.
-- `semantic_validated_pass`: no reference image was supplied, but a raw-data figure passed semantic and vector validation. This is a successful generated-figure workflow, not a visual-fidelity claim.
+- `semantic_validated_pass`: no reference image was supplied, but a raw-data figure passed semantic, render-integrity, mapping-validity, and vector validation. This is a successful generated-figure workflow, not a visual-fidelity or publication-readiness claim.
 - `semantic_near_pass`: comparison evidence exists but does not meet the strict threshold.
 - `render_only`: rendering completed, but the evidence needed for semantic validation was not available.
+
+These axes are intentionally separate: `render_integrity` checks that the renderer preserved declared objects and fields; `mapping_validity` checks that scientific fields such as y and yerr refer to valid, traceable data; `publication_readiness` checks reporting prerequisites such as sample-size and statistical definitions. A PNG/SVG/PDF export can succeed while either scientific gate remains failed or conditional.
 
 ## Installation
 
@@ -68,6 +70,8 @@ py -3.14 scripts/scientific_figure_pipeline.py \
 ```
 
 The pipeline writes `advisor/`, `style/`, and optional `qa/` artifacts. These are advisory and traceable; deterministic VisualSpec, semantic, vector, and bundle checks remain the final gates.
+
+For explicit uncertainty values, pass `--uncertainty response_sd`. The Advisor verifies the column independently from `y`, records its identification evidence and definition, and carries the source hash and mapping through ChartDecision, VisualSpec, semantic audit, and the final manifest. A declared uncertainty definition without independent values falls back to a non-error chart with a structured warning.
 
 This path renders the example, audits its semantics, validates SVG/PDF structure, writes checksums, and creates a portable verification bundle.
 

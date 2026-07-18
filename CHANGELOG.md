@@ -1,3 +1,14 @@
+## Unreleased Advisor Semantic QA
+
+- Replaced substring-based uncertainty detection with token-boundary and phrase matching plus auditable match evidence.
+- Added explicit uncertainty priority, physical-axis ID safeguards, missing-value fallback, and fail-closed value checks for negative, non-numeric, length-mismatched, copied, or same-source uncertainty.
+- Added ChartDecision-to-VisualSpec x/y/uncertainty/source-hash consistency gates and bundled the shared uncertainty runtime module.
+- Restricted automatic bands to SD/SE (SE uses group count); confidence intervals require explicit lower/upper bounds, and generic xerr mappings fail closed.
+- Separated render integrity, mapping validity, and publication readiness so export success cannot certify a scientifically invalid mapping.
+- Extended inline and grouped-bar uncertainty validation and regression coverage without changing the v2.8.3 release identifier.
+- Tightened semantic visual strictness: SSIM, edge, layout, and registration-shift evidence are now required in addition to MAE and canvas checks; low-MAE shifted figures are downgraded honestly.
+- Added raster grouped-bar error-bar extent detection with explicit semantic safeguards: the visible pixel span is auditable, but no SD/SEM/CI meaning is inferred from the image.
+
 ## 2026-07-18 v2.8.3 Ambiguous-Occlusion and Edge-Contact Guards
 
 - Changed foreground-only vertical bridges to explicit opt-in evidence because an aligned legend swatch is pixel-indistinguishable from a fully covered background cap.

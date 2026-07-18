@@ -49,6 +49,48 @@ class GroupedBarDigitizerTests(ScientificFigureReproductionTestBase):
             self.assertEqual(1.0, by_group["B"]["value_uncertainty_from_pixels"])
             self.assertEqual("digitized_raster", by_group["D"]["source_strategy"])
 
+    def test_detects_visible_errorbar_extent_without_inferring_statistics(self) -> None:
+        digitizer = load_module(
+            "digitize_grouped_bar_raster_errorbars",
+            SCRIPTS / "digitize_grouped_bar_raster.py",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "bars_with_errorbar.png"
+            image = Image.new("RGB", (80, 70), "white")
+            pixels = image.load()
+            for y in range(30, 61):
+                for x in range(28, 35):
+                    pixels[x, y] = (220, 160, 120)
+            for x in range(30, 33):
+                pixels[x, 26] = (120, 120, 120)
+            for y in range(26, 31):
+                pixels[31, y] = (120, 120, 120)
+            image.save(source)
+            config = {
+                "schema": "scientificfigure.grouped_bar_digitization.v1",
+                "color_tolerance": 4,
+                "min_row_coverage": 0.8,
+                "baseline_tolerance_px": 3,
+                "panels": [{
+                    "id": "A",
+                    "plot_bbox_px": [10, 10, 70, 60],
+                    "category_centers_px": [31],
+                    "category_labels": ["1"],
+                    "y_axis": {"pixel_baseline": 60, "pixel_top": 10, "value_min": 0, "value_max": 50},
+                    "groups": [{"label": "B", "color_rgb": [220, 160, 120], "offset_px": 0, "width_px": 7}],
+                }],
+            }
+
+            rows, audit = digitizer.digitize(source, config)
+
+            self.assertEqual("pass", audit["status"])
+            self.assertEqual(1, audit["detected_errorbar_count"])
+            self.assertEqual(4, rows[0]["errorbar_upper_px"])
+            self.assertEqual(4.0, rows[0]["errorbar_value_from_pixels"])
+            detection = json.loads(rows[0]["errorbar_detection"])
+            self.assertEqual("achromatic_or_contrast_component_above_fill", detection["detection_method"])
+
     def test_scaffolds_three_panel_grouped_bars_without_short_bar_outlier(self) -> None:
         scaffolder = load_module(
             "scaffold_grouped_bar_digitizer_config",

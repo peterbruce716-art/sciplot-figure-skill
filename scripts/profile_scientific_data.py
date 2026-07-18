@@ -11,10 +11,10 @@ import numpy as np
 import pandas as pd
 
 from advisor_common import sha256_file, validate_payload, write_json
+from uncertainty_semantics import infer_uncertainty_name, inspect_uncertainty_values
 
 
 ID_NAME = re.compile(r"(^id$|_id$|^id_|identifier|uuid|sample|specimen|编号$|序号$)", re.IGNORECASE)
-UNCERTAINTY_NAME = re.compile(r"(sd|std|sem|se|ci|error|uncert|sigma|误差|标准差|置信)", re.IGNORECASE)
 
 
 def read_table(path: Path, *, sheet: str | int | None = None) -> pd.DataFrame:
@@ -84,9 +84,11 @@ def profile_dataframe(
     groups: list[str] | None = None,
     x: str | None = None,
     y: str | None = None,
+    explicit_uncertainty: list[str] | None = None,
 ) -> dict[str, Any]:
     groups = groups or []
-    missing_columns = [name for name in [*groups, x, y] if name and name not in frame.columns]
+    explicit_uncertainty = explicit_uncertainty or []
+    missing_columns = [name for name in [*groups, *explicit_uncertainty, x, y] if name and name not in frame.columns]
     if missing_columns:
         raise ValueError(f"requested columns are missing: {', '.join(sorted(set(missing_columns)))}")
     warnings: list[dict[str, Any]] = []
@@ -102,11 +104,7 @@ def profile_dataframe(
         non_null = series.dropna()
         unique = int(non_null.nunique(dropna=True))
         id_name_match = bool(ID_NAME.search(str(name)))
-        suspected_id = bool(
-            len(non_null) > 1
-            and unique == len(non_null)
-            and (id_name_match or inferred in {"text", "ordinal"})
-        )
+        suspected_id = bool(len(non_null) > 1 and unique == len(non_null) and id_name_match)
         id_reasons: list[str] = []
         if unique == len(non_null) and len(non_null) > 1:
             id_reasons.append("all_values_unique")
@@ -114,6 +112,9 @@ def profile_dataframe(
             id_reasons.append("column_name_contains_identifier_hint")
         if inferred in {"text", "ordinal"}:
             id_reasons.append("identifier_like_type")
+        uncertainty_evidence = infer_uncertainty_name(str(name))
+        if str(name) in explicit_uncertainty:
+            uncertainty_evidence = {**uncertainty_evidence, "is_uncertainty": True, "source": "explicit", "confidence": 1.0}
         record: dict[str, Any] = {
             "name": str(name),
             "inferred_type": inferred,
@@ -122,7 +123,8 @@ def profile_dataframe(
             "suspected_id": suspected_id,
             "suspected_id_confidence": round(min(1.0, 0.45 * bool(unique == len(non_null)) + 0.35 * bool(id_name_match) + 0.2 * bool(inferred in {"text", "ordinal"})), 3),
             "suspected_id_reasons": id_reasons,
-            "uncertainty_candidate": bool(UNCERTAINTY_NAME.search(str(name))),
+            "uncertainty_candidate": bool(uncertainty_evidence["is_uncertainty"]),
+            "uncertainty_evidence": uncertainty_evidence,
         }
         if pd.api.types.is_numeric_dtype(series.dtype) and not non_null.empty:
             numeric = pd.to_numeric(non_null, errors="coerce").dropna()
@@ -178,6 +180,21 @@ def profile_dataframe(
         recommended_tasks.append("distribution_comparison")
 
     uncertainty_columns = [str(item["name"]) for item in columns if item.get("uncertainty_candidate")]
+    uncertainty_evidence: list[dict[str, Any]] = []
+    for item in columns:
+        if not item.get("uncertainty_candidate"):
+            continue
+        evidence = dict(item["uncertainty_evidence"])
+        evidence["column"] = item["name"]
+        if y and y in frame.columns:
+            evidence["value_validation"] = inspect_uncertainty_values(
+                frame[y].tolist(),
+                frame[item["name"]].tolist(),
+                measurement_column=y,
+                uncertainty_column=item["name"],
+                evidence={**evidence, "semantics": evidence.get("semantics") or "unknown"},
+            )
+        uncertainty_evidence.append(evidence)
     repeated_x: dict[str, Any] | None = None
     if x and x in frame.columns:
         counts = frame.groupby([x], dropna=False, sort=True).size()
@@ -197,6 +214,8 @@ def profile_dataframe(
         "group_statistics": group_statistics,
         "distribution": {"skewness": skewness, "outliers": outliers},
         "uncertainty_columns": uncertainty_columns,
+        "uncertainty_evidence": uncertainty_evidence,
+        "explicit_uncertainty_columns": list(dict.fromkeys(explicit_uncertainty)),
         "repeated_x": repeated_x,
         "warnings": warnings,
         "recommended_tasks": sorted(set(recommended_tasks)),
@@ -213,10 +232,11 @@ def main() -> int:
     parser.add_argument("--group", action="append", default=[])
     parser.add_argument("--x")
     parser.add_argument("--y")
+    parser.add_argument("--uncertainty", action="append", default=[])
     args = parser.parse_args()
     try:
         frame = read_table(args.input, sheet=args.sheet)
-        payload = profile_dataframe(frame, source_path=args.input, sheet=args.sheet, groups=args.group, x=args.x, y=args.y)
+        payload = profile_dataframe(frame, source_path=args.input, sheet=args.sheet, groups=args.group, x=args.x, y=args.y, explicit_uncertainty=args.uncertainty)
         write_json(args.output, payload)
     except Exception as exc:
         parser.exit(2, f"profile_scientific_data: {exc}\n")

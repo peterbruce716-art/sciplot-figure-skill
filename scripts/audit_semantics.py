@@ -16,10 +16,11 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from portable_paths import portable_path
+from uncertainty_semantics import UncertaintySemanticError, validate_uncertainty_values
 
 from capability_model import plot_style_keys
 from data_resolver import resolve_series
-from visualspec import load_json, write_json
+from visualspec import load_json, validate_visualspec, write_json
 
 
 def _hash_values(values: list[float]) -> str:
@@ -697,12 +698,97 @@ def _panel_provenance_failures(expected_panel: dict[str, Any], actual_panel: dic
     return failures
 
 
+def audit_mapping_validity(spec: dict[str, Any], *, spec_path: Path) -> dict[str, Any]:
+    failures: list[dict[str, Any]] = []
+    checked = 0
+    source_checked = 0
+    delivery = spec.get("delivery") or {}
+    delivered_mapping = delivery.get("data_columns") or {}
+    delivered_validity = delivery.get("mapping_validity") or {}
+    source_hashes = delivery.get("source_hashes") or {}
+    has_delivery_mapping = bool(delivery.get("chart_decision_hash") or delivery.get("data_columns") or delivery.get("mapping_validity") or source_hashes or delivery.get("data_sha256"))
+
+    def expected_mapping(plot_type: str, mapping: dict[str, Any]) -> dict[str, str]:
+        if plot_type in {"line", "scatter"}:
+            return {"x": "x", "y": "y"}
+        if plot_type == "errorbar":
+            return {"x": "x", "y": "y", "yerr": "yerr"}
+        if plot_type == "fill_between":
+            return {"x": "x", "y1": "lower", "y2": "upper"}
+        return {}
+
+    source_refs: set[str] = set()
+    for panel_index, panel in enumerate(spec.get("panels") or []):
+        for plot_index, plot in enumerate(panel.get("plots") or []):
+            data = plot.get("data") or {}
+            mapping = data.get("mapping") or {}
+            plot_type = str(plot.get("type", ""))
+            if plot_type == "errorbar":
+                checked += 1
+            if not mapping:
+                if plot_type == "errorbar":
+                    inline_errors = [error for error in validate_visualspec(spec) if "uncertainty_" in error]
+                    failures.extend({"code": error.split("]", 1)[0].lstrip("["), "panel": panel_index, "plot": plot_index, "message": error} for error in inline_errors)
+                continue
+            if data.get("source"):
+                source_checked += 1
+                source_refs.add(str(data["source"]))
+            if has_delivery_mapping and data.get("source"):
+                expected = expected_mapping(plot_type, mapping)
+                for spec_key, delivery_key in expected.items():
+                    if delivered_mapping.get(delivery_key) != mapping.get(spec_key):
+                        failures.append({"code": "uncertainty_source_mismatch" if plot_type == "errorbar" else "source_mapping_mismatch", "panel": panel_index, "plot": plot_index, "field": spec_key, "message": "VisualSpec mapping differs from ChartDecision materialization evidence"})
+            if plot_type == "errorbar" and data.get("source"):
+                try:
+                    validate_uncertainty_values(
+                        _series(data, "y", base_dir=spec_path.parent),
+                        _series(data, "yerr", base_dir=spec_path.parent),
+                        measurement_column=str(mapping.get("y")),
+                        uncertainty_column=str(mapping.get("yerr")),
+                        evidence=data.get("uncertainty"),
+                        override=data.get("uncertainty_override"),
+                    )
+                except UncertaintySemanticError as exc:
+                    failures.append({**exc.as_dict(), "panel": panel_index, "plot": plot_index})
+            elif plot_type == "fill_between" and has_delivery_mapping:
+                evidence = data.get("uncertainty")
+                if not isinstance(evidence, dict) or not str(evidence.get("semantics") or "").strip() or str(evidence.get("semantics")).lower() == "unknown":
+                    failures.append({"code": "uncertainty_definition_unknown", "panel": panel_index, "plot": plot_index, "message": "source-backed error bands require declared uncertainty semantics"})
+                try:
+                    lower = _series(data, "y1", base_dir=spec_path.parent)
+                    upper = _series(data, "y2", base_dir=spec_path.parent)
+                    if len(lower) != len(upper) or any(a > b for a, b in zip(lower, upper)):
+                        failures.append({"code": "uncertainty_band_invalid_bounds", "panel": panel_index, "plot": plot_index, "message": "error-band bounds must be aligned and lower <= upper"})
+                except (TypeError, ValueError, OSError, KeyError) as exc:
+                    failures.append({"code": "uncertainty_band_values_invalid", "panel": panel_index, "plot": plot_index, "message": str(exc)})
+    if source_checked and delivered_validity.get("status") != "pass":
+        failures.append({"code": "uncertainty_evidence_missing", "message": "delivery.mapping_validity must record a passed mapping audit"})
+    if source_checked and (source_hashes or delivery.get("data_sha256")):
+        for source_ref in sorted(source_refs):
+            source = (spec_path.parent / source_ref).resolve()
+            expected_hash = source_hashes.get(source_ref)
+            if expected_hash is None and source_hashes:
+                matching = [value for key, value in source_hashes.items() if Path(str(key)).name == Path(source_ref).name]
+                expected_hash = matching[0] if len(matching) == 1 else None
+            if expected_hash is None and not source_hashes and len(source_refs) == 1:
+                expected_hash = delivery.get("data_sha256")
+            if expected_hash is None:
+                failures.append({"code": "source_hash_missing", "source": source_ref, "message": "source-backed plot lacks a traceable source hash"})
+            elif not source.exists() or "sha256:" + hashlib.sha256(source.read_bytes()).hexdigest() != expected_hash:
+                failures.append({"code": "data_source_mismatch", "source": source_ref, "message": "VisualSpec source file differs from ChartDecision materialization evidence"})
+    return {"status": "failed" if failures else "pass", "checked_uncertainty_plots": checked, "checked_source_plots": source_checked, "failures": failures}
+
+
 def audit_semantics(spec_path: Path, semantics_path: Path, *, project_root: Path | None = None) -> dict[str, Any]:
     spec = load_json(spec_path)
     expected = expected_semantics(spec, spec_path=spec_path)
     actual = load_json(semantics_path)
-    checks = {"axes": "pass", "data": "pass", "labels": "pass", "legend_mapping": "pass", "units": "pass", "annotations": "pass", "coverage": "pass", "provenance": "pass"}
+    checks = {"axes": "pass", "data": "pass", "labels": "pass", "legend_mapping": "pass", "units": "pass", "annotations": "pass", "coverage": "pass", "provenance": "pass", "mapping_validity": "pass"}
     failures: list[dict[str, str]] = []
+    mapping_validity = audit_mapping_validity(spec, spec_path=spec_path)
+    if mapping_validity["status"] != "pass":
+        checks["mapping_validity"] = "failed"
+        failures.extend(mapping_validity["failures"])
     expected_figures = expected.get("figures", {})
     actual_figures = actual.get("figures", {})
     for fig_id, figure in expected_figures.items():
@@ -732,8 +818,10 @@ def audit_semantics(spec_path: Path, semantics_path: Path, *, project_root: Path
                 checks["provenance"] = "failed"
                 failures.extend(coverage_failures)
     overall = "pass" if all(value == "pass" for value in checks.values()) else "failed"
+    render_checks = {key: value for key, value in checks.items() if key != "mapping_validity"}
+    render_integrity = {"status": "pass" if all(value == "pass" for value in render_checks.values()) else "failed", "checks": render_checks}
     root = (project_root or spec_path.parent).resolve()
-    return {"schema": "scientificfigure.semantic_audit.v2", "spec": portable_path(spec_path, root), "render_semantics": portable_path(semantics_path, root), "checks": checks, "scientific_fidelity": checks, "overall": overall, "failures": failures}
+    return {"schema": "scientificfigure.semantic_audit.v2", "spec": portable_path(spec_path, root), "render_semantics": portable_path(semantics_path, root), "checks": checks, "scientific_fidelity": checks, "render_integrity": render_integrity, "mapping_validity": mapping_validity, "overall": overall, "failures": failures}
 
 
 def main() -> int:

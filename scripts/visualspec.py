@@ -260,6 +260,25 @@ def _plot_data_errors(data: Any, ptype: str, prefix: str, *, allow_empty: bool =
     if allow_empty:
         return []
     if data.get("source"):
+        if ptype == "errorbar":
+            mapping = data.get("mapping") or {}
+            override = data.get("uncertainty_override") or {}
+            override_enabled = bool(override.get("enabled") is True and override.get("user_specified") is True and str(override.get("reason", "")).strip())
+            if mapping.get("xerr") is not None:
+                return [f"[uncertainty_xerr_unsupported] {prefix}.data.mapping.xerr is not supported by the generic renderer"]
+            if mapping.get("y") == mapping.get("yerr") and not override_enabled:
+                return [f"[uncertainty_same_as_measurement] {prefix}.data.mapping.yerr must not equal mapping.y"]
+            evidence = data.get("uncertainty") or {}
+            if not evidence:
+                return [f"[uncertainty_evidence_missing] {prefix}.data.uncertainty must record the uncertainty source"]
+            if not str(evidence.get("semantics") or "").strip() or str(evidence.get("semantics")).lower() == "unknown":
+                return [f"[uncertainty_definition_unknown] {prefix}.data.uncertainty.semantics must be declared"]
+        elif ptype == "fill_between":
+            evidence = data.get("uncertainty") or {}
+            if not evidence:
+                return [f"[uncertainty_evidence_missing] {prefix}.data.uncertainty must record the uncertainty source"]
+            if not str(evidence.get("semantics") or "").strip() or str(evidence.get("semantics")).lower() == "unknown":
+                return [f"[uncertainty_definition_unknown] {prefix}.data.uncertainty.semantics must be declared"]
         return []
     errors: list[str] = []
     if ptype in {"line", "scatter", "errorbar"}:
@@ -270,10 +289,21 @@ def _plot_data_errors(data: Any, ptype: str, prefix: str, *, allow_empty: bool =
         if _number_list(data.get("x")) and _number_list(data.get("y")) and len(data["x"]) != len(data["y"]):
             errors.append(f"{prefix}.data.x and data.y must have equal length")
         if ptype == "errorbar":
+            override = data.get("uncertainty_override") or {}
+            override_enabled = bool(override.get("enabled") is True and override.get("user_specified") is True and str(override.get("reason", "")).strip())
             if not _nonempty_number_list(data.get("yerr")):
                 errors.append(f"{prefix}.data.yerr must be a non-empty finite number array")
             elif _number_list(data.get("y")) and len(data["yerr"]) != len(data["y"]):
                 errors.append(f"{prefix}.data.yerr must match data.y length")
+            if _number_list(data.get("yerr")) and any(float(value) < 0 for value in data["yerr"]):
+                errors.append(f"[uncertainty_negative] {prefix}.data.yerr must contain only non-negative values")
+            if _number_list(data.get("y")) and _number_list(data.get("yerr")) and [float(value) for value in data["y"]] == [float(value) for value in data["yerr"]] and not override_enabled:
+                errors.append(f"[uncertainty_duplicates_measurement] {prefix}.data.yerr must not duplicate data.y")
+            evidence = data.get("uncertainty") or {}
+            if not evidence:
+                errors.append(f"[uncertainty_evidence_missing] {prefix}.data.uncertainty must record the uncertainty source")
+            elif not str(evidence.get("semantics") or "").strip() or str(evidence.get("semantics")).lower() == "unknown":
+                errors.append(f"[uncertainty_definition_unknown] {prefix}.data.uncertainty.semantics must be declared")
     elif ptype == "fill_between":
         for key in ("x", "y1", "y2"):
             if not _nonempty_number_list(data.get(key)):
@@ -282,6 +312,12 @@ def _plot_data_errors(data: Any, ptype: str, prefix: str, *, allow_empty: bool =
             for key in ("y1", "y2"):
                 if _number_list(data.get(key)) and len(data["x"]) != len(data[key]):
                     errors.append(f"{prefix}.data.x and data.{key} must have equal length")
+        if data.get("source"):
+            evidence = data.get("uncertainty") or {}
+            if not evidence:
+                errors.append(f"[uncertainty_evidence_missing] {prefix}.data.uncertainty must record the uncertainty source")
+            elif not str(evidence.get("semantics") or "").strip() or str(evidence.get("semantics")).lower() == "unknown":
+                errors.append(f"[uncertainty_definition_unknown] {prefix}.data.uncertainty.semantics must be declared")
     elif ptype in {"grouped_bar", "stacked_bar"}:
         if not _nonempty_number_list(data.get("x")):
             errors.append(f"{prefix}.data.x must be a non-empty finite number array")
@@ -299,10 +335,21 @@ def _plot_data_errors(data: Any, ptype: str, prefix: str, *, allow_empty: bool =
                 elif x_len and len(group["y"]) != x_len:
                     errors.append(f"{prefix}.data.groups[{group_index}].y must match data.x length")
                 if "yerr" in group:
+                    override = group.get("uncertainty_override") or {}
+                    override_enabled = bool(override.get("enabled") is True and override.get("user_specified") is True and str(override.get("reason", "")).strip())
                     if not _nonempty_number_list(group.get("yerr")):
                         errors.append(f"{prefix}.data.groups[{group_index}].yerr must be a non-empty finite number array")
                     elif x_len and len(group["yerr"]) != x_len:
                         errors.append(f"{prefix}.data.groups[{group_index}].yerr must match data.x length")
+                    if _number_list(group.get("yerr")) and any(float(value) < 0 for value in group["yerr"]):
+                        errors.append(f"[uncertainty_negative] {prefix}.data.groups[{group_index}].yerr must contain only non-negative values")
+                    if _number_list(group.get("y")) and _number_list(group.get("yerr")) and [float(value) for value in group["y"]] == [float(value) for value in group["yerr"]] and not override_enabled:
+                        errors.append(f"[uncertainty_duplicates_measurement] {prefix}.data.groups[{group_index}].yerr must not duplicate group.y")
+                    evidence = group.get("uncertainty") or {}
+                    if not evidence:
+                        errors.append(f"[uncertainty_evidence_missing] {prefix}.data.groups[{group_index}].uncertainty must record the uncertainty source")
+                    elif not str(evidence.get("semantics") or "").strip() or str(evidence.get("semantics")).lower() == "unknown":
+                        errors.append(f"[uncertainty_definition_unknown] {prefix}.data.groups[{group_index}].uncertainty.semantics must be declared")
     elif ptype == "heatmap":
         if not _matrix(data.get("z")):
             errors.append(f"{prefix}.data.z must be a non-empty finite 2D matrix")

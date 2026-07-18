@@ -89,7 +89,7 @@ class FastSemanticsTests(ScientificFigureReproductionTestBase):
         auditor = load_module("audit_semantics", SCRIPTS / "audit_semantics.py")
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            spec = self._single_plot_spec({"type": "errorbar", "data": {"x": [0, 1], "y": [0.5, 0.5], "yerr": [0.1, 0.2]}})
+            spec = self._single_plot_spec({"type": "errorbar", "data": {"x": [0, 1], "y": [0.5, 0.5], "yerr": [0.1, 0.2], "uncertainty": {"source": "explicit", "semantics": "standard deviation"}}})
             spec_path = root / "spec.json"
             spec_path.write_text(json.dumps(spec), encoding="utf-8")
             out = root / "out"
@@ -223,12 +223,12 @@ class FastSemanticsTests(ScientificFigureReproductionTestBase):
             root = Path(tmp)
             spec = self._single_plot_spec({
                 "type": "grouped_bar",
-                "data": {"x": [1, 2], "groups": [{"label": "B", "y": [4, 5], "yerr": [0.2, 0.3], "color": "#cc9966"}]},
+                "data": {"x": [1, 2], "groups": [{"label": "B", "y": [4, 5], "yerr": [0.2, 0.3], "uncertainty": {"source": "explicit", "semantics": "standard deviation"}, "color": "#cc9966"}]},
                 "style": {"bar_width": 0.25, "errorbar_color": "#444444", "errorbar_line_width_pt": 0.5, "errorbar_capsize": 1.5},
             })
             spec["panels"][0]["plots"].append({
                 "type": "errorbar",
-                "data": {"x": [1, 2], "y": [4, 5], "yerr": [0.2, 0.2]},
+                "data": {"x": [1, 2], "y": [4, 5], "yerr": [0.2, 0.2], "uncertainty": {"source": "explicit", "semantics": "standard deviation"}},
                 "style": {"color": "#444444", "line_width_pt": 0.5, "line_style": "none", "capsize": 1.5},
             })
             spec["panels"][0]["legend"] = {
@@ -311,3 +311,47 @@ class FastSemanticsTests(ScientificFigureReproductionTestBase):
             "not_strict",
             finalizer.classify_status(score, profile="semantic", source_strategy="raw_data", representation="semantic_vector", semantic_audit={"overall": "pass"}, vector_validation={"status": "pass"}, panel_scores={}, required_panel_ids={"A"}),
         )
+
+    def test_source_free_success_requires_render_and_mapping_reports(self) -> None:
+        finalizer = load_module("finalize_manifest_mapping_gate", SCRIPTS / "finalize_manifest.py")
+        incomplete = {"overall": "pass"}
+        complete = {"overall": "pass", "render_integrity": {"status": "pass"}, "mapping_validity": {"status": "pass"}}
+        vector = {"status": "pass"}
+        self.assertEqual("not_strict", finalizer.classify_source_free_status(source_strategy="raw_data", representation="semantic_vector", semantic_audit=incomplete, vector_validation=vector))
+        self.assertEqual("semantic_validated_pass", finalizer.classify_source_free_status(source_strategy="raw_data", representation="semantic_vector", semantic_audit=complete, vector_validation=vector))
+
+    def test_mapping_audit_rejects_chartdecision_visualspec_source_mismatch(self) -> None:
+        auditor = load_module("audit_semantics_mapping_gate", SCRIPTS / "audit_semantics.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            data = root / "data.csv"
+            data.write_text("temperature,response,response_sd\n300,1.2,0.1\n350,1.8,0.2\n", encoding="utf-8")
+            spec = self._single_plot_spec({
+                "type": "errorbar",
+                "data": {
+                    "source": "data.csv",
+                    "mapping": {"x": "temperature", "y": "response", "yerr": "response_sd"},
+                    "uncertainty": {"column": "response_sd", "source": "explicit", "match_type": "token", "matched_token": "sd", "confidence": 1.0, "semantics": "standard deviation"},
+                },
+            })
+            spec["delivery"] = {"data_columns": {"x": "temperature", "y": "response", "yerr": "wrong_sd"}, "mapping_validity": {"status": "pass"}}
+            spec_path = root / "spec.json"
+            spec_path.write_text(json.dumps(spec), encoding="utf-8")
+            report = auditor.audit_mapping_validity(spec, spec_path=spec_path)
+            self.assertEqual("failed", report["status"])
+            self.assertIn("uncertainty_source_mismatch", {item["code"] for item in report["failures"]})
+
+    def test_mapping_audit_covers_line_sources_and_hashes(self) -> None:
+        auditor = load_module("audit_semantics_line_mapping_gate", SCRIPTS / "audit_semantics.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            data = root / "data.csv"
+            data.write_text("x,y\n0,1\n1,2\n", encoding="utf-8")
+            spec = self._single_plot_spec({"type": "line", "data": {"source": "data.csv", "mapping": {"x": "x", "y": "y"}}})
+            spec["delivery"] = {"chart_decision_hash": "sha256:decision", "data_columns": {"x": "wrong_x", "y": "y"}, "data_sha256": "sha256:wrong", "mapping_validity": {"status": "pass"}}
+            spec_path = root / "spec.json"
+            spec_path.write_text(json.dumps(spec), encoding="utf-8")
+            report = auditor.audit_mapping_validity(spec, spec_path=spec_path)
+            self.assertEqual("failed", report["status"])
+            self.assertIn("source_mapping_mismatch", {item["code"] for item in report["failures"]})
+            self.assertIn("data_source_mismatch", {item["code"] for item in report["failures"]})

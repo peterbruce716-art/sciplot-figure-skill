@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 import common  # noqa: F401
-from advisor_common import ROOT, load_json
+from advisor_common import ROOT, load_json, sha256_file
 from build_figure_contract import build_contract
 from build_statistics_report import build_statistics_report
 from chart_decision_to_visualspec import materialize_chart_decision
@@ -152,7 +152,9 @@ class ContractStatisticsTests(unittest.TestCase):
                 evidence_chain=[{"id": "E1", "source": "data.csv", "claim": "unknown", "status": "unknown"}],
             )
             decision = recommend_chart(PROFILE, INTENT, x="x", y="y", figure_contract=contract)
-            self.assertEqual("line_with_error_band", decision["recommended_type"])
+            self.assertEqual("line_with_markers", decision["recommended_type"])
+            self.assertIn("uncertainty_values_missing", {item["code"] for item in decision["warnings"]})
+            decision["data_source"]["sha256"] = sha256_file(data)
             spec, materialization = materialize_chart_decision(decision, data_path=data, output_dir=root / "out", x="x", y="y", figure_contract=contract)
             self.assertEqual("asymmetric_mixed", spec["layout"]["archetype"])
             self.assertEqual("A", spec["layout"]["hero_panel_id"])

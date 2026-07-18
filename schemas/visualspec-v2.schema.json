@@ -489,7 +489,9 @@
           "properties": {
             "x": {"$ref": "#/$defs/number_array"},
             "y": {"$ref": "#/$defs/number_array"},
-            "yerr": {"$ref": "#/$defs/number_array"}
+            "yerr": {"$ref": "#/$defs/number_array"},
+            "uncertainty": {"type": "object", "additionalProperties": true},
+            "uncertainty_override": {"type": ["object", "null"], "additionalProperties": true}
           }
         }
       ]
@@ -517,7 +519,9 @@
         "label": {"type": ["string", "null"]},
         "color": {"type": "string"},
         "y": {"$ref": "#/$defs/number_array"},
-        "yerr": {"$ref": "#/$defs/number_array"}
+        "yerr": {"$ref": "#/$defs/number_array"},
+        "uncertainty": {"type": "object", "additionalProperties": true},
+        "uncertainty_override": {"type": ["object", "null"], "additionalProperties": true}
       }
     },
     "grouped_bar_data": {

@@ -29,7 +29,9 @@
           "inferred_type": {"enum": ["continuous", "ordinal", "categorical", "datetime", "boolean", "text", "unknown"]},
           "missing_count": {"type": "integer", "minimum": 0},
           "unique_count": {"type": "integer", "minimum": 0},
-          "suspected_id": {"type": "boolean"}
+          "suspected_id": {"type": "boolean"},
+          "uncertainty_candidate": {"type": "boolean"},
+          "uncertainty_evidence": {"$ref": "#/$defs/uncertainty_evidence"}
         }
       }
     },
@@ -46,6 +48,8 @@
     "warnings": {"type": "array", "items": {"$ref": "#/$defs/message"}},
     "recommended_tasks": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "uncertainty_columns": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "explicit_uncertainty_columns": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "uncertainty_evidence": {"type": "array", "items": {"$ref": "#/$defs/uncertainty_evidence"}},
     "repeated_x": {"type": ["object", "null"], "additionalProperties": false, "properties": {
       "x": {"type": "string"},
       "unique_x": {"type": "integer", "minimum": 0},
@@ -55,6 +59,20 @@
     }}
   },
   "$defs": {
+    "uncertainty_evidence": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["source", "match_type", "confidence"],
+      "properties": {
+        "column": {"type": "string"},
+        "is_uncertainty": {"type": "boolean"},
+        "source": {"enum": ["explicit", "name_inference", "metadata"]},
+        "match_type": {"type": "string"},
+        "matched_token": {"type": ["string", "null"]},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "semantics": {"type": ["string", "null"]}
+      }
+    },
     "message": {
       "type": "object",
       "additionalProperties": false,

@@ -1,0 +1,57 @@
+{
+  "schema": "scientificfigure.visualspec.v2",
+  "figure": {
+    "id": "kybd_triptych",
+    "size_mm": [171.196, 47.361],
+    "dpi": 96,
+    "crop_mode": "fixed_canvas",
+    "background": "white"
+  },
+  "theme": {
+    "font": {"family_candidates": ["Times New Roman", "DejaVu Serif"], "size_pt": 6.5},
+    "axes": {"line_width_pt": 0.6}
+  },
+  "delivery": {
+    "source_strategy": "digitized_raster",
+    "representation": "semantic_vector",
+    "reference_sha256": "03BC9481D1AFE2DB812CA2ECC148A51BAFAB251B4BF3EE7E1E118F5BA6F63",
+    "digitized_data": "examples/kybd_triptych/digitized_bars.csv",
+    "digitization_config": "examples/kybd_triptych/digitizer_config.json",
+    "digitization_audit": "examples/kybd_triptych/digitization_audit.json"
+  },
+  "panels": [
+    {
+      "id": "P1",
+      "description": "fresh raster digitization; side-by-side bars",
+      "bbox_normalized": [0.0587326121, 0.1843575419, 0.264296753, 0.7653631285],
+      "source_strategy": "digitized_raster",
+      "representation": "semantic_vector",
+      "reconstruction_mode": "semantic_reconstruction",
+      "legend": {"loc": "upper right", "ncol": 3, "font_size_pt": 5.5, "bbox_to_anchor": [0.99, 0.995], "handle_length": 1.4, "handle_height": 0.7, "column_spacing": 0.55, "label_spacing": 0.1, "border_pad": 0, "handle_text_pad": 0.25},
+      "axes": {"x": {"limits": [0.5, 5.5], "ticks": [1, 2, 3, 4, 5], "label": "KYBD-2"}, "y": {"limits": [0, 80], "ticks": [0, 20, 40, 60, 80], "label": "KYBD-1"}},
+      "plots": [{"type": "grouped_bar", "data": {"x": [1, 2, 3, 4, 5], "groups": [{"label": "B", "color": "#FDC997", "y": [54.890511, 63.065693, 42.043796, 67.737226, 67.153285], "yerr": [1.751825, 1.167883, 1.167883, 1.751825, 1.167883], "uncertainty": {"source": "metadata", "column": "errorbar_value_from_pixels", "semantics": "raster-observed error-bar extent; statistical definition not recoverable", "confidence": 0.7}}, {"label": "D", "color": "#9DD79D", "y": [24.525547, 34.452555, 27.445255, 20.437956, 29.781022], "yerr": [1.751825, 1.751825, 1.751825, 1.167883, 1.167883], "uncertainty": {"source": "metadata", "column": "errorbar_value_from_pixels", "semantics": "raster-observed error-bar extent; statistical definition not recoverable", "confidence": 0.7}}, {"label": "F", "color": "#C1B5D4", "y": [8.759124, 11.094891, 7.591241, 12.846715, 15.766423], "yerr": [1.751825, 1.167883, 0.583942, 1.167883, 0.583942], "uncertainty": {"source": "metadata", "column": "errorbar_value_from_pixels", "semantics": "raster-observed error-bar extent; statistical definition not recoverable", "confidence": 0.7}}]}, "style": {"bar_width": 0.235, "bar_widths": [0.235, 0.235, 0.265], "group_mode": "side_by_side", "group_offsets": [-0.270, -0.005, 0.270], "errorbar_color": "#777777", "errorbar_line_width_pt": 0.45, "errorbar_capsize": 1.2}}]
+    },
+    {
+      "id": "P2",
+      "description": "fresh raster digitization; centered nested bars",
+      "bbox_normalized": [0.3848531685, 0.1843575419, 0.2627511592, 0.7653631285],
+      "source_strategy": "digitized_raster",
+      "representation": "semantic_vector",
+      "reconstruction_mode": "semantic_reconstruction",
+      "legend": {"loc": "upper right", "ncol": 3, "font_size_pt": 5.5, "bbox_to_anchor": [0.99, 0.995], "handle_length": 1.4, "handle_height": 0.7, "column_spacing": 0.55, "label_spacing": 0.1, "border_pad": 0, "handle_text_pad": 0.25},
+      "axes": {"x": {"limits": [0.5, 5.5], "ticks": [1, 2, 3, 4, 5], "label": "KYBD-2"}, "y": {"limits": [0, 80], "ticks": [0, 20, 40, 60, 80], "label": "KYBD-1"}},
+      "plots": [{"type": "grouped_bar", "data": {"x": [1, 2, 3, 4, 5], "groups": [{"label": "B", "color": "#ECD6FE", "y": [54.890511, 63.065693, 42.043796, 68.321168, 67.153285], "yerr": [1.751825, 1.167883, 1.167883, 1.167883, 1.167883], "uncertainty": {"source": "metadata", "column": "errorbar_value_from_pixels", "semantics": "raster-observed error-bar extent; statistical definition not recoverable", "confidence": 0.7}}, {"label": "D", "color": "#DAA4FB", "y": [25.109489, 35.036496, 28.029197, 21.021898, 29.781022], "yerr": [1.167883, 1.167883, 1.167883, 0.583942, 1.167883], "uncertainty": {"source": "metadata", "column": "errorbar_value_from_pixels", "semantics": "raster-observed error-bar extent; statistical definition not recoverable", "confidence": 0.7}}, {"label": "F", "color": "#9642B3", "y": [9.343066, 11.678832, 7.591241, 12.846715, 15.766423], "yerr": [1.167883, 0.583942, 0.583942, 1.167883, 0.583942], "uncertainty": {"source": "metadata", "column": "errorbar_value_from_pixels", "semantics": "raster-observed error-bar extent; statistical definition not recoverable", "confidence": 0.7}}]}, "style": {"bar_width": 0.706, "bar_widths": [0.706, 0.500, 0.265], "group_mode": "overlap", "group_offsets": [-0.010, 0.005, 0.005], "errorbar_color": "#777777", "errorbar_line_width_pt": 0.45, "errorbar_capsize": 1.2}}]
+    },
+    {
+      "id": "P3",
+      "description": "fresh raster digitization; wide outer bar with offset inner bars",
+      "bbox_normalized": [0.7094281300, 0.1843575419, 0.2642967530, 0.7653631285],
+      "source_strategy": "digitized_raster",
+      "representation": "semantic_vector",
+      "reconstruction_mode": "semantic_reconstruction",
+      "legend": {"loc": "upper right", "ncol": 3, "font_size_pt": 5.5, "bbox_to_anchor": [0.99, 0.995], "handle_length": 1.4, "handle_height": 0.7, "column_spacing": 0.55, "label_spacing": 0.1, "border_pad": 0, "handle_text_pad": 0.25},
+      "axes": {"x": {"limits": [0.5, 5.5], "ticks": [1, 2, 3, 4, 5], "label": "KYBD-2"}, "y": {"limits": [0, 80], "ticks": [0, 20, 40, 60, 80], "label": "KYBD-1"}},
+      "plots": [{"type": "grouped_bar", "data": {"x": [1, 2, 3, 4, 5], "groups": [{"label": "E", "color": "#ECD6FE", "y": [54.890511, 63.065693, 42.043796, 68.321168, 67.153285], "yerr": [1.751825, 1.167883, 1.167883, 1.167883, 1.167883], "uncertainty": {"source": "metadata", "column": "errorbar_value_from_pixels", "semantics": "raster-observed error-bar extent; statistical definition not recoverable", "confidence": 0.7}}, {"label": "D", "color": "#DAA6FA", "y": [23.357664, 35.036496, 28.029197, 21.021898, 29.781022], "yerr": [2.919708, 1.167883, 1.167883, 0.583942, 1.167883], "uncertainty": {"source": "metadata", "column": "errorbar_value_from_pixels", "semantics": "raster-observed error-bar extent; statistical definition not recoverable", "confidence": 0.7}}, {"label": "F", "color": "#A058B4", "y": [9.343066, 11.678832, 7.591241, 12.846715, 15.766423], "yerr": [1.167883, 0.583942, 0.583942, 0.583942, 0.583942], "uncertainty": {"source": "metadata", "column": "errorbar_value_from_pixels", "semantics": "raster-observed error-bar extent; statistical definition not recoverable", "confidence": 0.7}}]}, "style": {"bar_width": 0.706, "bar_widths": [0.706, 0.265, 0.235], "group_mode": "overlap", "group_offsets": [0.005, -0.127, 0.123], "errorbar_color": "#777777", "errorbar_line_width_pt": 0.45, "errorbar_capsize": 1.2}}]
+    }
+  ]
+}

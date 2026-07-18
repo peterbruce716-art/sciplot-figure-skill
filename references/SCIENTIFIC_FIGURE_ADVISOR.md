@@ -12,7 +12,7 @@ The Advisor Layer is advisory. It does not modify input data, delete outliers, o
 ## Recommended sequence
 
 ```powershell
-py -3.14 scripts\profile_scientific_data.py --input data.csv --output outputs\data_profile.json --group treatment --x temperature --y stress
+py -3.14 scripts\profile_scientific_data.py --input data.csv --output outputs\data_profile.json --group treatment --x temperature --y stress --uncertainty stress_sd
 py -3.14 scripts\recommend_scientific_chart.py --profile outputs\data_profile.json --intent intent.json --output outputs\chart_decision.json --x temperature --y stress
 py -3.14 scripts\evaluate_scientific_plot_policy.py --context context.json --output outputs\policy_report.json
 ```
@@ -24,5 +24,8 @@ Use `scientific_figure_pipeline.py` when these stages should be resumed from one
 - A continuous variable should not be treated as a categorical axis without a documented reason.
 - Small groups should expose individual observations; do not infer that a mean-only bar is invalid in every context.
 - An error bar has no meaning until SD, SEM, confidence interval, or another definition is recorded.
+- Uncertainty inference uses token/phrase boundaries and records `match_type`, `matched_token`, `confidence`, and `source`; explicit `--uncertainty` input takes priority.
+- Error values must be finite, non-negative, row-aligned, independent from the measurement source, and not a row-wise copy of the measurement. Unknown definitions and unconfirmed inferred candidates fail before materialization.
+- ChartDecision and VisualSpec x/y/error mappings and source hashes must agree. Rendering integrity, mapping validity, and publication readiness are separate QA results; successful export is not evidence that all three passed.
 - Correlation and trend recommendations do not establish causation.
 - The Advisor helps most with CSV/TSV/Excel data redraws. It is only auxiliary for screenshot fidelity, technical route maps, and mechanism schematics.

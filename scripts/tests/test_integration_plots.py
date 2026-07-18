@@ -26,7 +26,7 @@ class IntegrationPlotTests(ScientificFigureReproductionTestBase):
         plots = {
             "line": {"type": "line", "data": {"x": [0, 1, 2], "y": [0, 1, 0]}, "style": {"color": "#111111", "marker": "o"}},
             "scatter": {"type": "scatter", "data": {"x": [0, 1, 2], "y": [2, 1, 0]}, "style": {"color": "#aa0000", "marker": "s", "alpha": 0.7}},
-            "errorbar": {"type": "errorbar", "data": {"x": [0, 1, 2], "y": [1, 1.5, 1], "yerr": [0.1, 0.2, 0.3]}, "style": {"color": "#0033aa", "capsize": 2}},
+            "errorbar": {"type": "errorbar", "data": {"x": [0, 1, 2], "y": [1, 1.5, 1], "yerr": [0.1, 0.2, 0.3], "uncertainty": {"source": "explicit", "semantics": "standard deviation"}}, "style": {"color": "#0033aa", "capsize": 2}},
             "fill_between": {"type": "fill_between", "data": {"x": [0, 1, 2], "y1": [0.2, 0.3, 0.2], "y2": [0.7, 0.8, 0.7]}, "style": {"color": "#6699cc", "alpha": 0.45}},
             "grouped_bar": {"type": "grouped_bar", "data": {"x": [0, 1], "groups": [{"label": "a", "y": [1, 2], "color": "#cc0000"}, {"label": "b", "y": [2, 1], "color": "#0000cc"}]}, "style": {"bar_width": 0.25, "alpha": 0.8}},
             "stacked_bar": {"type": "stacked_bar", "data": {"x": [0, 1], "groups": [{"label": "a", "y": [1, 2], "color": "#cc0000"}, {"label": "b", "y": [2, 1], "color": "#0000cc"}]}, "style": {"bar_width": 0.5, "alpha": 0.8}},
@@ -48,4 +48,3 @@ class IntegrationPlotTests(ScientificFigureReproductionTestBase):
                 provenance = actual_plot.get("provenance", {})
                 self.assertTrue(provenance, name)
                 self.assertNotIn("declared", set(provenance.values()), name)
-

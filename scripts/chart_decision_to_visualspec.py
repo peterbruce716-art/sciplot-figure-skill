@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any
@@ -10,7 +11,9 @@ from typing import Any
 import pandas as pd
 
 from advisor_common import load_json, validate_payload, write_json
+from advisor_common import sha256_file
 from resolve_panel_layout import panel_semantics, resolve_layout
+from uncertainty_semantics import UncertaintySemanticError, validate_uncertainty_values
 
 
 SUPPORTED = {
@@ -64,16 +67,34 @@ def materialize_chart_decision(
         raise ValueError(f"unsupported chart decision '{recommended}'; use a project-level renderer instead of silently drawing a line")
     output_dir.mkdir(parents=True, exist_ok=True)
     source = data_path.resolve()
+    decision_columns = decision.get("data_columns") or {}
+    for axis, supplied in (("x", x), ("y", y)):
+        declared = decision_columns.get(axis)
+        if declared is not None and declared != supplied:
+            raise UncertaintySemanticError("source_mapping_mismatch", f"ChartDecision {axis} mapping differs from the materializer argument", declared=declared, supplied=supplied)
+    if decision.get("requires_user_confirmation") is True and recommended in {"line_with_error_bars", "line_with_error_band"}:
+        raise UncertaintySemanticError("uncertainty_confirmation_required", "ChartDecision requires user confirmation before materialization")
+    data_sha256 = sha256_file(source)
+    declared_sha256 = (decision.get("data_source") or {}).get("sha256")
+    if declared_sha256 and declared_sha256 != data_sha256:
+        raise UncertaintySemanticError("data_source_mismatch", "ChartDecision data source hash differs from the materialized data", declared=declared_sha256, actual=data_sha256)
     root = output_dir.resolve()
     derived_path: Path | None = None
     plot_style = _style(style_profile)
     plots: list[dict[str, Any]] = []
     mapping: dict[str, Any] = {"x": x, "y": y}
     source_ref = _source_ref(source, root)
+    source_hashes: dict[str, str] = {source_ref: data_sha256}
     contract_panels = list((figure_contract or {}).get("panel_plan") or [])
     panel_id = str(contract_panels[0].get("panel_id")) if contract_panels and contract_panels[0].get("panel_id") else "A"
     layout = resolve_layout(figure_contract, panel_ids=[panel_id])
     semantics = panel_semantics(figure_contract).get(panel_id, {})
+    mapping_validity: dict[str, Any] = {
+        "status": "pass",
+        "measurement_column": y,
+        "uncertainty_column": None,
+        "checks": {"measurement_mapping": "pass", "uncertainty_not_requested": "pass"},
+    }
 
     if recommended in {"line", "line_with_markers", "scatter"}:
         plot_type = "scatter" if recommended == "scatter" else "line"
@@ -85,21 +106,50 @@ def materialize_chart_decision(
         error_column = decision.get("data_columns", {}).get("error") or decision.get("uncertainty_source")
         if not error_column:
             raise ValueError("line_with_error_bars requires a declared uncertainty column")
-        plots.append({"type": "errorbar", "data": {"source": source_ref, "mapping": {"x": x, "y": y, "yerr": error_column}}, "style": _typed_style(plot_style, "errorbar")})
+        if decision.get("uncertainty_source") != error_column:
+            raise UncertaintySemanticError("uncertainty_source_mismatch", "ChartDecision error mapping and uncertainty source do not agree")
+        frame = pd.read_csv(source)
+        missing = [name for name in (x, y, error_column) if name not in frame.columns]
+        if missing:
+            raise UncertaintySemanticError("uncertainty_column_missing", f"mapped data columns are missing: {', '.join(missing)}")
+        evidence = decision.get("uncertainty_evidence")
+        if isinstance(evidence, dict) and evidence.get("column") not in {None, error_column}:
+            raise UncertaintySemanticError("uncertainty_source_mismatch", "uncertainty evidence names a different source column")
+        mapping_validity = validate_uncertainty_values(
+            frame[y].tolist(),
+            frame[error_column].tolist(),
+            measurement_column=y,
+            uncertainty_column=error_column,
+            evidence=evidence,
+            override=decision.get("uncertainty_override"),
+        )
+        plots.append({"type": "errorbar", "data": {"source": source_ref, "mapping": {"x": x, "y": y, "yerr": error_column}, "uncertainty": evidence, "uncertainty_override": decision.get("uncertainty_override")}, "style": _typed_style(plot_style, "errorbar")})
         mapping["yerr"] = error_column
     elif recommended == "line_with_error_band":
+        evidence = decision.get("uncertainty_evidence")
+        if not isinstance(evidence, dict) or not evidence.get("semantics"):
+            raise UncertaintySemanticError("uncertainty_definition_unknown", "error bands require traceable uncertainty semantics")
         frame = pd.read_csv(source)
         if x not in frame or y not in frame:
             raise ValueError(f"data columns not found: {x}, {y}")
         lower = decision.get("data_columns", {}).get("lower")
         upper = decision.get("data_columns", {}).get("upper")
+        semantics_name = str(evidence.get("semantics", "")).strip().lower().replace("_", " ")
         if lower and upper and lower in frame and upper in frame:
             derived = frame[[x, y, lower, upper]].copy()
+            lower_values = pd.to_numeric(derived[lower], errors="coerce")
+            upper_values = pd.to_numeric(derived[upper], errors="coerce")
+            if lower_values.isna().any() or upper_values.isna().any() or (lower_values > upper_values).any():
+                raise UncertaintySemanticError("uncertainty_band_invalid_bounds", "error-band bounds must be finite numeric values with lower <= upper")
             mapping.update({"lower": lower, "upper": upper})
         else:
+            if semantics_name not in {"standard deviation", "standard error"}:
+                raise UncertaintySemanticError("uncertainty_band_requires_declared_bounds", "automatic error bands support standard deviation or standard error; provide lower and upper columns for other definitions")
             grouped = frame.groupby([x], sort=True, dropna=False)[y]
-            derived = grouped.agg(["mean", "std"]).reset_index().rename(columns={"mean": y})
-            derived["std"] = derived["std"].fillna(0.0)
+            derived = grouped.agg(["mean", "std", "count"]).reset_index().rename(columns={"mean": y})
+            derived["std"] = pd.to_numeric(derived["std"], errors="coerce").fillna(0.0)
+            if semantics_name == "standard error":
+                derived["std"] = derived["std"] / derived["count"].clip(lower=1).pow(0.5)
             derived["lower"] = derived[y] - derived["std"]
             derived["upper"] = derived[y] + derived["std"]
             mapping.update({"lower": "lower", "upper": "upper", "uncertainty": "std"})
@@ -107,10 +157,18 @@ def materialize_chart_decision(
         derived_path.parent.mkdir(parents=True, exist_ok=True)
         derived.to_csv(derived_path, index=False)
         derived_ref = _source_ref(derived_path, root)
+        source_hashes[derived_ref] = sha256_file(derived_path)
         plots.extend([
-            {"type": "fill_between", "data": {"source": derived_ref, "mapping": {"x": x, "y1": mapping["lower"], "y2": mapping["upper"]}}, "style": {"color": plot_style["color"], "alpha": 0.18}},
+            {"type": "fill_between", "data": {"source": derived_ref, "mapping": {"x": x, "y1": mapping["lower"], "y2": mapping["upper"]}, "uncertainty": evidence}, "style": {"color": plot_style["color"], "alpha": 0.18}},
             {"type": "line", "data": {"source": derived_ref, "mapping": {"x": x, "y": y}}, "style": _typed_style(plot_style, "line")},
         ])
+        mapping_validity = {
+            "status": "pass",
+            "measurement_column": y,
+            "uncertainty_column": decision.get("uncertainty_source"),
+            "checks": {"measurement_mapping": "pass", "definition_known": "pass", "traceable_source": "pass"},
+            "evidence": evidence,
+        }
     elif recommended in {"grouped_bar", "stacked_bar"}:
         raise ValueError(f"{recommended} requires an explicit grouped-bar data mapping; no silent reduction is allowed")
     else:
@@ -139,7 +197,7 @@ def materialize_chart_decision(
         },
         "layout": layout,
         "panels": [panel],
-        "delivery": {"chart_decision_hash": _hash_payload(decision), "materialized_as": [plot["type"] for plot in plots], "data_columns": mapping, "figure_contract_hash": _hash_payload(figure_contract) if figure_contract else None},
+        "delivery": {"chart_decision_hash": _hash_payload(decision), "materialized_as": [plot["type"] for plot in plots], "data_columns": mapping, "data_sha256": data_sha256, "source_hashes": source_hashes, "mapping_validity": mapping_validity, "figure_contract_hash": _hash_payload(figure_contract) if figure_contract else None},
     }
     validate_payload(spec, "visualspec-v2.schema.json")
     report = {
@@ -148,6 +206,9 @@ def materialize_chart_decision(
         "recommended_type": recommended,
         "materialized_as": [plot["type"] for plot in plots],
         "data_columns": mapping,
+        "data_sha256": data_sha256,
+        "source_hashes": source_hashes,
+        "mapping_validity": mapping_validity,
         "derived_data": None if derived_path is None else derived_path.relative_to(root).as_posix(),
         "layout": layout,
         "panel_semantics": {panel_id: semantics} if semantics else {},

@@ -167,6 +167,37 @@ class FastValidationTests(ScientificFigureReproductionTestBase):
         self.assertTrue(any("data.x" in error or "data.y" in error for error in errors), errors)
         self.assertTrue(any("linewidht_pt" in error for error in errors), errors)
 
+    def test_inline_errorbar_rejects_negative_and_copied_uncertainty(self) -> None:
+        for yerr, code in [([-0.1, 0.2], "uncertainty_negative"), ([1.0, 2.0], "uncertainty_duplicates_measurement")]:
+            with self.subTest(code=code):
+                spec = self._line_spec()
+                spec["panels"][0]["plots"] = [{"type": "errorbar", "data": {"x": [0, 1], "y": [1.0, 2.0], "yerr": yerr}, "style": {}}]
+                errors = visualspec.validate_visualspec(spec)
+                self.assertTrue(any(code in error for error in errors), errors)
+
+    def test_source_mapping_rejects_same_y_and_yerr_without_override(self) -> None:
+        spec = self._line_spec()
+        spec["panels"][0]["plots"] = [{"type": "errorbar", "data": {"source": "data.csv", "mapping": {"x": "temperature", "y": "response", "yerr": "response"}}, "style": {}}]
+        errors = visualspec.validate_visualspec(spec)
+        self.assertTrue(any("uncertainty_same_as_measurement" in error for error in errors), errors)
+        spec["panels"][0]["plots"] = [{"type": "errorbar", "data": {"source": "data.csv", "mapping": {"x": "temperature", "y": "response", "yerr": "response_sd", "xerr": "temperature"}, "uncertainty": {"source": "explicit", "semantics": "standard deviation"}}, "style": {}}]
+        errors = visualspec.validate_visualspec(spec)
+        self.assertTrue(any("uncertainty_xerr_unsupported" in error for error in errors), errors)
+
+    def test_source_error_band_requires_uncertainty_evidence(self) -> None:
+        spec = self._line_spec()
+        spec["panels"][0]["plots"] = [{"type": "fill_between", "data": {"source": "data.csv", "mapping": {"x": "temperature", "y1": "lower", "y2": "upper"}}, "style": {}}]
+        errors = visualspec.validate_visualspec(spec)
+        self.assertTrue(any("uncertainty_evidence_missing" in error for error in errors), errors)
+
+    def test_grouped_bar_uncertainty_fails_closed(self) -> None:
+        for yerr, code in [([-0.1, 0.2], "uncertainty_negative"), ([1.0, 2.0], "uncertainty_duplicates_measurement")]:
+            with self.subTest(code=code):
+                spec = self._line_spec()
+                spec["panels"][0]["plots"] = [{"type": "grouped_bar", "data": {"x": [0, 1], "groups": [{"y": [1.0, 2.0], "yerr": yerr, "uncertainty": {"source": "explicit", "semantics": "standard deviation"}}]}, "style": {}}]
+                errors = visualspec.validate_visualspec(spec)
+                self.assertTrue(any(code in error for error in errors), errors)
+
     def test_score_reads_qa_regions_from_spec_and_masks_ignore(self) -> None:
         scorer = load_module("score_iteration", SCRIPTS / "score_iteration.py")
         with tempfile.TemporaryDirectory() as tmp:
@@ -254,4 +285,3 @@ class FastValidationTests(ScientificFigureReproductionTestBase):
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -36,6 +36,7 @@ RUNTIME_FILES = [
     "capability_model.py",
     "capabilities.py",
     "data_resolver.py",
+    "uncertainty_semantics.py",
     "visualspec.py",
     "render_visualspec_matplotlib.py",
     "audit_semantics.py",

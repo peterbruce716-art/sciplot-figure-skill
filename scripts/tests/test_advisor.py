@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pandas as pd
+
 from common import *
 
 
@@ -24,6 +26,45 @@ class AdvisorTests(unittest.TestCase):
             self.assertEqual(4, payload["row_count"])
             self.assertTrue(any(item["code"] == "small_group_sample" for item in payload["warnings"]))
             self.assertEqual(payload, profile_mod.profile_dataframe(frame, source_path=source, groups=["treatment"], x="temperature", y="response"))
+
+    def test_uncertainty_name_detection_uses_tokens_not_substrings(self) -> None:
+        profile_mod = load_module("profile_scientific_data_uncertainty_names", SCRIPTS / "profile_scientific_data.py")
+        negative = ["response", "dose", "phase", "baseline", "measurement", "stress", "strain", "temperature", "sample_response"]
+        positive = ["response_sd", "response_std", "response_sem", "response_se", "y_error", "yerr", "sigma", "ci95", "95_ci", "confidence_interval", "标准差", "标准误", "误差", "置信区间"]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "names.csv"
+            frame = pd.DataFrame({name: [1.0, 2.0] for name in [*negative, *positive]})
+            frame.to_csv(source, index=False)
+            profile = profile_mod.profile_dataframe(frame, source_path=source)
+        by_name = {item["name"]: item for item in profile["columns"]}
+        for name in negative:
+            self.assertFalse(by_name[name]["uncertainty_candidate"], name)
+        for name in positive:
+            self.assertTrue(by_name[name]["uncertainty_candidate"], name)
+            evidence = by_name[name]["uncertainty_evidence"]
+            self.assertTrue(evidence["matched_token"], name)
+            self.assertEqual("name_inference", evidence["source"])
+
+    def test_explicit_physical_x_is_not_suspected_id_but_true_ids_remain_flagged(self) -> None:
+        profile_mod = load_module("profile_scientific_data_id_semantics", SCRIPTS / "profile_scientific_data.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "ids.csv"
+            frame = pd.DataFrame({
+                "temperature": [300, 350, 400, 450],
+                "sample_id": [1, 2, 3, 4],
+                "specimen_id": [11, 12, 13, 14],
+                "编号": [21, 22, 23, 24],
+                "response": [1.2, 1.8, 2.7, 3.9],
+            })
+            frame.to_csv(source, index=False)
+            profile = profile_mod.profile_dataframe(frame, source_path=source, x="temperature", y="response")
+        by_name = {item["name"]: item for item in profile["columns"]}
+        self.assertFalse(by_name["temperature"]["suspected_id"])
+        self.assertFalse(any(item["code"] == "suspected_id_column" and item.get("columns") == ["temperature"] for item in profile["warnings"]))
+        for name in ["sample_id", "specimen_id", "编号"]:
+            self.assertTrue(by_name[name]["suspected_id"], name)
 
     def test_chart_decision_explains_small_sample_and_user_risk(self) -> None:
         profile_mod = load_module("profile_scientific_data_decision", SCRIPTS / "profile_scientific_data.py")

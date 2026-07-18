@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +44,19 @@ def semantic_visual_strict_score_ok(score: dict[str, Any]) -> bool:
     bbox_error = score.get("content_bbox_error")
     if bbox_error is not None and float(bbox_error) > 0.03:
         return False
+    # A low whole-image MAE can hide shifted text, axes, or bar edges. Strict
+    # semantic reconstruction therefore needs independent structural evidence.
+    for key, minimum in (("ssim_score", 0.85), ("edge_score", 0.70), ("layout_score", 0.90)):
+        value = score.get(key)
+        if value is None or not math.isfinite(float(value)) or float(value) < minimum:
+            return False
+    shift = score.get("registration_shift")
+    if not isinstance(shift, dict):
+        return False
+    for axis in ("dx_px", "dy_px"):
+        value = shift.get(axis)
+        if value is None or not math.isfinite(float(value)) or abs(float(value)) > 2.0:
+            return False
     return True
 
 
@@ -75,7 +89,13 @@ def classify_source_free_status(
         return "render_only"
     if semantic_audit is None or vector_validation is None:
         return "render_only"
-    semantic_ok = semantic_audit.get("overall") == "pass"
+    render_integrity = semantic_audit.get("render_integrity") or {}
+    mapping_validity = semantic_audit.get("mapping_validity") or {}
+    semantic_ok = (
+        semantic_audit.get("overall") == "pass"
+        and render_integrity.get("status") == "pass"
+        and mapping_validity.get("status") == "pass"
+    )
     vector_required = representation == "semantic_vector"
     vector_ok = (not vector_required) or vector_validation.get("status") == "pass"
     return "semantic_validated_pass" if semantic_ok and vector_ok else "not_strict"
@@ -111,7 +131,12 @@ def classify_status(
         return visual_status
     if visual_status == "not_strict":
         return "not_strict"
-    semantic_ok = semantic_audit is not None and semantic_audit.get("overall") == "pass"
+    semantic_ok = bool(
+        semantic_audit is not None
+        and semantic_audit.get("overall") == "pass"
+        and (semantic_audit.get("render_integrity") or {}).get("status") == "pass"
+        and (semantic_audit.get("mapping_validity") or {}).get("status") == "pass"
+    )
     if semantic_audit is not None and not semantic_ok:
         return "not_strict"
     vector_required = representation == "semantic_vector"
@@ -307,6 +332,8 @@ def finalize_manifest(
     if semantic_audit:
         manifest["semantic_audit"] = semantic_audit
         manifest["semantic_reconstruction_status"] = "pass" if semantic_audit.get("overall") == "pass" else "failed"
+        manifest["render_integrity"] = semantic_audit.get("render_integrity", {"status": "failed", "blocking_reasons": ["render integrity report missing"]})
+        manifest["mapping_validity"] = semantic_audit.get("mapping_validity", {"status": "failed", "blocking_reasons": ["mapping validity report missing"]})
     if vector_validation:
         manifest["vector_validation"] = vector_validation
         manifest["vector_validation_status"] = "pass" if vector_validation.get("status") == "pass" else "failed"
@@ -328,6 +355,8 @@ def finalize_manifest(
     if statistics_report_path and statistics_report:
         manifest["statistics_report"] = portable_path(statistics_report_path, project_root)
         manifest["publication_readiness"] = statistics_report.get("publication_readiness", {"status": "conditional", "blocking_reasons": ["statistics report missing publication_readiness"]})
+    else:
+        manifest["publication_readiness"] = {"status": "conditional", "blocking_reasons": ["statistics report not supplied"]}
 
     if final_statuses:
         if any(status == "not_strict" for status in final_statuses):

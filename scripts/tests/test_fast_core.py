@@ -107,6 +107,32 @@ class FastCoreTests(ScientificFigureReproductionTestBase):
             self.assertIn("visual_fidelity", score)
             self.assertTrue((root / "comparison" / "overlay_50.png").exists())
 
+    def test_semantic_strict_score_rejects_low_structural_fidelity(self) -> None:
+        finalizer = load_module("finalize_manifest_strict_score", SCRIPTS / "finalize_manifest.py")
+        score = {
+            "canvas_size_match": True,
+            "score_0_1": 0.0315,
+            "content_bbox_error": 0.0101,
+            "ssim_score": 0.7979,
+            "edge_score": 0.5701,
+            "layout_score": 0.7989,
+            "registration_shift": {"dx_px": -6.0, "dy_px": 1.5},
+        }
+        self.assertFalse(finalizer.semantic_visual_strict_score_ok(score))
+
+    def test_semantic_strict_score_accepts_complete_structural_fidelity(self) -> None:
+        finalizer = load_module("finalize_manifest_strict_score_pass", SCRIPTS / "finalize_manifest.py")
+        score = {
+            "canvas_size_match": True,
+            "score_0_1": 0.02,
+            "content_bbox_error": 0.01,
+            "ssim_score": 0.93,
+            "edge_score": 0.82,
+            "layout_score": 0.97,
+            "registration_shift": {"dx_px": 0.5, "dy_px": -0.5},
+        }
+        self.assertTrue(finalizer.semantic_visual_strict_score_ok(score))
+
     def test_build_skill_package_writes_portable_zip(self) -> None:
         builder = load_module("build_skill_package", SCRIPTS / "build_skill_package.py")
         validator = load_module("validate_skill_package", SCRIPTS / "validate_skill_package.py")
@@ -125,4 +151,3 @@ class FastCoreTests(ScientificFigureReproductionTestBase):
         result = env.check_environment()
         self.assertIn("matplotlib", result["required_modules"])
         self.assertIn("fonts_available", result)
-

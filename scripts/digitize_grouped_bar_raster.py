@@ -114,6 +114,89 @@ def _bar_window(category_center: float, group: dict[str, Any]) -> tuple[int, int
     return x0, x0 + bar_width - 1
 
 
+def _detect_upper_errorbar(
+    image: np.ndarray,
+    *,
+    bar_center: float,
+    bar_width: int,
+    bar_top: int,
+    plot_top: int,
+    plot_height: int,
+) -> dict[str, Any] | None:
+    """Detect the achromatic cap/stem immediately above a raster bar top."""
+    half_window = max(2, min(4, int(math.ceil(bar_width * 0.25))))
+    center = int(round(bar_center))
+    left = max(0, center - half_window)
+    right = min(image.shape[1] - 1, center + half_window)
+    search_height = max(4, min(12, int(math.ceil(plot_height * 0.08))))
+    top = max(plot_top, bar_top - search_height)
+    bottom = min(image.shape[0] - 1, bar_top + 1)
+    if top >= bottom:
+        return None
+
+    crop = image[top : bottom + 1, left : right + 1]
+    spread = crop.max(axis=2) - crop.min(axis=2)
+    intensity = crop.mean(axis=2)
+    row_median = np.median(intensity, axis=1, keepdims=True)
+    achromatic = (spread <= 18.0) & (intensity >= 45.0) & (intensity <= 225.0)
+    local_contrast = (row_median - intensity >= 18.0) & (intensity >= 35.0) & (intensity <= 235.0)
+    candidate = achromatic | local_contrast
+
+    seen = np.zeros(candidate.shape, dtype=bool)
+    components: list[list[tuple[int, int]]] = []
+    for local_y, local_x in zip(*np.nonzero(candidate), strict=True):
+        if seen[local_y, local_x]:
+            continue
+        stack = [(int(local_y), int(local_x))]
+        seen[local_y, local_x] = True
+        component: list[tuple[int, int]] = []
+        while stack:
+            current_y, current_x = stack.pop()
+            component.append((current_y, current_x))
+            for delta_y in (-1, 0, 1):
+                for delta_x in (-1, 0, 1):
+                    if delta_y == 0 and delta_x == 0:
+                        continue
+                    next_y = current_y + delta_y
+                    next_x = current_x + delta_x
+                    if (
+                        0 <= next_y < candidate.shape[0]
+                        and 0 <= next_x < candidate.shape[1]
+                        and candidate[next_y, next_x]
+                        and not seen[next_y, next_x]
+                    ):
+                        seen[next_y, next_x] = True
+                        stack.append((next_y, next_x))
+        components.append(component)
+
+    eligible: list[tuple[int, int, int, list[tuple[int, int]]]] = []
+    for component in components:
+        ys = [top + point[0] for point in component]
+        xs = [left + point[1] for point in component]
+        upper_extent = bar_top - min(ys)
+        if (
+            len(component) >= 3
+            and max(ys) >= bar_top - 2
+            and upper_extent >= 1
+            and max(xs) - min(xs) >= 1
+        ):
+            eligible.append((upper_extent, len(component), -min(ys), component))
+    if not eligible:
+        return None
+
+    upper_extent, _, _, selected = max(eligible)
+    ys = [top + point[0] for point in selected]
+    xs = [left + point[1] for point in selected]
+    return {
+        "upper_extent_px": int(upper_extent),
+        "top_y_px": int(min(ys)),
+        "bottom_y_px": int(max(ys)),
+        "left_x_px": int(min(xs)),
+        "right_x_px": int(max(xs)),
+        "detection_method": "achromatic_or_contrast_component_above_fill",
+    }
+
+
 def _front_occlusion_evidence(
     image: np.ndarray,
     panel: dict[str, Any],
@@ -205,6 +288,7 @@ def digitize(source: Path, config: dict[str, Any]) -> tuple[list[dict[str, Any]]
     default_tolerance = float(config.get("color_tolerance", 28.0))
     default_coverage = float(config.get("min_row_coverage", 0.45))
     default_baseline_tolerance = int(config.get("baseline_tolerance_px", 4))
+    detect_errorbars = bool(config.get("detect_errorbars", True))
     if default_tolerance <= 0 or not 0 < default_coverage <= 1 or default_baseline_tolerance < 0:
         raise ValueError("color_tolerance, min_row_coverage, and baseline_tolerance_px are invalid")
 
@@ -310,6 +394,18 @@ def digitize(source: Path, config: dict[str, Any]) -> tuple[list[dict[str, Any]]
                     failures.append({"panel": panel_id, "category": str(category_label), "group": str(group["label"]), "reason": "no_color_component_near_baseline"})
                     continue
                 value = value_min + (baseline - run_top) * units_per_pixel
+                errorbar = (
+                    _detect_upper_errorbar(
+                        image,
+                        bar_center=bar_center,
+                        bar_width=bar_width,
+                        bar_top=run_top,
+                        plot_top=top,
+                        plot_height=int(round(baseline)) - top,
+                    )
+                    if detect_errorbars
+                    else None
+                )
                 run_mask = mask[run_top - top : run_bottom - top + 1]
                 run_pixels = crop[run_top - top : run_bottom - top + 1][run_mask]
                 mean_rgb = [round(float(item), 3) for item in run_pixels.mean(axis=0)] if run_pixels.size else [float(item) for item in prototype]
@@ -332,6 +428,9 @@ def digitize(source: Path, config: dict[str, Any]) -> tuple[list[dict[str, Any]]
                         "value": round(value, 6),
                         "pixel_uncertainty": 1.0,
                         "value_uncertainty_from_pixels": round(units_per_pixel, 6),
+                        "errorbar_upper_px": errorbar["upper_extent_px"] if errorbar else "",
+                        "errorbar_value_from_pixels": round(errorbar["upper_extent_px"] * units_per_pixel, 6) if errorbar else "",
+                        "errorbar_detection": json.dumps(errorbar, ensure_ascii=True, separators=(",", ":")) if errorbar else "",
                         "mean_r": mean_rgb[0],
                         "mean_g": mean_rgb[1],
                         "mean_b": mean_rgb[2],
@@ -355,9 +454,10 @@ def digitize(source: Path, config: dict[str, Any]) -> tuple[list[dict[str, Any]]
         "source": {"path": source.name, "sha256": _sha256(source), "width_px": width, "height_px": height},
         "status": "pass" if rows and not failures else "partial" if rows else "failed",
         "row_count": len(rows),
+        "detected_errorbar_count": sum(1 for row in rows if row.get("errorbar_upper_px") != ""),
         "failures": failures,
         "calibration": config,
-        "uncertainty_note": "Central values use the detected fill top; value_uncertainty_from_pixels is the mapped magnitude of plus/minus one source pixel.",
+        "uncertainty_note": "Central values use the detected fill top; value_uncertainty_from_pixels is the mapped magnitude of plus/minus one source pixel. errorbar_value_from_pixels records only the visible upper raster extent and does not infer SD, SEM, CI, or another statistical definition.",
     }
     return rows, audit
 

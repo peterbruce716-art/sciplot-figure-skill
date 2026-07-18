@@ -32,6 +32,8 @@
     "visual_qa_status": {"type": "string"},
     "qa_status": {"type": "string"},
     "semantic_audit": {"type": "object", "additionalProperties": true},
+    "render_integrity": {"type": "object", "additionalProperties": true},
+    "mapping_validity": {"type": "object", "additionalProperties": true},
     "vector_validation": {"type": "object", "additionalProperties": true},
     "canvas_safety": {"$ref": "#/$defs/canvas_safety_report"},
     "boxed_text_safety": {"$ref": "#/$defs/boxed_text_safety_report"},

@@ -26,7 +26,7 @@ At root level prefer:
 - `quality_status`: `strict_pass`, `near_pass`, `render_only`, `not_strict`, `not_applicable`, or `failed`.
 - `status`: `semantic_strict_pass`, `semantic_near_pass`, `visual_trace_pass`, `render_only`, `not_strict`, or `failed`.
 
-`semantic_strict_pass` requires semantic audit, visual QA, vector validation when applicable, and all required panel QA to pass.
+`semantic_strict_pass` requires semantic audit, visual QA, vector validation when applicable, and all required panel QA to pass. The default semantic visual gate also requires `score_0_1 <= 0.08`, `ssim_score >= 0.85`, `edge_score >= 0.70`, `layout_score >= 0.90`, and absolute registration shift no larger than 2 px on either axis. Missing structural metrics fail closed.
 
 ## visual
 
