@@ -190,7 +190,7 @@ sciplot-figure-skill/
 
 ## Version
 
-Current version: **v2.8.4**
+Current version: **v2.8.6**
 
 ## Scope and Limitations
 
