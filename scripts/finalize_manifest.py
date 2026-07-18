@@ -129,8 +129,6 @@ def classify_status(
     visual_status = _status_from_score(score, profile=profile, source_strategy=source_strategy)
     if profile == "trace" or source_strategy == "pixel_trace":
         return visual_status
-    if visual_status == "not_strict":
-        return "not_strict"
     semantic_ok = bool(
         semantic_audit is not None
         and semantic_audit.get("overall") == "pass"
@@ -150,13 +148,16 @@ def classify_status(
             panels_ok = False
             continue
         panel_status = _status_from_score(panel_score, profile=profile, source_strategy=source_strategy)
-        if panel_status != "semantic_strict_pass":
+        if panel_status not in {"semantic_strict_pass", "semantic_near_pass"}:
             panels_ok = False
     if required_panel_ids and not panels_ok:
         return "not_strict"
     if visual_status == "semantic_strict_pass" and semantic_ok and vector_ok and panels_ok:
         return "semantic_strict_pass"
-    if float(score.get("score_0_1", 1.0)) <= 0.30:
+    # A non-strict run may still complete as a near pass when semantic and
+    # vector evidence are valid. Strict certification remains gated above.
+    near_pass = float(score.get("score_0_1", 1.0)) <= 0.30
+    if near_pass and semantic_ok and vector_ok and panels_ok:
         return "semantic_near_pass"
     return "not_strict"
 
