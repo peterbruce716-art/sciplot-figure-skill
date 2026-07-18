@@ -25,7 +25,36 @@ jobs:
       - run: python -m unittest discover -s scripts/tests -p "test_grouped_bar_digitizer.py"
       - run: python -m unittest discover -s scripts/tests -p "test_contract_statistics.py"
       - run: python -m unittest discover -s scripts/tests -p "test_figure_priors_mixed_backend.py"
-      - run: python -m unittest discover -s scripts/tests -p "test_bundle_workflow.py"
+      - name: bundle strict success
+        run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_run_reproduction_strict_success_checks_statuses
+      - name: bundle canvas safety failure
+        run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_canvas_safety_fails_bundle_before_manifest_finalization
+      - name: bundle boxed text safety failure
+        run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_boxed_text_safety_fails_bundle_before_manifest_finalization
+      - name: bundle boxed text safety pass
+        run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_boxed_text_safety_pass_is_recorded_in_final_manifest
+      - name: bundle plot geometry failure
+        run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_plot_geometry_safety_fails_bundle_before_manifest_finalization
+      - name: bundle plot geometry pass
+        run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_plot_geometry_safety_pass_is_recorded_in_final_manifest
+      - name: bundle axis spine failure
+        run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_incomplete_axis_spines_fail_bundle_before_manifest_finalization
+      - name: bundle strict failure status
+        run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_run_reproduction_strict_failure_is_incomplete
+      - name: bundle relocation
+        run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_reproduction_bundle_runs_after_moving_without_skill_path
+      - name: bundle custom renderer
+        run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_custom_renderer_is_inherited_by_reproduce_entrypoint
+      - name: bundle checksum tamper detection
+        run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_bundle_reproduce_verify_and_checksum_tamper_detection
+      - name: bundle vector and checksum guards
+        run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_v24_verify_reports_unexpected_files_and_fake_pdf_fails
+      - name: bundle lock recertification guard
+        run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_v24_bundle_lock_blocks_runtime_recertification
+      - name: bundle stable canonical hashes
+        run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_v24_reproduce_outputs_have_stable_canonical_hashes
+      - name: bundle environment policy guard
+        run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_v25_environment_policy_mismatch_fails_verification
 
   integration:
     runs-on: ubuntu-latest
