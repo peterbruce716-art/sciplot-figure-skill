@@ -1,0 +1,46 @@
+{
+  "$id": "scientificfigure.mixed_backend_audit.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "failures": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "panels": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "const": "scientificfigure.mixed_backend_audit.v1"
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "warning",
+        "failed"
+      ]
+    },
+    "warnings": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "status",
+    "panels",
+    "failures",
+    "warnings"
+  ],
+  "type": "object"
+}

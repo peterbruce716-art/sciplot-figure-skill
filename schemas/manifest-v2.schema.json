@@ -37,12 +37,15 @@
     "boxed_text_safety": {"$ref": "#/$defs/boxed_text_safety_report"},
     "plot_geometry_safety": {"$ref": "#/$defs/plot_geometry_safety_report"},
     "checksums": {"type": "string"},
+    "figure_contract": {"type": "string"},
+    "statistics_report": {"type": "string"},
+    "publication_readiness": {"type": "object", "additionalProperties": true},
     "semantics": {"type": "string"},
     "source_strategy": {
       "enum": ["raw_data", "digitized_raster", "manual_measurement", "vector_redraw", "color_region_extraction", "pixel_trace", "mixed"]
     },
     "representation": {
-      "enum": ["semantic_vector", "semantic_raster", "mixed", "pixel_primitives"]
+      "enum": ["semantic_vector", "semantic_raster", "mixed", "pixel_primitives", "rasterized_panel"]
     },
     "figures": {
       "type": "object",
@@ -147,7 +150,9 @@
         "source": {"type": ["string", "null"]},
         "source_strategy": {"type": "string"},
         "representation": {"type": "string"},
-        "qa": {"$ref": "#/$defs/qa"}
+        "qa": {"$ref": "#/$defs/qa"},
+        "semantic_role": {"type": "string"},
+        "evidence_ids": {"type": "array", "items": {"type": "string"}}
       }
     },
     "figure_record": {
@@ -163,11 +168,13 @@
           "enum": ["raw_data", "digitized_raster", "manual_measurement", "vector_redraw", "color_region_extraction", "pixel_trace", "mixed"]
         },
         "representation": {
-          "enum": ["semantic_vector", "semantic_raster", "mixed", "pixel_primitives"]
+          "enum": ["semantic_vector", "semantic_raster", "mixed", "pixel_primitives", "rasterized_panel"]
         },
         "status": {"$ref": "#/$defs/final_status"},
         "exports": {"$ref": "#/$defs/exports"},
         "qa": {"$ref": "#/$defs/qa"},
+        "semantic_role": {"type": "string"},
+        "evidence_ids": {"type": "array", "items": {"type": "string"}},
         "score": {"type": "object"},
         "panels": {
           "type": "object",

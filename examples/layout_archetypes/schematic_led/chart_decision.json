@@ -1,0 +1,37 @@
+{
+  "alternatives": [
+    "scatter"
+  ],
+  "data_columns": {},
+  "figure_contract": {
+    "archetype": "schematic_led",
+    "hero_panel_id": "a",
+    "panel_ids": [
+      "a",
+      "b"
+    ],
+    "schema": "scientificfigure.figure_contract.v1"
+  },
+  "journal_profile": "generic_scientific",
+  "layout": {
+    "archetype": "schematic_led",
+    "hero_panel_id": "a"
+  },
+  "reasoning_summary": [
+    "Lightweight archetype example derived from FigureContract; not a statistical claim."
+  ],
+  "recommended_type": "project_renderer",
+  "rejected_types": [],
+  "required_visual_elements": [
+    "figure_contract",
+    "panel_role",
+    "evidence_trace"
+  ],
+  "requires_user_confirmation": false,
+  "schema": "scientificfigure.chart_decision.v1",
+  "schema_version": "1.0",
+  "statistics_report_required": true,
+  "uncertainty_source": null,
+  "user_requested_type": null,
+  "warnings": []
+}

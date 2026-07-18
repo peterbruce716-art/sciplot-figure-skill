@@ -1,0 +1,31 @@
+{
+  "figure_type": "line_with_uncertainty",
+  "layout_priors": {
+    "aspect_ratio": 1.28,
+    "recommended_width_mm": 89
+  },
+  "provenance": {
+    "adaptation": "concept_and_parameter_adaptation_only",
+    "imported_files": [],
+    "license": "Apache-2.0",
+    "source": "academic-figure-skill"
+  },
+  "schema": "scientificfigure.figure_prior.v1",
+  "style_tokens": {
+    "line_width_pt": 1.1,
+    "marker_size_pt": 4.0,
+    "uncertainty_alpha": 0.18
+  },
+  "supported_data_signature": {
+    "optional": [
+      "group",
+      "yerr",
+      "ci_low",
+      "ci_high"
+    ],
+    "required": [
+      "x",
+      "y"
+    ]
+  }
+}

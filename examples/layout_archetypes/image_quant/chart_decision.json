@@ -1,0 +1,37 @@
+{
+  "alternatives": [
+    "scatter"
+  ],
+  "data_columns": {},
+  "figure_contract": {
+    "archetype": "image_quant",
+    "hero_panel_id": "b",
+    "panel_ids": [
+      "a",
+      "b"
+    ],
+    "schema": "scientificfigure.figure_contract.v1"
+  },
+  "journal_profile": "acta_materialia",
+  "layout": {
+    "archetype": "image_quant",
+    "hero_panel_id": "b"
+  },
+  "reasoning_summary": [
+    "Lightweight archetype example derived from FigureContract; not a statistical claim."
+  ],
+  "recommended_type": "line",
+  "rejected_types": [],
+  "required_visual_elements": [
+    "figure_contract",
+    "panel_role",
+    "evidence_trace"
+  ],
+  "requires_user_confirmation": false,
+  "schema": "scientificfigure.chart_decision.v1",
+  "schema_version": "1.0",
+  "statistics_report_required": true,
+  "uncertainty_source": null,
+  "user_requested_type": null,
+  "warnings": []
+}

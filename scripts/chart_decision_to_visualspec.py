@@ -10,6 +10,7 @@ from typing import Any
 import pandas as pd
 
 from advisor_common import load_json, validate_payload, write_json
+from resolve_panel_layout import panel_semantics, resolve_layout
 
 
 SUPPORTED = {
@@ -56,6 +57,7 @@ def materialize_chart_decision(
     y: str,
     style_profile: dict[str, Any] | None = None,
     figure_intent: dict[str, Any] | None = None,
+    figure_contract: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     recommended = str(decision.get("recommended_type", ""))
     if recommended not in SUPPORTED:
@@ -68,6 +70,10 @@ def materialize_chart_decision(
     plots: list[dict[str, Any]] = []
     mapping: dict[str, Any] = {"x": x, "y": y}
     source_ref = _source_ref(source, root)
+    contract_panels = list((figure_contract or {}).get("panel_plan") or [])
+    panel_id = str(contract_panels[0].get("panel_id")) if contract_panels and contract_panels[0].get("panel_id") else "A"
+    layout = resolve_layout(figure_contract, panel_ids=[panel_id])
+    semantics = panel_semantics(figure_contract).get(panel_id, {})
 
     if recommended in {"line", "line_with_markers", "scatter"}:
         plot_type = "scatter" if recommended == "scatter" else "line"
@@ -111,24 +117,29 @@ def materialize_chart_decision(
         raise ValueError(f"{recommended} requires a project-level matrix mapping")
 
     style_settings = (style_profile or {}).get("settings", {})
-    spec: dict[str, Any] = {
-        "schema": "scientificfigure.visualspec.v2",
-        "figure": {"size_mm": [85, 60], "dpi": int(style_settings.get("dpi", 300)), "crop_mode": "fixed_canvas"},
-        "theme": {
-            "font": {"family_candidates": [style_settings.get("font_family"), "Liberation Sans", "DejaVu Sans"], "size_pt": float(style_settings.get("font_size_pt", 8)), "mathtext_fontset": "stix"},
-            "axes": {"line_width_pt": float(style_settings.get("axis_line_width_pt", style_settings.get("line_width_pt", 0.8)))},
-            "palette": style_settings.get("palette", ["#0072B2", "#D55E00", "#009E73"]),
-        },
-        "panels": [{
-            "id": "A",
+    size_width = float((figure_contract or {}).get("target_width_mm") or 85)
+    size_height = max(45.0, min(120.0, size_width * 60.0 / 85.0))
+    panel = {
+            "id": panel_id,
             "bbox_normalized": [0.15, 0.16, 0.78, 0.75],
             "source_strategy": "raw_data",
             "representation": "semantic_vector",
             "axes": {"x": {"label": x}, "y": {"label": y}},
             "plots": plots,
             "annotations": [],
-        }],
-        "delivery": {"chart_decision_hash": _hash_payload(decision), "materialized_as": [plot["type"] for plot in plots], "data_columns": mapping},
+        }
+    panel.update({key: value for key, value in semantics.items() if value is not None})
+    spec: dict[str, Any] = {
+        "schema": "scientificfigure.visualspec.v2",
+        "figure": {"size_mm": [size_width, size_height], "dpi": int(style_settings.get("dpi", 300)), "crop_mode": "fixed_canvas"},
+        "theme": {
+            "font": {"family_candidates": [style_settings.get("font_family"), "Liberation Sans", "DejaVu Sans"], "size_pt": float(style_settings.get("font_size_pt", 8)), "mathtext_fontset": "stix"},
+            "axes": {"line_width_pt": float(style_settings.get("axis_line_width_pt", style_settings.get("line_width_pt", 0.8)))},
+            "palette": style_settings.get("palette", ["#0072B2", "#D55E00", "#009E73"]),
+        },
+        "layout": layout,
+        "panels": [panel],
+        "delivery": {"chart_decision_hash": _hash_payload(decision), "materialized_as": [plot["type"] for plot in plots], "data_columns": mapping, "figure_contract_hash": _hash_payload(figure_contract) if figure_contract else None},
     }
     validate_payload(spec, "visualspec-v2.schema.json")
     report = {
@@ -138,6 +149,8 @@ def materialize_chart_decision(
         "materialized_as": [plot["type"] for plot in plots],
         "data_columns": mapping,
         "derived_data": None if derived_path is None else derived_path.relative_to(root).as_posix(),
+        "layout": layout,
+        "panel_semantics": {panel_id: semantics} if semantics else {},
         "status": "pass",
     }
     return spec, report
@@ -152,9 +165,10 @@ def main() -> int:
     parser.add_argument("--y", required=True)
     parser.add_argument("--style-profile", type=Path)
     parser.add_argument("--intent", type=Path)
+    parser.add_argument("--figure-contract", type=Path)
     args = parser.parse_args()
     try:
-        spec, report = materialize_chart_decision(load_json(args.decision), data_path=args.data, output_dir=args.output_dir, x=args.x, y=args.y, style_profile=load_json(args.style_profile) if args.style_profile else None, figure_intent=load_json(args.intent) if args.intent else None)
+        spec, report = materialize_chart_decision(load_json(args.decision), data_path=args.data, output_dir=args.output_dir, x=args.x, y=args.y, style_profile=load_json(args.style_profile) if args.style_profile else None, figure_intent=load_json(args.intent) if args.intent else None, figure_contract=load_json(args.figure_contract) if args.figure_contract else None)
         write_json(args.output_dir / "generated_visualspec.json", spec)
         write_json(args.output_dir / "chart_decision_materialization.json", report)
     except Exception as exc:

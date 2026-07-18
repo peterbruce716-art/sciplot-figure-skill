@@ -1,12 +1,26 @@
+## 2026-07-18 v2.8.1 Panel-Specific Grouped-Bar Geometry
+
+- Detect grouped-bar color layers, widths, and offsets independently for each panel.
+- Preserve distinct side-by-side, concentric nested, and offset-foreground layouts within one multi-panel raster figure.
+- Added explicit `baseline_visibility` handling with positive edge-continuity or foreground-bridge evidence for bars whose normal baseline contact is covered.
+- Prevented compact legend swatches from replacing occluded bar-height measurements; unverified candidates now produce no data row and a non-passing audit.
+- Marked unresolved equal-width scaffold fallback as `review_required` instead of a passing calibration.
+- Added regression coverage for a triptych whose second panel is concentric while its third panel uses D-left/F-right foreground bars over a wide B bar.
+- Aligned GitHub Actions with the declared Python 3.14 runtime.
+
+## 2026-07-18 v2.8.0 Academic Figure Integration
+
+- Added VisualSpec layout.inference_log so auto-derived hero panels, fallback archetypes, default narrative order, and hero-panel weight promotion remain machine-traceable.
+- Added StatisticsReport declared-statistics import through --statistics-json and aligned publication-readiness blockers for unknown n definitions and missing source traces.
+- Fixed default FigureContract generation so a provided hero panel ID is represented by the generated default panel plan.
+- Added protocol references and lightweight bundled examples for FigureContract, StatisticsReport, and all four layout archetypes.
+- Added VisualSpec-compatible figure priors with provenance and validation.
+- Added mixed backend audit and composition manifest scripts.
+- Added journal reviewer advisory policy, protocol docs, and expanded rubric scope.
+- Added third-party provenance records for academic-figure-skill concept adaptation.
+- Added integration reports and focused regression tests.
+
 # Changelog
-
-## 2026-07-18 v2.7.1 Safety-Gate Update
-
-- Added fail-closed boxed-text checks for clipped legend and annotation glyphs, including top-edge clipping.
-- Added canvas-edge checks that require declared margins around rendered content.
-- Added plot-geometry checks for complete bottom and left axis spines, target plot bounds, and axis-origin alignment.
-- Integrated all three reports into reproduction bundles and final manifests, with regression tests for incomplete axes and shifted plot geometry.
-- Aligned GitHub Actions with the package's Python 3.14 runtime contract.
 
 ## 2026-07-16 v2.7.1 Grouped-Bar Raster Reproduction
 

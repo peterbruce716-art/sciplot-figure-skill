@@ -1,0 +1,19 @@
+{
+  "schema": "scientificfigure.figure_contract.v1",
+  "schema_version": "1.0",
+  "scientific_question": "What mechanism is proposed and what quantitative evidence supports it?",
+  "core_claim": "unknown",
+  "target_audience": "scientific_readers",
+  "target_journal": "generic_scientific",
+  "target_width_mm": 183,
+  "archetype": "schematic_led",
+  "hero_panel_id": "a",
+  "evidence_chain": [{"id": "E1", "source": "declared_mechanism_notes", "claim": "Mechanism is a declared hypothesis, not a proven causal result.", "status": "declared"}, {"id": "E2", "source": "example_quant_table", "claim": "Supporting quantitative source is available; significance is unknown.", "status": "unknown"}],
+  "panel_plan": [
+    {"panel_id": "a", "scientific_role": "hero", "question": "What mechanism is being proposed?", "preferred_representation": "vector_schematic", "evidence_ids": ["E1"], "panel_weight": 1.8, "backend": "project", "required_output": "svg"},
+    {"panel_id": "b", "scientific_role": "evidence", "question": "What data support or constrain the mechanism?", "preferred_representation": "line", "evidence_ids": ["E2"], "panel_weight": 1.0, "backend": "matplotlib", "required_output": "svg"}
+  ],
+  "assumptions": [{"id": "A1", "statement": "The schematic is treated as a hypothesis diagram, not causal proof.", "reason": "Mechanistic evidence is declared rather than independently inferred.", "status": "user_declared"}],
+  "approval": {"mode": "auto", "status": "not_required"},
+  "provenance": {"import_mode": "concept_and_parameter_adaptation"}
+}

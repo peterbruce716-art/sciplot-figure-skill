@@ -33,6 +33,7 @@
       "type": "object",
       "additionalProperties": true
     },
+    "layout": {"$ref": "#/$defs/layout"},
     "qa_policy": {
       "type": "object",
       "additionalProperties": true,
@@ -67,7 +68,7 @@
             "enum": ["raw_data", "digitized_raster", "manual_measurement", "vector_redraw", "color_region_extraction", "pixel_trace"]
           },
           "representation": {
-            "enum": ["semantic_vector", "semantic_raster", "mixed", "pixel_primitives"]
+            "enum": ["semantic_vector", "semantic_raster", "mixed", "pixel_primitives", "rasterized_panel"]
           },
           "axes": {
             "type": "object",
@@ -86,12 +87,51 @@
             "items": {"$ref": "#/$defs/annotation"}
           },
           "legend": {"$ref": "#/$defs/legend"},
+          "semantic_role": {"enum": ["context", "hero", "evidence", "quantification", "mechanism", "validation", "supporting"]},
+          "answers_question": {"type": "string"},
+          "evidence_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "panel_weight": {"type": "number", "exclusiveMinimum": 0},
+          "backend": {"enum": ["matplotlib", "r", "project", "unknown"]},
+          "renderer": {"type": "string"},
+          "required_output": {"enum": ["svg", "pdf", "png", "mixed", "unknown"]},
+          "rasterization_reason": {"type": "string"},
           "reconstruction_mode": {"type": "string"}
         }
       }
     }
   },
   "$defs": {
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "archetype": {"enum": ["quantitative_grid", "schematic_led", "image_quant", "asymmetric_mixed"]},
+        "hero_panel_id": {"type": ["string", "null"]},
+        "narrative_order": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "panel_weights": {"type": "object", "additionalProperties": {"type": "number", "exclusiveMinimum": 0}},
+        "gutter_mm": {"type": "number", "minimum": 0},
+        "alignment": {"enum": ["baseline", "center", "top"]},
+        "target_width_mm": {"type": "number", "exclusiveMinimum": 0},
+        "min_panel_width_mm": {"type": "number", "exclusiveMinimum": 0},
+        "min_readable_font_size_pt": {"type": "number", "exclusiveMinimum": 0},
+        "inference_log": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/inference_entry"}
+        }
+      }
+    },
+    "inference_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "value", "source", "status", "reason"],
+      "properties": {
+        "field": {"type": "string", "minLength": 1},
+        "value": {},
+        "source": {"type": "string", "minLength": 1},
+        "status": {"enum": ["inferred", "derived", "defaulted"]},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    },
     "plot_geometry_safety_policy": {
       "type": "object",
       "additionalProperties": false,

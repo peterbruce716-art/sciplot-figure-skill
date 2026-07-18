@@ -21,7 +21,7 @@ SOURCE_STRATEGIES = {
     "color_region_extraction",
     "pixel_trace",
 }
-REPRESENTATIONS = {"semantic_vector", "semantic_raster", "mixed", "pixel_primitives"}
+REPRESENTATIONS = {"semantic_vector", "semantic_raster", "mixed", "pixel_primitives", "rasterized_panel"}
 FINAL_STATUSES = {
     "semantic_strict_pass",
     "semantic_validated_pass",
@@ -347,6 +347,18 @@ def validate_visualspec(spec: dict[str, Any]) -> list[str]:
         return errors
 
     seen: set[str] = set()
+    layout = spec.get("layout") or {}
+    if layout:
+        if not isinstance(layout, dict):
+            errors.append("layout must be an object")
+        else:
+            order = layout.get("narrative_order") or []
+            if order and not isinstance(order, list):
+                errors.append("layout.narrative_order must be a list")
+            hero_panel_id = layout.get("hero_panel_id")
+            if hero_panel_id is not None and not isinstance(hero_panel_id, str):
+                errors.append("layout.hero_panel_id must be a string or null")
+
     for index, panel in enumerate(panels):
         if not isinstance(panel, dict):
             errors.append(f"panels[{index}] must be an object")
@@ -437,6 +449,24 @@ def validate_visualspec(spec: dict[str, Any]) -> list[str]:
                         errors.append(f"panels[{index}].annotations[{ann_index}].coordinates must contain at least three x,y points")
                 if atype in SUPPORTED_ANNOTATION_TYPES:
                     errors.extend(_annotation_style_errors(annotation.get("style") or {}, atype, f"panels[{index}].annotations[{ann_index}]"))
+
+    if isinstance(layout, dict):
+        panel_ids = {str(panel.get("id")) for panel in panels if isinstance(panel, dict) and panel.get("id")}
+        order = layout.get("narrative_order") or []
+        for panel_id in order:
+            if panel_id not in panel_ids:
+                errors.append(f"layout.narrative_order references missing panel: {panel_id}")
+        hero_panel_id = layout.get("hero_panel_id")
+        if hero_panel_id and hero_panel_id not in panel_ids:
+            errors.append(f"layout.hero_panel_id references missing panel: {hero_panel_id}")
+        weights = layout.get("panel_weights") or {}
+        if isinstance(weights, dict):
+            for panel_id in weights:
+                if panel_id not in panel_ids:
+                    errors.append(f"layout.panel_weights references missing panel: {panel_id}")
+        hero_roles = [panel.get("id") for panel in panels if isinstance(panel, dict) and panel.get("semantic_role") == "hero"]
+        if len(hero_roles) > 1:
+            errors.append(f"multiple hero panels declared: {hero_roles}")
 
     return errors
 

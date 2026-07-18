@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scientificfigure.statistics_report.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "panels", "publication_readiness"],
+  "properties": {
+    "schema": {"const": "scientificfigure.statistics_report.v1"},
+    "schema_version": {"const": "1.0"},
+    "panels": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/panel_statistics"}
+    },
+    "publication_readiness": {"$ref": "#/$defs/publication_readiness"},
+    "provenance": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "panel_statistics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["panel_id", "n_definition", "center", "spread", "test", "source_trace"],
+      "properties": {
+        "panel_id": {"type": "string", "minLength": 1},
+        "n_definition": {"type": "string", "minLength": 1},
+        "center": {"enum": ["mean", "median", "geometric_mean", "model_estimate", "not_applicable", "unknown"]},
+        "spread": {"enum": ["standard_deviation", "standard_error", "confidence_interval", "interquartile_range", "range", "not_applicable", "unknown"]},
+        "test": {"$ref": "#/$defs/statistical_test"},
+        "source_trace": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/source_trace"}
+        },
+        "advisory": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/message"}
+        }
+      }
+    },
+    "statistical_test": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "status": {"enum": ["declared", "not_applicable", "unknown"]},
+        "multiple_comparison": {"type": ["string", "null"]},
+        "provenance": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "source_trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "columns"],
+      "properties": {
+        "file": {"type": "string", "minLength": 1},
+        "sheet": {"type": ["string", "number", "null"]},
+        "columns": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        },
+        "filters": {"type": "array", "items": {"type": "string"}},
+        "aggregation": {"type": ["string", "null"]},
+        "sample_definition": {"type": ["string", "null"]},
+        "random_seed": {"type": ["integer", "null"]},
+        "split": {"type": ["string", "null"]},
+        "metric_definition": {"type": ["string", "null"]},
+        "sha256": {"type": ["string", "null"]}
+      }
+    },
+    "publication_readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "blocking_reasons"],
+      "properties": {
+        "status": {"enum": ["ready", "conditional", "blocked"]},
+        "blocking_reasons": {"type": "array", "items": {"type": "string"}},
+        "advisory": {"type": "array", "items": {"$ref": "#/$defs/message"}}
+      }
+    },
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "message"],
+      "properties": {
+        "code": {"type": "string"},
+        "severity": {"enum": ["info", "warning", "error"]},
+        "message": {"type": "string"}
+      }
+    }
+  }
+}

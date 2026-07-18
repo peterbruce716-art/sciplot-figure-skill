@@ -1,0 +1,101 @@
+{
+  "$id": "scientificfigure.figure_prior.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "figure_type": {
+      "enum": [
+        "line_with_uncertainty",
+        "grouped_bar",
+        "scatter_regression",
+        "pca",
+        "heatmap",
+        "box_violin"
+      ]
+    },
+    "layout_priors": {
+      "additionalProperties": true,
+      "properties": {
+        "aspect_ratio": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "recommended_width_mm": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "aspect_ratio",
+        "recommended_width_mm"
+      ],
+      "type": "object"
+    },
+    "provenance": {
+      "additionalProperties": true,
+      "properties": {
+        "adaptation": {
+          "type": "string"
+        },
+        "imported_files": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "license": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "license",
+        "adaptation"
+      ],
+      "type": "object"
+    },
+    "schema": {
+      "const": "scientificfigure.figure_prior.v1"
+    },
+    "style_tokens": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "supported_data_signature": {
+      "additionalProperties": false,
+      "properties": {
+        "optional": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "required": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "required",
+        "optional"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema",
+    "figure_type",
+    "supported_data_signature",
+    "style_tokens",
+    "layout_priors",
+    "provenance"
+  ],
+  "type": "object"
+}

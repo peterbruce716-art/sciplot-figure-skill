@@ -1,0 +1,1 @@
+Figure priors adapt reusable visual conventions into VisualSpec-compatible hints. They must not bypass FigureContract, ChartDecision, deterministic rendering, semantic audit, vector QA, manifest validation, or portability checks. Missing signature columns are warnings unless a renderer truly lacks required data. Weak, negative, or non-significant results remain drawable.

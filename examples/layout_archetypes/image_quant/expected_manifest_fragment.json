@@ -1,0 +1,32 @@
+{
+  "figure_contract": "figure_contract.json",
+  "figures": {
+    "example": {
+      "exports": {
+        "pdf": "outputs/example.pdf",
+        "png": "outputs/example.png",
+        "svg": "outputs/example.svg"
+      },
+      "qa": {
+        "execution_status": "not_run",
+        "result": "not_applicable"
+      },
+      "status": "render_only"
+    }
+  },
+  "notes": [
+    "Lightweight archetype example; rendered previews are intentionally not bundled."
+  ],
+  "per_figure_scripts": {
+    "example": "render.py"
+  },
+  "publication_readiness": {
+    "blocking_reasons": [
+      "Example statistics are illustrative and not publication-ready."
+    ],
+    "status": "conditional"
+  },
+  "schema": "scientificfigure.manifest.v2",
+  "statistics_report": "../../statistics_report/statistics_report.json",
+  "status": "render_only"
+}

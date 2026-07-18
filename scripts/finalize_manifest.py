@@ -154,6 +154,8 @@ def finalize_manifest(
     plot_geometry_safety_path: Path | None = None,
     panel_score_dir: Path | None = None,
     checksums_path: Path | None = None,
+    figure_contract_path: Path | None = None,
+    statistics_report_path: Path | None = None,
 ) -> dict[str, Any]:
     manifest = load_json(manifest_path)
     raw_score = load_json(score_path) if score_path else None
@@ -166,10 +168,21 @@ def finalize_manifest(
     plot_geometry_safety = _load_optional_json(plot_geometry_safety_path)
     panel_scores = _load_panel_scores(panel_score_dir)
     manifest["project_root"] = "."
+    companion_index: dict[str, Any] | None = None
     companion_path = project_root / "companion_artifacts.json"
     if companion_path.exists():
         companion_index = load_json(companion_path)
         manifest["companion_artifacts"] = companion_index.get("artifacts", {})
+
+    def companion_artifact_path(key: str) -> Path | None:
+        if not companion_index:
+            return None
+        artifact = (companion_index.get("artifacts") or {}).get(key) or {}
+        path = artifact.get("path")
+        return project_root / path if path else None
+
+    figure_contract_path = figure_contract_path or companion_artifact_path("figure_contract")
+    statistics_report_path = statistics_report_path or companion_artifact_path("statistics_report")
     if spec_path:
         manifest["spec_path"] = portable_path(spec_path, project_root)
     elif manifest.get("spec_path"):
@@ -308,6 +321,13 @@ def finalize_manifest(
         manifest["plot_geometry_safety_status"] = "pass" if plot_geometry_safety.get("status") == "pass" else "failed"
     if checksums_path:
         manifest["checksums"] = portable_path(checksums_path, project_root)
+    figure_contract = _load_optional_json(figure_contract_path)
+    statistics_report = _load_optional_json(statistics_report_path)
+    if figure_contract_path and figure_contract:
+        manifest["figure_contract"] = portable_path(figure_contract_path, project_root)
+    if statistics_report_path and statistics_report:
+        manifest["statistics_report"] = portable_path(statistics_report_path, project_root)
+        manifest["publication_readiness"] = statistics_report.get("publication_readiness", {"status": "conditional", "blocking_reasons": ["statistics report missing publication_readiness"]})
 
     if final_statuses:
         if any(status == "not_strict" for status in final_statuses):
@@ -352,6 +372,8 @@ def main() -> int:
     parser.add_argument("--plot-geometry-safety", type=Path)
     parser.add_argument("--panel-score-dir", type=Path)
     parser.add_argument("--checksums", type=Path)
+    parser.add_argument("--figure-contract", type=Path)
+    parser.add_argument("--statistics-report", type=Path)
     args = parser.parse_args()
     result = finalize_manifest(
         args.manifest,
@@ -370,6 +392,8 @@ def main() -> int:
         plot_geometry_safety_path=args.plot_geometry_safety,
         panel_score_dir=args.panel_score_dir,
         checksums_path=args.checksums,
+        figure_contract_path=args.figure_contract,
+        statistics_report_path=args.statistics_report,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result.get("status") in {"semantic_strict_pass", "semantic_validated_pass", "semantic_near_pass", "visual_trace_pass"} else 2

@@ -1,0 +1,10 @@
+{
+  "schema": "scientificfigure.statistics_report.v1",
+  "schema_version": "1.0",
+  "panels": [
+    {"panel_id": "a", "n_definition": "not applicable to qualitative context panel", "center": "not_applicable", "spread": "not_applicable", "test": {"name": "not_applicable", "status": "not_applicable", "multiple_comparison": null}, "source_trace": [{"file": "example_microstructure_image", "columns": [], "aggregation": null, "sample_definition": "representative image only", "sha256": null}]},
+    {"panel_id": "b", "n_definition": "unknown", "center": "mean", "spread": "standard_deviation", "test": {"name": "unknown", "status": "unknown", "multiple_comparison": null}, "source_trace": [{"file": "example_quant_table", "columns": ["condition", "metric"], "aggregation": "mean by condition", "sample_definition": "unknown", "sha256": null}], "advisory": [{"code": "UNKNOWN_TEST", "severity": "warning", "message": "The statistical test is not declared; do not add significance symbols."}]}
+  ],
+  "publication_readiness": {"status": "conditional", "blocking_reasons": ["Panel b n definition is unknown", "Panel b statistical test is unknown"], "advisory": [{"code": "REPRODUCTION_NOT_PUBLICATION_READY", "severity": "warning", "message": "The figure may be reproduced, but manuscript-ready statistical claims require declared tests."}]},
+  "provenance": {"builder": "examples/statistics_report", "import_mode": "concept_and_parameter_adaptation"}
+}

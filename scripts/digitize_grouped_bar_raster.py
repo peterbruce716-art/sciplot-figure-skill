@@ -87,6 +87,70 @@ def _validate_config(config: dict[str, Any]) -> None:
             width = _require_number(group.get("width_px"), f"{group_prefix}.width_px")
             if width < 1:
                 raise ValueError(f"{group_prefix}.width_px must be at least 1")
+            baseline_visibility = group.get("baseline_visibility", "visible")
+            if baseline_visibility not in {"visible", "occluded_by_front_groups"}:
+                raise ValueError(
+                    f"{group_prefix}.baseline_visibility must be visible or occluded_by_front_groups"
+                )
+
+
+def _bar_window(category_center: float, group: dict[str, Any]) -> tuple[int, int]:
+    bar_width = max(1, int(round(float(group["width_px"]))))
+    bar_center = float(category_center) + float(group["offset_px"])
+    x0 = int(round(bar_center - (bar_width - 1) / 2.0))
+    return x0, x0 + bar_width - 1
+
+
+def _front_occlusion_evidence(
+    image: np.ndarray,
+    panel: dict[str, Any],
+    group_index: int,
+    category_center: float,
+    run_bottom: int,
+    baseline: float,
+    tolerance: float,
+    baseline_tolerance: int,
+) -> list[str]:
+    groups = panel["groups"]
+    current_left, current_right = _bar_window(category_center, groups[group_index])
+    current_width = current_right - current_left + 1
+    baseline_floor = int(round(baseline)) - baseline_tolerance
+    bridge_limit = run_bottom + max(2, baseline_tolerance)
+    current_prototype = np.asarray(groups[group_index]["color_rgb"], dtype=np.float64)
+    current_crop = image[: int(round(baseline)) + 1, current_left : current_right + 1]
+    current_mask = np.linalg.norm(current_crop - current_prototype, axis=2) <= tolerance
+    narrow_current_contact = False
+    for column in range(current_width):
+        column_rows = [int(y) for y in np.flatnonzero(current_mask[:, column])]
+        if any(
+            run[0] <= bridge_limit and run[1] >= baseline_floor
+            for run in _runs(column_rows)
+        ):
+            narrow_current_contact = True
+            break
+    evidence: list[str] = []
+    for front_group in groups[group_index + 1 :]:
+        front_left, front_right = _bar_window(category_center, front_group)
+        overlap_left = max(current_left, front_left)
+        overlap_right = min(current_right, front_right)
+        overlap_width = overlap_right - overlap_left + 1
+        front_width = front_right - front_left + 1
+        if overlap_width <= 0 or overlap_width / min(current_width, front_width) < 0.25:
+            continue
+        if narrow_current_contact:
+            evidence.append(str(front_group["label"]))
+            continue
+        prototype = np.asarray(front_group["color_rgb"], dtype=np.float64)
+        crop = image[: int(round(baseline)) + 1, overlap_left : overlap_right + 1]
+        mask = np.linalg.norm(crop - prototype, axis=2) <= tolerance
+        # A still-deeper group can cover most of this foreground bar at the
+        # baseline, so continuity needs only a narrow color-consistent edge.
+        minimum_count = max(1, int(math.ceil(overlap_width * 0.2)))
+        qualifying = [int(y) for y, count in enumerate(mask.sum(axis=1)) if int(count) >= minimum_count]
+        touching_runs = [run for run in _runs(qualifying) if run[1] >= baseline_floor]
+        if any(run_bottom < run[0] <= bridge_limit for run in touching_runs):
+            evidence.append(str(front_group["label"]))
+    return evidence
 
 
 def digitize(source: Path, config: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -121,11 +185,10 @@ def digitize(source: Path, config: dict[str, Any]) -> tuple[list[dict[str, Any]]
         baseline_tolerance = int(panel.get("baseline_tolerance_px", default_baseline_tolerance))
 
         for category_index, (category_label, category_center) in enumerate(zip(category_labels, panel["category_centers_px"], strict=True), start=1):
-            for group in panel["groups"]:
+            for group_index, group in enumerate(panel["groups"]):
                 bar_width = max(1, int(round(float(group["width_px"]))))
                 bar_center = float(category_center) + float(group["offset_px"])
-                x0 = int(round(bar_center - (bar_width - 1) / 2.0))
-                x1 = x0 + bar_width - 1
+                x0, x1 = _bar_window(float(category_center), group)
                 if x0 < left or x1 > right:
                     raise ValueError(f"panel {panel_id} category {category_label} group {group['label']} window is outside plot_bbox_px")
                 prototype = np.asarray(group["color_rgb"], dtype=np.float64)
@@ -141,10 +204,43 @@ def digitize(source: Path, config: dict[str, Any]) -> tuple[list[dict[str, Any]]
                 candidate_runs = _runs(qualifying)
                 baseline_floor = int(round(baseline)) - baseline_tolerance
                 touching = [run for run in candidate_runs if run[1] >= baseline_floor]
-                if not touching:
+                baseline_visibility = str(group.get("baseline_visibility", "visible"))
+                baseline_contact_observed = bool(touching)
+                occlusion_evidence_groups: list[str] = []
+                if touching:
+                    run_top, run_bottom = max(
+                        touching,
+                        key=lambda item: (item[1] - item[0] + 1, item[1]),
+                    )
+                elif baseline_visibility == "occluded_by_front_groups" and candidate_runs:
+                    candidate_top, candidate_bottom = max(
+                        candidate_runs,
+                        key=lambda item: (item[1] - item[0] + 1, -item[0]),
+                    )
+                    occlusion_evidence_groups = _front_occlusion_evidence(
+                        image,
+                        panel,
+                        group_index,
+                        float(category_center),
+                        candidate_bottom,
+                        baseline,
+                        tolerance,
+                        baseline_tolerance,
+                    )
+                    if not occlusion_evidence_groups:
+                        failures.append(
+                            {
+                                "panel": panel_id,
+                                "category": str(category_label),
+                                "group": str(group["label"]),
+                                "reason": "unverified_front_group_occlusion",
+                            }
+                        )
+                        continue
+                    run_top, run_bottom = candidate_top, candidate_bottom
+                else:
                     failures.append({"panel": panel_id, "category": str(category_label), "group": str(group["label"]), "reason": "no_color_component_near_baseline"})
                     continue
-                run_top, run_bottom = max(touching, key=lambda item: (item[1] - item[0] + 1, item[1]))
                 value = value_min + (baseline - run_top) * units_per_pixel
                 run_mask = mask[run_top - top : run_bottom - top + 1]
                 run_pixels = crop[run_top - top : run_bottom - top + 1][run_mask]
@@ -172,6 +268,9 @@ def digitize(source: Path, config: dict[str, Any]) -> tuple[list[dict[str, Any]]
                         "mean_g": mean_rgb[1],
                         "mean_b": mean_rgb[2],
                         "confidence": confidence,
+                        "baseline_visibility": baseline_visibility,
+                        "baseline_contact_observed": baseline_contact_observed,
+                        "occlusion_evidence_groups": "|".join(occlusion_evidence_groups),
                         "source_strategy": "digitized_raster",
                     }
                 )

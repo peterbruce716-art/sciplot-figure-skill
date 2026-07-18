@@ -11,7 +11,10 @@ from advisor_common import load_json, sha256_file, validate_payload, write_json
 
 
 REVIEW_SCOPE = [
-    "legend_overlap", "annotation_overlap", "panel_label_alignment", "visual_hierarchy",
+    "scientific_question_clarity", "claim_evidence_alignment", "panel_role_clarity",
+    "statistical_transparency", "negative_result_honesty", "visual_hierarchy",
+    "legend_annotation_clarity", "journal_width_readability",
+    "legend_overlap", "annotation_overlap", "panel_label_alignment",
     "color_discriminability", "panel_consistency", "title_redundancy", "crowding",
     "information_density", "visual_balance",
 ]

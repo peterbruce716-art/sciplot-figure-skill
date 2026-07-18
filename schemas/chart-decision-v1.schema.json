@@ -25,7 +25,10 @@
     "journal_profile": {"type": ["string", "null"]},
     "uncertainty_source": {"type": ["string", "null"]},
     "data_columns": {"type": "object", "additionalProperties": true},
-    "requires_user_confirmation": {"type": "boolean"}
+    "requires_user_confirmation": {"type": "boolean"},
+    "figure_contract": {"type": ["object", "null"], "additionalProperties": true},
+    "layout": {"type": ["object", "null"], "additionalProperties": true},
+    "statistics_report_required": {"type": "boolean"}
   },
   "$defs": {
     "message": {

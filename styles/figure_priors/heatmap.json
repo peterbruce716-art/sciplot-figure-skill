@@ -1,0 +1,29 @@
+{
+  "figure_type": "heatmap",
+  "layout_priors": {
+    "aspect_ratio": 1.0,
+    "recommended_width_mm": 89
+  },
+  "provenance": {
+    "adaptation": "concept_and_parameter_adaptation_only",
+    "imported_files": [],
+    "license": "Apache-2.0",
+    "source": "academic-figure-skill"
+  },
+  "schema": "scientificfigure.figure_prior.v1",
+  "style_tokens": {
+    "cluster_lines": false,
+    "cmap": "viridis",
+    "colorbar_width_mm": 3.0
+  },
+  "supported_data_signature": {
+    "optional": [
+      "row_group",
+      "column_group",
+      "annotation"
+    ],
+    "required": [
+      "matrix"
+    ]
+  }
+}

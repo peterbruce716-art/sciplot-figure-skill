@@ -23,6 +23,10 @@ Core capabilities:
 - portable reproduction bundles
 - checksums, environment records, and offline verification
 
+## Academic Figure Integration
+
+SciPlot now adapts the high-value planning ideas from academic-figure-skill without copying production scripts or bypassing deterministic QA. FigureContract records scientific question, core claim, evidence chain, panel roles, archetype, hero panel, and approval mode; see references/FIGURE_CONTRACT_PROTOCOL.md. FigureIntent remains the chart-selection intent layer. Figure priors in styles/figure_priors provide VisualSpec-compatible hints only. StatisticsReport records n definition, center/spread choices, declared tests, source trace, and publication-readiness blockers; build_statistics_report.py --statistics-json imports user-declared or auditable upstream statistics without recomputing tests; see references/STATISTICAL_REPORTING_PROTOCOL.md. Mixed backend scripts audit Python/R vector metadata before final vector QA. Reviewer advisory remains advisory only.
+
 ## Validation Levels
 
 The workflow reports different statuses depending on the evidence available:
@@ -98,6 +102,17 @@ python out/line_plot_strict/verify.py
 
 `--require-strict` requires `--source`; the command fails early when no reference image is supplied.
 
+## Raster Grouped-Bar Digitization
+
+Run `scripts/scaffold_grouped_bar_digitizer_config.py` before
+`scripts/digitize_grouped_bar_raster.py`. The scaffold detects each panel independently:
+one triptych may legitimately combine side-by-side bars, concentric nested bars, and
+left/right foreground bars over a wider background bar. Review the emitted per-panel
+`offset_px`, `width_px`, and `baseline_visibility` fields instead of imposing one group
+layout across all panels. A non-baseline-connected background run requires positive
+foreground-occlusion evidence; unresolved equal-width scaffold fallback is marked
+`review_required`, not silently accepted.
+
 ## Supported Plot and Annotation Types
 
 The generic renderer currently supports:
@@ -150,6 +165,9 @@ sciplot-figure-skill/
 ├── .github/workflows/
 ├── agents/
 ├── examples/
+│   ├── figure_contract/
+│   ├── layout_archetypes/
+│   └── statistics_report/
 ├── policies/
 ├── references/
 ├── schemas/
@@ -164,7 +182,7 @@ sciplot-figure-skill/
 
 ## Version
 
-Current version: **v2.7.1**
+Current version: **v2.8.1**
 
 ## Scope and Limitations
 

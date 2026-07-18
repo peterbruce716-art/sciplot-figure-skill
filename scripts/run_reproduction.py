@@ -245,6 +245,8 @@ COMPANION_SPECS = {
     "data_profile": ("advisor", "data_profile.json", "data-profile-v1.schema.json"),
     "figure_intent": ("advisor", "figure_intent.json", "figure-intent-v1.schema.json"),
     "chart_decision": ("advisor", "chart_decision.json", "chart-decision-v1.schema.json"),
+    "figure_contract": ("advisor", "figure_contract.json", "figure-contract-v1.schema.json"),
+    "statistics_report": ("statistics", "statistics_report.json", "statistics-report-v1.schema.json"),
     "policy_report": ("advisor", "policy_report.json", None),
     "style_profile": ("style", "resolved_style_profile.json", "style-profile-v1.schema.json"),
     "font_resolution": ("style", "font_resolution.json", "font-resolution-v1.schema.json"),
@@ -493,6 +495,8 @@ def main() -> int:
     parser.add_argument("--data-profile", type=Path)
     parser.add_argument("--figure-intent", type=Path)
     parser.add_argument("--chart-decision", type=Path)
+    parser.add_argument("--figure-contract", type=Path)
+    parser.add_argument("--statistics-report", type=Path)
     parser.add_argument("--policy-report", type=Path)
     parser.add_argument("--style-profile", type=Path)
     parser.add_argument("--font-resolution", type=Path)
@@ -529,6 +533,8 @@ def main() -> int:
         "data_profile": args.data_profile,
         "figure_intent": args.figure_intent,
         "chart_decision": args.chart_decision,
+        "figure_contract": args.figure_contract,
+        "statistics_report": args.statistics_report,
         "policy_report": args.policy_report,
         "style_profile": args.style_profile,
         "font_resolution": args.font_resolution,

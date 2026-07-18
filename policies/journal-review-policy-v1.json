@@ -1,0 +1,21 @@
+{
+  "constraints": {
+    "accepted_patch_requires_deterministic_rerun": true,
+    "advisory_only": true,
+    "can_add_significance_stars": false,
+    "can_choose_declared_statistical_test": false,
+    "can_grant_strict_pass": false,
+    "can_modify_raw_data": false
+  },
+  "rubric": [
+    "scientific_question_clarity",
+    "claim_evidence_alignment",
+    "panel_role_clarity",
+    "statistical_transparency",
+    "negative_result_honesty",
+    "visual_hierarchy",
+    "legend_annotation_clarity",
+    "journal_width_readability"
+  ],
+  "schema": "scientificfigure.journal_review_policy.v1"
+}

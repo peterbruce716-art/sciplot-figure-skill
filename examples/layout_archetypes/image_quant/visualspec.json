@@ -1,0 +1,150 @@
+{
+  "figure": {
+    "background": "white",
+    "crop_mode": "fixed_canvas",
+    "dpi": 300,
+    "size_mm": [
+      183,
+      90
+    ]
+  },
+  "layout": {
+    "alignment": "baseline",
+    "archetype": "image_quant",
+    "gutter_mm": 3.0,
+    "hero_panel_id": "b",
+    "min_panel_width_mm": 35.0,
+    "min_readable_font_size_pt": 6.0,
+    "narrative_order": [
+      "a",
+      "b"
+    ],
+    "panel_weights": {
+      "a": 1.0,
+      "b": 1.8
+    },
+    "target_width_mm": 183
+  },
+  "panels": [
+    {
+      "annotations": [
+        {
+          "coordinate_space": "axes_fraction",
+          "coordinates": [
+            0.04,
+            0.94
+          ],
+          "style": {
+            "font_size_pt": 9,
+            "ha": "left",
+            "va": "top"
+          },
+          "text": "(a)",
+          "type": "text"
+        }
+      ],
+      "answers_question": "What does the representative microstructure look like?",
+      "backend": "project",
+      "bbox_normalized": [
+        0.08,
+        0.18,
+        0.40499999999999997,
+        0.68
+      ],
+      "evidence_ids": [
+        "E1"
+      ],
+      "id": "a",
+      "panel_weight": 1.0,
+      "representation": "mixed",
+      "required_output": "mixed",
+      "semantic_role": "context",
+      "source_strategy": "raw_data"
+    },
+    {
+      "annotations": [
+        {
+          "coordinate_space": "axes_fraction",
+          "coordinates": [
+            0.04,
+            0.94
+          ],
+          "style": {
+            "font_size_pt": 9,
+            "ha": "left",
+            "va": "top"
+          },
+          "text": "(b)",
+          "type": "text"
+        }
+      ],
+      "answers_question": "Does the quantitative boundary metric change with temperature?",
+      "axes": {
+        "x": {
+          "label": "Condition",
+          "limits": [
+            0,
+            2
+          ],
+          "ticks": [
+            0,
+            1,
+            2
+          ]
+        },
+        "y": {
+          "label": "Metric",
+          "limits": [
+            0,
+            3
+          ],
+          "ticks": [
+            0,
+            1,
+            2,
+            3
+          ]
+        }
+      },
+      "backend": "matplotlib",
+      "bbox_normalized": [
+        0.51,
+        0.18,
+        0.40499999999999997,
+        0.68
+      ],
+      "evidence_ids": [
+        "E2"
+      ],
+      "id": "b",
+      "panel_weight": 1.8,
+      "plots": [
+        {
+          "data": {
+            "x": [
+              0,
+              1,
+              2
+            ],
+            "y": [
+              1,
+              1.5999999999999999,
+              2.0
+            ]
+          },
+          "label": "b",
+          "style": {
+            "color": "#1f77b4",
+            "line_width_pt": 1.2
+          },
+          "type": "line"
+        }
+      ],
+      "representation": "semantic_vector",
+      "required_output": "svg",
+      "semantic_role": "hero",
+      "source_strategy": "raw_data"
+    }
+  ],
+  "schema": "scientificfigure.visualspec.v2"
+}

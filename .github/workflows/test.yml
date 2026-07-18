@@ -12,20 +12,20 @@ permissions:
 jobs:
   fast:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.14"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.14"
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt
       - run: python -m unittest discover -s scripts/tests -p "test_fast_*.py"
       - run: python -m unittest discover -s scripts/tests -p "test_score_batch.py"
+      - run: python -m unittest discover -s scripts/tests -p "test_grouped_bar_digitizer.py"
+      - run: python -m unittest discover -s scripts/tests -p "test_contract_statistics.py"
+      - run: python -m unittest discover -s scripts/tests -p "test_figure_priors_mixed_backend.py"
+      - run: python -m unittest discover -s scripts/tests -p "test_bundle_workflow.py"
 
   integration:
     runs-on: ubuntu-latest
@@ -40,7 +40,6 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m unittest discover -s scripts/tests -p "test_integration_*.py"
       - run: python -m unittest discover -s scripts/tests -p "test_source_free_bundle.py"
-      - run: python -m unittest discover -s scripts/tests -p "test_bundle_workflow.py"
 
   acceptance:
     runs-on: ubuntu-latest

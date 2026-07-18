@@ -1,0 +1,30 @@
+{
+  "figure_type": "box_violin",
+  "layout_priors": {
+    "aspect_ratio": 1.15,
+    "recommended_width_mm": 89
+  },
+  "provenance": {
+    "adaptation": "concept_and_parameter_adaptation_only",
+    "imported_files": [],
+    "license": "Apache-2.0",
+    "source": "academic-figure-skill"
+  },
+  "schema": "scientificfigure.figure_prior.v1",
+  "style_tokens": {
+    "box_line_width_pt": 0.7,
+    "point_size_pt": 2.8,
+    "violin_alpha": 0.35
+  },
+  "supported_data_signature": {
+    "optional": [
+      "subgroup",
+      "paired_id",
+      "n"
+    ],
+    "required": [
+      "group",
+      "value"
+    ]
+  }
+}

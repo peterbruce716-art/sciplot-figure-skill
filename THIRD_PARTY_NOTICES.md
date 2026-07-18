@@ -1,0 +1,1 @@
+Third-party reference: academic-figure-skill, repository https://github.com/TingxiYu/academic-figure-skill, license Apache-2.0. Import mode: concept and parameter adaptation only. Imported files: none. Adapted concepts: figure contract, panel archetypes, statistical reporting, reviewer rubric, and figure priors. No production scripts or assets are copied into SciPlot.

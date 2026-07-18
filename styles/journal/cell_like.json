@@ -1,0 +1,25 @@
+{
+  "name": "cell_like",
+  "provenance": {
+    "disclaimer": "cell_like is not an official Cell Press template.",
+    "license": "Apache-2.0",
+    "source": "academic-figure-skill concept adaptation"
+  },
+  "schema": "scientificfigure.style_profile.v1",
+  "settings": {
+    "base_font_size_pt": 7.0,
+    "double_column_width_mm": 183,
+    "latin_font": [
+      "Arial",
+      "Helvetica",
+      "DejaVu Sans"
+    ],
+    "palette": [
+      "#0072B2",
+      "#D55E00",
+      "#009E73",
+      "#CC79A7"
+    ],
+    "single_column_width_mm": 89
+  }
+}

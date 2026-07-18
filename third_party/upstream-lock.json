@@ -1,0 +1,14 @@
+{
+  "adapted_concepts": [
+    "figure contract",
+    "panel archetypes",
+    "statistical reporting",
+    "reviewer rubric",
+    "figure priors"
+  ],
+  "import_mode": "concept_and_parameter_adaptation",
+  "imported_files": [],
+  "license": "Apache-2.0",
+  "name": "academic-figure-skill",
+  "repository": "https://github.com/TingxiYu/academic-figure-skill"
+}

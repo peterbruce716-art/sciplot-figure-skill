@@ -23,6 +23,7 @@ def recommend_chart(
     group: list[str] | None = None,
     requested_type: str | None = None,
     journal_profile: str | None = None,
+    figure_contract: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     group = group or []
     task = str(intent.get("task_type", "trend_comparison"))
@@ -37,6 +38,21 @@ def recommend_chart(
     uncertainty_source: str | None = None
     data_columns: dict[str, Any] = {"x": x, "y": y, "group": group}
     requires_user_confirmation = False
+    contract_summary: dict[str, Any] | None = None
+    contract_preferred: str | None = None
+    if figure_contract:
+        panels = list(figure_contract.get("panel_plan") or [])
+        first_panel = panels[0] if panels else {}
+        contract_preferred = first_panel.get("preferred_representation")
+        contract_summary = {
+            "schema": figure_contract.get("schema"),
+            "scientific_question": figure_contract.get("scientific_question"),
+            "core_claim": figure_contract.get("core_claim"),
+            "archetype": figure_contract.get("archetype"),
+            "hero_panel_id": figure_contract.get("hero_panel_id"),
+            "panel_count": len(panels),
+            "evidence_ids": [item.get("id") for item in figure_contract.get("evidence_chain", [])],
+        }
 
     if task in {"trend_comparison", "temporal_change"}:
         if x_info and x_info.get("inferred_type") in {"continuous", "datetime", "ordinal"}:
@@ -96,6 +112,23 @@ def recommend_chart(
         recommended = "semantic_vector_reconstruction"
         reasons.append("图像重建优先保留可编辑语义对象，并将视觉追踪与科学数据恢复区分")
 
+    if contract_preferred:
+        representation_map = {
+            "line_with_uncertainty": "line_with_error_band",
+            "line_with_error_bars": "line_with_error_bars",
+            "scatter_regression": "scatter",
+            "grouped_bar": "grouped_bar",
+            "heatmap": "heatmap",
+            "pca": "scatter",
+            "box_violin": "box_with_raw_points",
+            "chart_from_data_profile": recommended,
+        }
+        mapped = representation_map.get(str(contract_preferred), recommended)
+        if mapped != recommended:
+            reasons.insert(0, f"FigureContract preferred_representation={contract_preferred} adjusted the chart recommendation to {mapped}")
+            recommended = mapped
+        required.extend(["figure_contract", "evidence_trace", "panel_role"])
+
     if group_count > 12:
         warnings.append({"code": "too_many_groups", "severity": "warning", "message": "组或系列超过 12 个，建议使用 small multiples 或分层筛选。"})
     if min_n is not None and min_n < 10:
@@ -132,6 +165,9 @@ def recommend_chart(
         "uncertainty_source": uncertainty_source,
         "data_columns": data_columns,
         "requires_user_confirmation": requires_user_confirmation,
+        "figure_contract": contract_summary,
+        "layout": {"archetype": figure_contract.get("archetype"), "hero_panel_id": figure_contract.get("hero_panel_id")} if figure_contract else None,
+        "statistics_report_required": True,
     }
     validate_payload(payload, "chart-decision-v1.schema.json")
     return payload
@@ -147,9 +183,10 @@ def main() -> int:
     parser.add_argument("--group", action="append", default=[])
     parser.add_argument("--requested-type")
     parser.add_argument("--journal-profile")
+    parser.add_argument("--figure-contract", type=Path)
     args = parser.parse_args()
     try:
-        payload = recommend_chart(load_json(args.profile), load_json(args.intent), x=args.x, y=args.y, group=args.group, requested_type=args.requested_type, journal_profile=args.journal_profile)
+        payload = recommend_chart(load_json(args.profile), load_json(args.intent), x=args.x, y=args.y, group=args.group, requested_type=args.requested_type, journal_profile=args.journal_profile, figure_contract=load_json(args.figure_contract) if args.figure_contract else None)
         write_json(args.output, payload)
     except Exception as exc:
         parser.exit(2, f"recommend_scientific_chart: {exc}\n")

@@ -1,0 +1,1 @@
+Reviewer advisory checks scientific question clarity, claim-evidence alignment, panel role clarity, statistical transparency, negative-result honesty, visual hierarchy, legend and annotation clarity, and journal-width readability. Advisory output cannot modify raw data, add significance stars, choose declared statistical tests, or grant strict pass.

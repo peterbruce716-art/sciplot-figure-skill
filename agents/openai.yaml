@@ -1,5 +1,15 @@
 interface:
   display_name: "Scientific Figure Reproduction"
-  version: "2.7.1"
-  short_description: "Advise, reproduce, and validate scientific figures with deterministic bundle gates."
-  default_prompt: "Use $scientific-figure-reproduction to profile the data, choose a defensible chart, resolve fonts and style, render with VisualSpec, and verify the portable bundle."
+  version: "2.8.1"
+  short_description: "Plan, render, audit, and package scientific figures with deterministic bundle gates."
+  default_prompt: "Use $scientific-figure-reproduction to build a FigureContract, profile data, resolve VisualSpec-compatible priors, render deterministically, audit semantics/vector output, and verify the portable bundle."
+  trigger_examples:
+    - "Reproduce this paper figure with editable scientific plots and QA."
+    - "Build a manuscript-ready multi-panel figure from these data and scientific question."
+    - "Audit whether this figure is publication-ready with statistics and vector checks."
+  negative_examples:
+    - "帮我分析数据"
+    - "计算显著性"
+    - "清洗CSV"
+    - "做一个PPT流程图"
+    - "修复Python报错"

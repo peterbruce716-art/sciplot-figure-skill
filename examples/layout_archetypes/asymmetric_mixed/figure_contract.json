@@ -1,0 +1,20 @@
+{
+  "schema": "scientificfigure.figure_contract.v1",
+  "schema_version": "1.0",
+  "scientific_question": "How do context, primary quantitative evidence, and supporting checks fit together?",
+  "core_claim": "unknown",
+  "target_audience": "scientific_readers",
+  "target_journal": "generic_scientific",
+  "target_width_mm": 183,
+  "archetype": "asymmetric_mixed",
+  "hero_panel_id": "b",
+  "evidence_chain": [{"id": "E1", "source": "context_image", "claim": "Context image is available.", "status": "unknown"}, {"id": "E2", "source": "primary_quant_table", "claim": "Primary quantitative source is available; interpretation is unknown.", "status": "unknown"}, {"id": "E3", "source": "supporting_check_table", "claim": "Supporting check is available; interpretation is unknown.", "status": "unknown"}],
+  "panel_plan": [
+    {"panel_id": "a", "scientific_role": "context", "question": "What context frames the result?", "preferred_representation": "image_panel", "evidence_ids": ["E1"], "panel_weight": 1.0, "backend": "project", "required_output": "mixed"},
+    {"panel_id": "b", "scientific_role": "hero", "question": "What is the primary quantitative comparison?", "preferred_representation": "line_with_uncertainty", "evidence_ids": ["E2"], "panel_weight": 1.8, "backend": "matplotlib", "required_output": "svg"},
+    {"panel_id": "c", "scientific_role": "supporting", "question": "Does a supporting check agree with the primary comparison?", "preferred_representation": "scatter", "evidence_ids": ["E3"], "panel_weight": 1.0, "backend": "matplotlib", "required_output": "svg"}
+  ],
+  "assumptions": [{"id": "A1", "statement": "Panel b is the hero because the contract declares it as the primary comparison.", "reason": "Hero selection is based on panel role and weight, not effect size.", "status": "defaulted"}],
+  "approval": {"mode": "auto", "status": "not_required"},
+  "provenance": {"import_mode": "concept_and_parameter_adaptation"}
+}

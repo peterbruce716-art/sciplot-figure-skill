@@ -15,7 +15,7 @@ Document any visual calibration, such as using a labeled peak or plateau when a 
 ## Grouped Bars
 
 1. Calibrate the y mapping from the baseline and at least two visible ticks; do not infer the scale from bar heights alone.
-2. Record each panel rectangle, category center, group offset, and bar width in source pixels before mapping values.
+2. Record each panel rectangle, category center, group offset, and bar width in source pixels before mapping values. Detect these values independently per panel; do not assume that adjacent panels share side-by-side or nested geometry.
 3. Segment fill colors only inside each panel. Exclude legend swatches by requiring components to touch or approach the calibrated baseline.
 4. Use the top edge of the filled rectangle for the central value. Treat antialiasing and compression as a pixel uncertainty and record the implied data-unit uncertainty.
 5. Detect error-bar stems and caps separately from fills. If the raster cannot distinguish the uncertainty magnitude reliably, record it as unavailable rather than fabricating a value.
@@ -27,4 +27,8 @@ Use the calibrated helper when the bar geometry and colors are known:
 py -3.14 scripts\digitize_grouped_bar_raster.py --source source.png --config grouped_bar_calibration.json --csv-out digitized_bars.csv --audit-out grouped_bar_audit.json
 ```
 
-The calibration JSON uses schema `scientificfigure.grouped_bar_digitization.v1`. Each panel records `plot_bbox_px`, `category_centers_px`, `y_axis.pixel_baseline`, `y_axis.pixel_top`, `y_axis.value_min`, `y_axis.value_max`, and groups with `label`, `color_rgb`, `offset_px`, and `width_px`. A nested bar may set group-level `min_row_coverage` lower than the panel default because inner bars occlude the outer fill near the baseline. The helper still rejects components that do not reach the calibrated baseline neighborhood, which filters compact legend swatches from bar measurements.
+The calibration JSON uses schema `scientificfigure.grouped_bar_digitization.v1`. Each panel records `plot_bbox_px`, `category_centers_px`, `y_axis.pixel_baseline`, `y_axis.pixel_top`, `y_axis.value_min`, `y_axis.value_max`, and groups with `label`, `color_rgb`, `offset_px`, `width_px`, and `baseline_visibility`.
+
+Panel layouts are independent. For example, one panel may have three nearly zero offsets with descending widths (concentric B/D/F nesting), while the next uses a wide B background plus negative D and positive F offsets (left/right foreground bars). The scaffold must preserve those distinct offsets and widths instead of averaging them into one figure-wide layout.
+
+Use `baseline_visibility: visible` when the group's fill reaches the calibrated baseline neighborhood. Use `occluded_by_front_groups` only when later foreground groups overlap that bar. A non-baseline-connected run is accepted only when the calibrated overlap is supported by positive raster evidence: a narrow edge of the same fill continues to the baseline, or a foreground fill starts immediately below the candidate and continues to the baseline. Without that evidence, the row is omitted and the audit fails or becomes partial. The scaffold also reports `review_required` instead of `pass` when it must estimate unresolved touching groups with equal-width fallback. The extracted values remain raster-derived approximations.

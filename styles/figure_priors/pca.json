@@ -1,0 +1,30 @@
+{
+  "figure_type": "pca",
+  "layout_priors": {
+    "aspect_ratio": 1.05,
+    "recommended_width_mm": 89
+  },
+  "provenance": {
+    "adaptation": "concept_and_parameter_adaptation_only",
+    "imported_files": [],
+    "license": "Apache-2.0",
+    "source": "academic-figure-skill"
+  },
+  "schema": "scientificfigure.figure_prior.v1",
+  "style_tokens": {
+    "ellipse_line_width_pt": 0.7,
+    "marker_alpha": 0.82,
+    "marker_size_pt": 4.5
+  },
+  "supported_data_signature": {
+    "optional": [
+      "group",
+      "confidence_region"
+    ],
+    "required": [
+      "sample_id",
+      "pc1",
+      "pc2"
+    ]
+  }
+}

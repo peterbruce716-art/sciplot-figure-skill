@@ -1,0 +1,24 @@
+{
+  "schema": "scientificfigure.figure_contract.v1",
+  "schema_version": "1.0",
+  "scientific_question": "How does processing temperature affect boundary evolution?",
+  "core_claim": "unknown",
+  "target_audience": "materials_science_reviewer",
+  "target_journal": "acta_materialia",
+  "target_width_mm": 183,
+  "archetype": "image_quant",
+  "hero_panel_id": "b",
+  "evidence_chain": [
+    {"id": "E1", "source": "example_microstructure_image", "claim": "Microstructure context is available; interpretation remains user-declared.", "status": "unknown"},
+    {"id": "E2", "source": "example_quant_table", "claim": "Quantitative trend source is available; significance is unknown.", "status": "unknown"}
+  ],
+  "panel_plan": [
+    {"panel_id": "a", "scientific_role": "context", "question": "What does the representative microstructure look like?", "preferred_representation": "image_panel", "evidence_ids": ["E1"], "panel_weight": 1.0, "backend": "project", "required_output": "mixed"},
+    {"panel_id": "b", "scientific_role": "hero", "question": "Does the quantitative boundary metric change with temperature?", "preferred_representation": "line_with_uncertainty", "evidence_ids": ["E2"], "panel_weight": 1.8, "backend": "matplotlib", "required_output": "svg"}
+  ],
+  "assumptions": [
+    {"id": "A1", "statement": "The example records structure only and does not declare a scientific result.", "reason": "No raw experimental table is bundled with this lightweight example.", "status": "unknown"}
+  ],
+  "approval": {"mode": "auto", "status": "not_required"},
+  "provenance": {"import_mode": "concept_and_parameter_adaptation", "source_reference": "academic-figure-skill planning concepts"}
+}

@@ -1,0 +1,19 @@
+{
+  "schema": "scientificfigure.figure_contract.v1",
+  "schema_version": "1.0",
+  "scientific_question": "How do two quantitative metrics vary across conditions?",
+  "core_claim": "unknown",
+  "target_audience": "scientific_readers",
+  "target_journal": "generic_scientific",
+  "target_width_mm": 183,
+  "archetype": "quantitative_grid",
+  "hero_panel_id": null,
+  "evidence_chain": [{"id": "E1", "source": "example_quant_table", "claim": "Two metrics are available for plotting; interpretation is unknown.", "status": "unknown"}],
+  "panel_plan": [
+    {"panel_id": "a", "scientific_role": "quantification", "question": "How does metric one vary?", "preferred_representation": "line", "evidence_ids": ["E1"], "panel_weight": 1.0, "backend": "matplotlib", "required_output": "svg"},
+    {"panel_id": "b", "scientific_role": "validation", "question": "How does metric two vary?", "preferred_representation": "scatter", "evidence_ids": ["E1"], "panel_weight": 1.0, "backend": "matplotlib", "required_output": "svg"}
+  ],
+  "assumptions": [{"id": "A1", "statement": "No panel is designated as a hero because the grid has equal panel weights.", "reason": "quantitative_grid uses balanced panels.", "status": "defaulted"}],
+  "approval": {"mode": "auto", "status": "not_required"},
+  "provenance": {"import_mode": "concept_and_parameter_adaptation"}
+}

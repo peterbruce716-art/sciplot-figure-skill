@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from advisor_common import build_priority_variables, load_json, validate_payload, write_json
+from build_figure_contract import build_contract
+from build_statistics_report import build_statistics_report
 from chart_decision_to_visualspec import materialize_chart_decision
 from apply_style_profile import apply_style
 from font_resolver import resolve_fonts
@@ -16,6 +18,7 @@ from prepare_ai_visual_review import prepare_review
 from profile_scientific_data import profile_dataframe, read_table
 from recommend_scientific_chart import recommend_chart
 from resolve_style_profile import resolve_style
+from validate_figure_contract import validate_contract_payload
 from evaluate_scientific_plot_policy import evaluate_policies
 
 
@@ -62,9 +65,33 @@ def run_pipeline(args: argparse.Namespace) -> dict[str, Any]:
         intent = _intent(args.intent, x=args.x, y=args.y, group=args.group, uncertainty_columns=profile.get("uncertainty_columns", []))
         artifacts["figure_intent"] = output / "advisor" / "figure_intent.json"
         write_json(artifacts["figure_intent"], intent)
-        decision = recommend_chart(profile, intent, x=args.x, y=args.y, group=args.group, requested_type=args.requested_type, journal_profile=args.style)
+        if args.figure_contract:
+            contract = load_json(args.figure_contract)
+            contract_validation = validate_contract_payload(contract)
+            if contract_validation["status"] != "pass":
+                raise ValueError("invalid --figure-contract: " + json.dumps(contract_validation["failures"], ensure_ascii=False))
+        else:
+            question = args.scientific_question or intent.get("primary_message") or intent.get("claim")
+            contract = build_contract(
+                profile,
+                question=str(question),
+                core_claim=args.core_claim or str(intent.get("claim", "unknown")),
+                target_audience=args.target_audience or str(intent.get("audience", "scientific_readers")),
+                target_journal=args.target_journal or (args.style or "generic_scientific"),
+                target_width_mm=args.target_width_mm,
+                archetype=args.archetype,
+                hero_panel_id=args.hero_panel_id,
+                approval_mode=args.approval_mode,
+                strict=args.approval_mode == "strict",
+            )
+        artifacts["figure_contract"] = output / "advisor" / "figure_contract.json"
+        write_json(artifacts["figure_contract"], contract)
+        decision = recommend_chart(profile, intent, x=args.x, y=args.y, group=args.group, requested_type=args.requested_type, journal_profile=args.style, figure_contract=contract)
         artifacts["chart_decision"] = output / "advisor" / "chart_decision.json"
         write_json(artifacts["chart_decision"], decision)
+        statistics_report = build_statistics_report(profile, figure_contract=contract)
+        artifacts["statistics_report"] = output / "statistics" / "statistics_report.json"
+        write_json(artifacts["statistics_report"], statistics_report)
         context = {"sample": {"min_group_n": min((int(item.get("sample_count", 0)) for item in profile.get("group_statistics", [])), default=0)}, "chart": {"type": decision["recommended_type"], "has_uncertainty": bool(intent.get("uncertainty_semantics") or decision.get("uncertainty_source")), "raw_points_visible": "raw_points" in decision.get("required_visual_elements", [])}, "intent": intent, "data": {"category_count": max((int(item.get("unique_count", 0)) for item in profile.get("columns", [])), default=0), "x_numeric": bool(args.x and next((item.get("inferred_type") == "continuous" for item in profile.get("columns", []) if item.get("name") == args.x), False)), "x_treated_as_category": decision["recommended_type"] in {"grouped_bar", "bar"}}, "caption": {"sample_size_declared": False}, "layout": {"panel_count": 1, "panel_labels_present": True}, "style": {"colormap": None}}
         policy = load_json(args.policy)
         policy_report = evaluate_policies(context, policy, disabled=set(args.disable_policy))
@@ -96,7 +123,7 @@ def run_pipeline(args: argparse.Namespace) -> dict[str, Any]:
         if "chart_decision" not in artifacts:
             raise ValueError("--generate-visualspec requires advisor chart decision; do not silently assume a line chart")
         style_payload = load_json(artifacts["style_profile"]) if "style_profile" in artifacts else None
-        generated, materialization = materialize_chart_decision(load_json(artifacts["chart_decision"]), data_path=local_data, output_dir=output / "visualspec", x=args.x, y=args.y, style_profile=style_payload, figure_intent=intent)
+        generated, materialization = materialize_chart_decision(load_json(artifacts["chart_decision"]), data_path=local_data, output_dir=output / "visualspec", x=args.x, y=args.y, style_profile=style_payload, figure_intent=intent, figure_contract=load_json(artifacts["figure_contract"]) if "figure_contract" in artifacts else None)
         if style_payload:
             generated, style_application = apply_style(generated, style_payload)
             artifacts["style_application"] = output / "style" / "style_application.json"
@@ -119,7 +146,7 @@ def run_pipeline(args: argparse.Namespace) -> dict[str, Any]:
         command = [sys.executable, str(Path(__file__).resolve().parent / "run_reproduction.py"), "--spec", str(spec_path), "--out-dir", str(output / "bundle")]
         if args.image:
             command.extend(["--source", str(args.image)])
-        for key, flag in [("data_profile", "--data-profile"), ("figure_intent", "--figure-intent"), ("chart_decision", "--chart-decision"), ("policy_report", "--policy-report"), ("style_profile", "--style-profile"), ("font_resolution", "--font-resolution"), ("ai_review", "--ai-review")]:
+        for key, flag in [("data_profile", "--data-profile"), ("figure_intent", "--figure-intent"), ("chart_decision", "--chart-decision"), ("figure_contract", "--figure-contract"), ("statistics_report", "--statistics-report"), ("policy_report", "--policy-report"), ("style_profile", "--style-profile"), ("font_resolution", "--font-resolution"), ("ai_review", "--ai-review")]:
             if key in artifacts:
                 command.extend([flag, str(artifacts[key])])
         if args.strict:
@@ -134,6 +161,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Advisor-first scientific figure pipeline with optional deterministic SciPlot bundle QA.")
     parser.add_argument("--data", required=True, type=Path)
     parser.add_argument("--intent", type=Path)
+    parser.add_argument("--figure-contract", type=Path)
+    parser.add_argument("--scientific-question")
+    parser.add_argument("--core-claim")
+    parser.add_argument("--target-audience")
+    parser.add_argument("--target-journal")
+    parser.add_argument("--target-width-mm", type=float, default=183.0)
+    parser.add_argument("--archetype", choices=["quantitative_grid", "schematic_led", "image_quant", "asymmetric_mixed"], default="quantitative_grid")
+    parser.add_argument("--hero-panel-id")
+    parser.add_argument("--approval-mode", choices=["auto", "interactive", "strict"], default="auto")
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--sheet")
     parser.add_argument("--x")

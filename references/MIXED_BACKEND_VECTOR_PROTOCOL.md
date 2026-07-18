@@ -1,0 +1,1 @@
+Mixed Python/R figures must preserve vector intent panel by panel. Semantic-vector panels should export SVG or PDF. PNG is allowed only for native raster panels or explicit rasterized_panel declarations with rasterization_reason. The composition manifest is not a quality pass; final output still needs vector QA and manifest closure.
