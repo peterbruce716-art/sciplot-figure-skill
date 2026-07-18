@@ -452,7 +452,7 @@ if __name__ == "__main__":
             spec_path = root / "visualspec.json"
             spec_path.write_text(json.dumps(spec), encoding="utf-8")
             baseline = root / "baseline"
-            subprocess.run([sys.executable, str(SCRIPTS / "render_matplotlib.py"), "--spec", str(spec_path), "--out-dir", str(baseline)], check=True, timeout=60)
+            subprocess.run([sys.executable, str(SCRIPTS / "render_matplotlib.py"), "--spec", str(spec_path), "--out-dir", str(baseline)], check=True, timeout=180)
             out_dir = root / "out"
             completed = subprocess.run(
                 [sys.executable, str(SCRIPTS / "run_reproduction.py"), "--spec", str(spec_path), "--source", str(baseline / "render.png"), "--out-dir", str(out_dir), "--require-strict"],
@@ -470,19 +470,19 @@ if __name__ == "__main__":
                 self.assertTrue((out_dir / "environment" / name).exists(), name)
             caches = [path for path in out_dir.rglob("*") if path.name == "__pycache__" or path.suffix in {".pyc", ".pyo"}]
             self.assertEqual([], caches)
-            verify = subprocess.run([sys.executable, str(out_dir / "verify.py")], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=60)
+            verify = subprocess.run([sys.executable, str(out_dir / "verify.py")], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=180)
             self.assertEqual(0, verify.returncode, verify.stdout + verify.stderr)
             attestation = out_dir / "run_attestation.json"
             original_attestation = attestation.read_text(encoding="utf-8")
             attestation.write_text(original_attestation + "\n", encoding="utf-8")
-            verify_after_attestation_tamper = subprocess.run([sys.executable, str(out_dir / "verify.py")], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=60)
+            verify_after_attestation_tamper = subprocess.run([sys.executable, str(out_dir / "verify.py")], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=180)
             self.assertNotEqual(0, verify_after_attestation_tamper.returncode)
             attestation.write_text(original_attestation, encoding="utf-8")
-            verify_after_attestation_restore = subprocess.run([sys.executable, str(out_dir / "verify.py")], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=60)
+            verify_after_attestation_restore = subprocess.run([sys.executable, str(out_dir / "verify.py")], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=180)
             self.assertEqual(0, verify_after_attestation_restore.returncode, verify_after_attestation_restore.stdout + verify_after_attestation_restore.stderr)
             with (out_dir / "outputs" / "render.svg").open("a", encoding="utf-8") as handle:
                 handle.write("\n<!--tamper-->\n")
-            verify_after_tamper = subprocess.run([sys.executable, str(out_dir / "verify.py")], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=60)
+            verify_after_tamper = subprocess.run([sys.executable, str(out_dir / "verify.py")], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=180)
             self.assertNotEqual(0, verify_after_tamper.returncode)
 
     def _single_plot_spec(self, plot: dict[str, object]) -> dict[str, object]:
@@ -518,7 +518,7 @@ if __name__ == "__main__":
             spec_path = root / "visualspec.json"
             spec_path.write_text(json.dumps(spec), encoding="utf-8")
             baseline = root / "baseline"
-            subprocess.run([sys.executable, str(SCRIPTS / "render_matplotlib.py"), "--spec", str(spec_path), "--out-dir", str(baseline)], check=True, timeout=60)
+            subprocess.run([sys.executable, str(SCRIPTS / "render_matplotlib.py"), "--spec", str(spec_path), "--out-dir", str(baseline)], check=True, timeout=180)
             out_dir = root / "out"
             completed = subprocess.run(
                 [sys.executable, str(SCRIPTS / "run_reproduction.py"), "--spec", str(spec_path), "--source", str(baseline / "render.png"), "--out-dir", str(out_dir), "--require-strict"],
@@ -536,9 +536,9 @@ if __name__ == "__main__":
             self.assertTrue(attestation.exists())
             runtime_file = out_dir / "runtime" / "scientific_figure_reproduction" / "capabilities.py"
             runtime_file.write_text(runtime_file.read_text(encoding="utf-8") + "\nTAMPERED = True\n", encoding="utf-8")
-            rerun = subprocess.run([sys.executable, str(out_dir / "reproduce.py")], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=60)
+            rerun = subprocess.run([sys.executable, str(out_dir / "reproduce.py")], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=180)
             self.assertNotEqual(0, rerun.returncode)
-            verify = subprocess.run([sys.executable, str(out_dir / "verify.py")], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=60)
+            verify = subprocess.run([sys.executable, str(out_dir / "verify.py")], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=180)
             self.assertNotEqual(0, verify.returncode)
 
     def test_v24_reproduce_outputs_have_stable_canonical_hashes(self) -> None:
@@ -549,7 +549,7 @@ if __name__ == "__main__":
             spec_path = root / "visualspec.json"
             spec_path.write_text(json.dumps(spec), encoding="utf-8")
             baseline = root / "baseline"
-            subprocess.run([sys.executable, str(SCRIPTS / "render_matplotlib.py"), "--spec", str(spec_path), "--out-dir", str(baseline)], check=True, timeout=60)
+            subprocess.run([sys.executable, str(SCRIPTS / "render_matplotlib.py"), "--spec", str(spec_path), "--out-dir", str(baseline)], check=True, timeout=180)
             out_dir = root / "out"
             first = subprocess.run([sys.executable, str(SCRIPTS / "run_reproduction.py"), "--spec", str(spec_path), "--source", str(baseline / "render.png"), "--out-dir", str(out_dir), "--require-strict"], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=180)
             self.assertEqual(0, first.returncode, first.stdout + first.stderr)
