@@ -136,7 +136,7 @@ Use `scripts/shared_geometry.py` when one logical curve is drawn in segments or 
 
 For multi-figure benchmarks, use `scripts/score_batch.py` with a `scientificfigure.visual_batch.v1` manifest. The batch command preserves source canvas size, writes per-figure comparison evidence, and fails when any required figure is missing or outside its predeclared visual thresholds.
 
-Use `scripts/pdf_vector_trace.py` for exact visual reproduction from a PDF figure region. The tool preserves native clipping and transformations, exports PNG/SVG/PDF, and compares a fresh rasterization of the exported PDF with the source-page clip without resizing either image. It reports whether the visible source is made of PDF compound paths or an embedded raster image. This workflow is always `visual_trace_pass`, never semantic recovery of primary data.
+Use `scripts/pdf_reference_set.py` to validate a PDF-derived reference manifest before digitization. The manifest binds the current PDF SHA-256 to relative PNG sources, positive PDF-point clip boxes, page numbers, DPI, and per-source hashes; stale hashes or path escapes fail closed. Then use `scripts/pdf_vector_trace.py` for exact visual reproduction from a PDF figure region. The tool preserves native clipping and transformations, exports PNG/SVG/PDF, and compares a fresh rasterization of the exported PDF with the source-page clip without resizing either image. It reports whether the visible source is made of PDF compound paths or an embedded raster image. This workflow is always `visual_trace_pass`, never semantic recovery of primary data.
 
 ## Bundle Contents
 
@@ -190,7 +190,17 @@ sciplot-figure-skill/
 
 ## Version
 
-Current version: **v2.8.6**
+Current version: **v2.8.11**
+
+### Reusing a renderer with new data
+
+Read `references/DATA_SWAP_PROTOCOL.md` before adding a reusable data entry
+point. Replacement values belong in a new data directory, must declare
+`historical_data_consumed: false` and an `input_mode`, and must be validated
+against the complete figure-specific shape before rendering. Keep outputs
+outside the data directory and emit a `scientificfigure.data-swap-run.v1`
+manifest with input/output hashes. Do not invoke a batch command that rebuilds
+canonical source crops or fresh measurements for an alternate-data run.
 
 ## Scope and Limitations
 

@@ -17,6 +17,89 @@ def _readonly_float64(values: Sequence[float] | np.ndarray, *, ndim: int | None 
     return array
 
 
+def smooth_curve_points(
+    x: Sequence[float] | np.ndarray,
+    y: Sequence[float] | np.ndarray,
+    *,
+    samples_per_interval: int = 16,
+    smoothing_window: int = 1,
+    clip: tuple[float, float] | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return a deterministic, shape-preserving smooth curve from digitized points.
+
+    A short reflected moving average removes raster stair-steps, then a PCHIP-style
+    cubic Hermite interpolation preserves endpoint values and avoids overshoot at
+    monotonic transitions.  This is intentionally NumPy-only so project renderers
+    remain portable when SciPy is unavailable.
+    """
+    x_arr = np.asarray(x, dtype="<f8")
+    y_arr = np.asarray(y, dtype="<f8")
+    if x_arr.ndim != 1 or y_arr.ndim != 1 or x_arr.size != y_arr.size or x_arr.size < 2:
+        raise ValueError("x and y must be one-dimensional arrays with at least two paired points")
+    if not np.all(np.isfinite(x_arr)) or not np.all(np.isfinite(y_arr)):
+        raise ValueError("x and y must contain only finite values")
+    if np.any(np.diff(x_arr) <= 0):
+        raise ValueError("x must be strictly increasing")
+    if samples_per_interval < 1:
+        raise ValueError("samples_per_interval must be positive")
+
+    window = max(1, int(smoothing_window))
+    if window > 1:
+        if window % 2 == 0:
+            window += 1
+        radius = window // 2
+        padded = np.pad(y_arr, (radius, radius), mode="reflect")
+        kernel = np.full(window, 1.0 / window, dtype="<f8")
+        filtered = np.convolve(padded, kernel, mode="valid")
+        filtered[0] = y_arr[0]
+        filtered[-1] = y_arr[-1]
+    else:
+        filtered = y_arr.copy()
+
+    h = np.diff(x_arr)
+    delta = np.diff(filtered) / h
+    slopes = np.zeros_like(filtered)
+    if filtered.size == 2:
+        slopes[:] = delta[0]
+    else:
+        for index in range(1, filtered.size - 1):
+            if delta[index - 1] * delta[index] <= 0:
+                slopes[index] = 0.0
+            else:
+                w_left = 2.0 * h[index] + h[index - 1]
+                w_right = h[index] + 2.0 * h[index - 1]
+                slopes[index] = (w_left + w_right) / (w_left / delta[index - 1] + w_right / delta[index])
+        slopes[0] = ((2.0 * h[0] + h[1]) * delta[0] - h[0] * delta[1]) / (h[0] + h[1])
+        slopes[-1] = ((2.0 * h[-1] + h[-2]) * delta[-1] - h[-1] * delta[-2]) / (h[-1] + h[-2])
+        if slopes[0] * delta[0] <= 0:
+            slopes[0] = 0.0
+        elif abs(slopes[0]) > 3.0 * abs(delta[0]):
+            slopes[0] = 3.0 * delta[0]
+        if slopes[-1] * delta[-1] <= 0:
+            slopes[-1] = 0.0
+        elif abs(slopes[-1]) > 3.0 * abs(delta[-1]):
+            slopes[-1] = 3.0 * delta[-1]
+
+    dense_x_parts: list[np.ndarray] = []
+    dense_y_parts: list[np.ndarray] = []
+    local_t = np.linspace(0.0, 1.0, int(samples_per_interval), endpoint=False, dtype="<f8")
+    for index, width in enumerate(h):
+        t = local_t
+        t2 = t * t
+        t3 = t2 * t
+        basis0 = 2.0 * t3 - 3.0 * t2 + 1.0
+        basis1 = t3 - 2.0 * t2 + t
+        basis2 = -2.0 * t3 + 3.0 * t2
+        basis3 = t3 - t2
+        dense_x_parts.append(x_arr[index] + width * t)
+        dense_y_parts.append(basis0 * filtered[index] + basis1 * width * slopes[index] + basis2 * filtered[index + 1] + basis3 * width * slopes[index + 1])
+    dense_x = np.concatenate([*dense_x_parts, x_arr[-1:]])
+    dense_y = np.concatenate([*dense_y_parts, filtered[-1:]])
+    if clip is not None:
+        dense_y = np.clip(dense_y, float(clip[0]), float(clip[1]))
+    return dense_x, dense_y
+
+
 def _source_hash(kind: str, arrays: Iterable[np.ndarray]) -> str:
     digest = hashlib.sha256()
     digest.update(f"sciplot.shared_geometry.v1:{kind}".encode("ascii"))

@@ -85,7 +85,8 @@ def source_free_validation_ok(manifest: dict[str, Any], figure: dict[str, Any]) 
 
 
 def validate_manifest(manifest_path: Path, *, root: Path | None = None, require_strict: bool = False) -> dict[str, Any]:
-    root = (root or manifest_path.parent).resolve()
+    declared_root = root if root is not None else manifest_path.parent
+    root = declared_root.resolve()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     failures: list[dict[str, str]] = [
         {"code": "schema_error", "message": error}
@@ -197,7 +198,8 @@ def validate_manifest(manifest_path: Path, *, root: Path | None = None, require_
     return {
         "schema": "scientificfigure.reproduction_manifest_validation.v1",
         "manifest": str(manifest_path),
-        "root": str(root),
+        # Keep a relative CLI root portable while resolving it internally above.
+        "root": str(declared_root),
         "require_strict": require_strict,
         "status": "ok" if not failures else "failed",
         "failures": failures,

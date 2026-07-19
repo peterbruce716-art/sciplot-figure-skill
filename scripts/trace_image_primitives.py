@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import defaultdict
 import json
 import math
 from datetime import datetime
@@ -61,6 +62,61 @@ def draw_png_from_runs(source: Image.Image, path: Path) -> Image.Image:
     return rebuilt
 
 
+def write_pdf_from_runs(source: Image.Image, path: Path) -> None:
+    """Write one vector path per exact RGB color instead of embedding a page raster."""
+    from matplotlib.backends.backend_pdf import FigureCanvasPdf
+    from matplotlib.figure import Figure
+    from matplotlib.patches import PathPatch
+    from matplotlib.path import Path as MplPath
+
+    rgb = source.convert("RGB")
+    width, height = rgb.size
+    grouped: dict[tuple[int, int, int], list[tuple[int, int, int]]] = defaultdict(list)
+    for x, y, run_width, color in iter_runs(np.asarray(rgb, dtype=np.uint8)):
+        if color != (255, 255, 255):
+            grouped[color].append((x, y, run_width))
+
+    figure = Figure(figsize=(width / 72.0, height / 72.0), dpi=72, facecolor="white")
+    canvas = FigureCanvasPdf(figure)
+    axes = figure.add_axes([0.0, 0.0, 1.0, 1.0])
+    axes.set_xlim(0, width)
+    axes.set_ylim(height, 0)
+    axes.axis("off")
+    for color, runs in grouped.items():
+        vertices: list[tuple[float, float]] = []
+        codes: list[int] = []
+        for x, y, run_width in runs:
+            vertices.extend(
+                [
+                    (x, y),
+                    (x + run_width, y),
+                    (x + run_width, y + 1),
+                    (x, y + 1),
+                    (x, y),
+                ]
+            )
+            codes.extend(
+                [
+                    MplPath.MOVETO,
+                    MplPath.LINETO,
+                    MplPath.LINETO,
+                    MplPath.LINETO,
+                    MplPath.CLOSEPOLY,
+                ]
+            )
+        path_object = MplPath(vertices, codes)
+        axes.add_patch(
+            PathPatch(
+                path_object,
+                facecolor=tuple(channel / 255.0 for channel in color),
+                edgecolor="none",
+                antialiased=False,
+                transform=axes.transData,
+            )
+        )
+    canvas.print_pdf(str(path), metadata={"Creator": "SciPlot trace_image_primitives"})
+
+
 def score_pair(source: Image.Image, actual: Image.Image) -> dict[str, Any]:
     source = source.convert("RGB")
     actual = actual.convert("RGB")
@@ -91,7 +147,7 @@ def trace_image(source_path: Path, out_dir: Path, stem: str) -> dict[str, Any]:
     pdf_path = out_dir / f"{stem}_trace_primitives.pdf"
     rebuilt = draw_png_from_runs(source, png_path)
     rect_count = write_svg_from_runs(source, svg_path)
-    rebuilt.save(pdf_path, "PDF", resolution=300.0)
+    write_pdf_from_runs(source, pdf_path)
     score = score_pair(source, rebuilt)
     return {
         "schema": "scientificfigure.trace_primitives.v1",
@@ -104,6 +160,7 @@ def trace_image(source_path: Path, out_dir: Path, stem: str) -> dict[str, Any]:
         "svg_rect_primitives": rect_count,
         "pixel_source_as_background_used": False,
         "source_trace_primitives_used": True,
+        "pdf_vector_primitives_used": True,
         "semantic_data_recovered": False,
         "scientific_objects_editable": False,
         "semantic_scientific_reconstruction": False,

@@ -4,6 +4,20 @@ from common import *
 
 
 class FastValidationTests(ScientificFigureReproductionTestBase):
+    def test_manifest_report_preserves_relative_root(self) -> None:
+        validator = load_module("validate_reproduction_manifest_relative_root", SCRIPTS / "validate_reproduction_manifest.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "manifest.json").write_text("{}", encoding="utf-8")
+            previous = Path.cwd()
+            try:
+                os.chdir(root)
+                result = validator.validate_manifest(Path("manifest.json"), root=Path("."))
+            finally:
+                os.chdir(previous)
+
+            self.assertEqual(".", result["root"])
+
     def test_skill_text_has_no_proprietary_project_terms(self) -> None:
         allowed_suffixes = {".md", ".py", ".json", ".yaml", ".yml", ".r"}
         text = "\n".join(

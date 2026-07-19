@@ -60,12 +60,13 @@ def walk_json(value: Any, *, file: str, pointer: str, root: Path, failures: list
             failures.append({"file": file, "json_pointer": pointer or "/", "value": value, "reason": reason})
 
 
-def validate_portability(root: Path) -> dict[str, Any]:
+def validate_portability(root: Path, *, excluded_paths: set[Path] | None = None) -> dict[str, Any]:
     root = root.resolve()
+    excluded = {path.resolve() for path in (excluded_paths or set())}
     failures: list[dict[str, str]] = []
     scanned = 0
     for path in sorted(root.rglob("*.json")):
-        if is_excluded(path, root):
+        if path.resolve() in excluded or is_excluded(path, root):
             continue
         scanned += 1
         file = rel(path, root)
@@ -83,7 +84,8 @@ def main() -> int:
     parser.add_argument("--root", required=True, type=Path)
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args()
-    result = validate_portability(args.root)
+    excluded = {args.json_out} if args.json_out else None
+    result = validate_portability(args.root, excluded_paths=excluded)
     if args.json_out:
         write_json(args.json_out, result)
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))

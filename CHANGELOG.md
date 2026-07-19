@@ -1,3 +1,67 @@
+## 2026-07-19 v2.8.11 Reusable Data-Swap Contract
+
+- Added `references/DATA_SWAP_PROTOCOL.md` for isolated replacement-data runs.
+- Required explicit input mode, complete figure-specific shape validation,
+  output isolation, and input/output hash manifests for reusable renderers.
+- Clarified that alternate data must not inherit a false PDF-digitization claim
+  and must not invoke a batch command that overwrites canonical fresh data.
+
+## 2026-07-19 v2.8.10 PDF Reference Set Provenance Gate
+
+- Added `scripts/pdf_reference_set.py` to validate PDF-derived reference manifests before fresh digitization, including current PDF hash, relative source paths, source hashes, positive clip boxes, page numbers, and DPI.
+- Added regression tests for current-hash acceptance, stale-PDF rejection, and invalid clip rejection.
+- Documented a deterministic PDF extraction stage so a prior PNG cannot silently become the input to a fresh run.
+- Explicitly marked external PDFs as opt-in provenance inputs; ordinary source paths still reject absolute and parent-directory escapes.
+
+## 2026-07-19 v2.8.8 Continuous Panel Baseline Contract
+
+- Added explicit required continuous panel-baseline regions for grouped-bar references that include an x-axis baseline, while retaining optional gap rejection for references without one.
+- Kept required per-bar bottom-frame checks and complete legend top-clearance checks in the same final-PNG validator.
+- Added regression coverage for accepted continuous baselines and rejection of missing baselines plus clipped legends.
+
+## 2026-07-19 v2.8.9 User-Requested Baseline Omission
+
+- Clarified that an explicit `panel_baseline_policy: omit` request overrides a visible reference baseline for corrected grouped-bar delivery.
+- Required a final-PNG gap scan proving that no panel-spanning black baseline remains while every bar retains its own bottom frame.
+
+## 2026-07-19 v2.8.7 Grouped-Bar Bottom-Frame and PDF Crop Closure
+
+- Changed the grouped-bar final-PNG validator to distinguish individual bar bottom frames from an independent panel baseline by checking category-gap regions and required bottom-frame regions.
+- Added regression coverage for missing bar bottoms, separated category gaps, complete legend top clearance, and long baseline rejection.
+- Added a reproducible PDF page-crop helper for source figures whose screenshot crop loses legend pixels or other boundary geometry.
+
+## 2026-07-19 v2.8.6 Corrected Grouped-Bar Delivery Gate
+
+- Added `scripts/validate_grouped_bar_delivery.py` to validate final exported PNG pixels for omitted panel-wide baselines and complete legend swatches, including the top-clear row that catches clipped legend frames.
+- Clarified that exact pixel-trace audits may preserve defects in a cropped reference and must remain internal when a user requests a corrected grouped-bar delivery.
+
+## 2026-07-19 v2.8.5 Fresh Output Provenance Closure
+
+- Extended `scripts/validate_source_policy.py` to validate declared `fresh_outputs_required` JSON artifacts, including project-relative paths, current source hashes, allowed reference binding, and explicit historical-data exclusion.
+- Added regression coverage for valid fresh artifacts and stale-output hash rejection so a rerender cannot silently reuse old digitization results.
+
+## 2026-07-19 v2.8.4 Portable Manifest Validation Reports
+
+- Preserved a caller-supplied relative `--root` in manifest-validation JSON while still resolving it internally for file checks.
+- Prevented validator-generated QA reports from failing the skill's own portability gate solely because `--root .` was expanded to an absolute Windows path.
+- Excluded `validate_portability.py`'s own `--json-out` from its scan so a stale report cannot poison all later runs.
+- Added regression tests for relative-root report output and portability-report self-exclusion.
+
+## 2026-07-19 v2.8.4 Canonical Corrected Delivery Mode
+
+- Added explicit guidance for requests that select one corrected reference format and prohibit alternate user-facing versions.
+- Require one contract-checked semantic export per figure under the declared corrected-delivery directory, with trace/semantic tracks retained only as internal QA evidence.
+
+## 2026-07-19 v2.8.4 Trace PDF Vector Primitive Regression Fix
+
+- Fixed `trace_image_primitives.py` so PDF output is built from grouped RGB run-length vector paths instead of a full-page Pillow raster image.
+- Added manifest evidence (`pdf_vector_primitives_used`) and regression coverage requiring trace PDFs to contain vector primitives and no `/Image` XObjects.
+- Added NumPy-only `smooth_curve_points()` for deterministic raster stair-step removal with endpoint preservation, shape-preserving cubic interpolation, and optional bounds clipping.
+- Clarified grouped-bar geometry: shared bar bottoms do not justify an independent panel-wide baseline; preserve each rectangle's own bottom outline and validate the exported image for accidental continuous baseline lines.
+- Clarified strict raster-reference delivery: pixel-trace output is authoritative for exact identity, while semantic/corrected redraws remain secondary and cannot be promoted by layout metrics alone.
+- Added a grouped-bar contract for explicit baseline policy, zero-white-gap contacts, shared bottom coordinates, and centered circular labels, with final-export rather than intermediate-render validation.
+- Fixed the common-bottom guidance to recompute grounded segment heights from `bottom - top`, preventing one-pixel bar-base drift when raster-derived heights and bottoms disagree.
+
 ## 2026-07-19 v2.8.4 Fresh Raster Reproduction and Semantic QA
 
 - Replaced substring-based uncertainty detection with token-boundary and phrase matching plus auditable match evidence.
@@ -178,3 +242,12 @@
 - Changed renderer manifest defaults to `render_only`/`incomplete` until scripts and QA evidence exist.
 - Changed strict QA semantics so only trace profile requires exact pixel match.
 - Changed the visual optimization loop to propagate child-step failures.
+## 2026-07-19 Fresh Digitization Source Closure
+
+- Added `scripts/validate_source_policy.py` to fail closed when a fresh raster-measurement run consumes historical tables, arrays, projects, QA artifacts, non-PNG inputs, missing references, stale hashes, or absolute/parent path escapes.
+- Added focused regression tests for accepted reference-only input sets and forbidden historical paths.
+- Kept rendering, VisualSpec semantics, manifest statuses, and existing CLI meanings unchanged.
+## 2026-07-19 v2.8.8 Continuous Panel Baseline Contract
+- Added explicit required continuous panel-baseline regions for grouped-bar references that include an x-axis baseline, while retaining optional gap rejection for references without one.
+- Kept required per-bar bottom-frame checks and complete legend top-clearance checks in the same final-PNG validator.
+- Added regression coverage for accepted continuous baselines and rejection of missing baselines plus clipped legends.

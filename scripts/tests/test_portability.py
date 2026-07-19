@@ -4,6 +4,18 @@ from common import *
 
 
 class PortabilityTests(ScientificFigureReproductionTestBase):
+    def test_portability_excludes_its_output_report(self) -> None:
+        portability = load_module("validate_portability_self_output", SCRIPTS / "validate_portability.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            report = root / "portability.json"
+            report.write_text(json.dumps({"stale_host_path": str(root.resolve())}), encoding="utf-8")
+
+            self.assertEqual("failed", portability.validate_portability(root)["status"])
+            result = portability.validate_portability(root, excluded_paths={report})
+            self.assertEqual("pass", result["status"])
+            self.assertEqual(0, result["scanned_json_files"])
+
     def test_portable_command_removes_host_absolute_paths(self) -> None:
         portable = load_module("portable_paths", SCRIPTS / "portable_paths.py")
         with tempfile.TemporaryDirectory() as tmp:

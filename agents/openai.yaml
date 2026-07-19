@@ -1,6 +1,6 @@
 interface:
   display_name: "Scientific Figure Reproduction"
-  version: "2.8.4"
+  version: "2.8.11"
   short_description: "Plan, render, audit, and package scientific figures with deterministic bundle gates."
   default_prompt: "Use $scientific-figure-reproduction to build a FigureContract, profile data, resolve VisualSpec-compatible priors, render deterministically, audit semantics/vector output, and verify the portable bundle."
   trigger_examples:
