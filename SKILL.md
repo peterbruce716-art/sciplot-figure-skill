@@ -1,9 +1,9 @@
 ---
-name: scientific-figure-reproduction
+name: sciplot-figure-skill
 description: Use when reproducing, redrawing, auditing, or visually optimizing scientific figures from papers, screenshots, extracted crops, source data, raster-only PNGs, multi-panel schematics, digitized plots, or annotation-heavy figure panels.
 ---
 
-# Scientific Figure Reproduction
+# SciPlot Figure Skill
 
 ## Advisor Layer (v2.6)
 
@@ -61,7 +61,7 @@ Run this skill with Python 3.14 only. Use `py -3.14` on Windows or `python3.14` 
 
 ## Overview
 
-Use this skill to reproduce scientific figures with open Python-first workflows. The v2.9.0 primary deliverable is a self-contained deterministic reproduction bundle with optional Advisor artifacts, semantic coverage, verifiable attestation, shared-geometry QA, batch visual gates, object-level reconstruction, path-portable delivery JSON, and a mandatory reusable data-swap template for every reproduced figure. Read `references/DATA_SWAP_PROTOCOL.md` for lineage rules and `references/DATA_SWAP_TEMPLATE_PROTOCOL.md` when a renderer must accept replacement measurements. When no reference image is supplied for a raw-data figure, successful semantic and vector checks produce `semantic_validated_pass`; this is intentionally not a visual strict claim. Do not use proprietary project conversion, desktop GUI automation, or approval-chain-dependent plotting tools in this skill.
+Use this skill to reproduce scientific figures with open Python-first workflows. The v2.9.2 primary deliverable is a self-contained deterministic reproduction bundle with optional Advisor artifacts, semantic coverage, verifiable attestation, shared-geometry QA, batch visual gates, object-level reconstruction, path-portable delivery JSON, and a mandatory reusable data-swap template for every reproduced figure. Read `references/DATA_SWAP_PROTOCOL.md` for lineage rules and `references/DATA_SWAP_TEMPLATE_PROTOCOL.md` when a renderer must accept replacement measurements. When no reference image is supplied for a raw-data figure, successful semantic and vector checks produce `semantic_validated_pass`; this is intentionally not a visual strict claim. Do not use proprietary project conversion, desktop GUI automation, or approval-chain-dependent plotting tools in this skill.
 
 ## Workflow
 
@@ -77,7 +77,7 @@ Use this skill to reproduce scientific figures with open Python-first workflows.
 10. When a logical curve is split into visible pieces, reused as a fill boundary, or paired with a local fill, load its geometry once and derive every artist from the same immutable source object and hash. Read `references/SHARED_GEOMETRY_PROTOCOL.md` and retain the geometry audit.
 11. Preserve one runnable script per reproduced figure, or a batch runner plus documented per-figure functions/sections when that is more practical. Record each script path in the manifest or notes.
 12. Create a `scientificfigure.data-swap-template.v1` manifest for every reproduced figure, including a complete data schema, example payload, renderer entrypoint, declared output formats, and relative paths.
-13. Run `scripts/validate_data_swap_template.py` and `scripts/run_data_swap.py` with an isolated output directory. Repeat with one changed input and verify that the input and output hashes change.
+13. Run scripts/validate_data_swap_template.py, scripts/run_data_swap.py, and scripts/verify_data_swap_change.py with isolated output directories. Repeat with one changed input and require a machine-readable proof that the input and at least one declared output hash changed. The generic runner must keep top-level stdout as one parseable JSON payload; renderer chatter belongs under runner_logs.
 14. Record deviations honestly; do not mark the result strict when it still differs.
 
 ## Mode Selection
@@ -173,7 +173,8 @@ If repeated geometry, color, typography, antialiasing, or legend tuning fails to
 - When the requester explicitly selects a corrected reference format and says not to provide other versions, use a canonical corrected-delivery mode: publish one contract-checked semantic export per figure under the declared delivery directory (for example `final_corrected/figN/figN.*`), apply the same delivery contract to every figure in the declared set, and label trace/semantic/intermediate directories as internal QA only. Do not advertise or present those internal tracks as alternate user-facing versions.
 - Use `scripts/pdf_vector_trace.py` when the requested reference is a PDF and exact visual clipping is required. It preserves native PDF paths when present, records target-region raster image hashes when the paper embeds a figure as an image, and scores a fresh rasterization of the exported PDF against the source-page clip. Keep its result at `pixel_primitives` / `visual_trace_pass`; neither path recovery nor image extraction recovers primary scientific data.
 - For repeated PDF figure sets, run a deterministic extraction stage first, then validate its `reference-extraction.json` with `scripts/pdf_reference_set.py`. The extraction stage must regenerate the reference PNGs from the current PDF before any digitizer reads them; retaining a previous PNG without a current PDF hash is not fresh evidence.
-- For a declared paper batch that must be rebuilt from the original PDF, use `scripts/fresh_pdf_batch.py`. It accepts only a new or empty output directory, binds every figure to the source PDF SHA-256, records page/clip provenance and output hashes, rejects inherited/reuse path tokens, and writes one `fresh_pdf_batch_manifest.json` plus `source_policy.json`. The default AA2195 route is Fig. 3/12/14/15/16; pass `--figure` more than once to run a smaller declared subset. This route is `pixel_trace` / `pixel_primitives` / `visual_trace_pass` and does not recover raw experimental data. Do not copy prior references, digitized tables, exports, or manifests into the output directory.
+- For a declared paper batch that must be rebuilt from the original PDF, use `scripts/fresh_pdf_batch.py`. Declare figure IDs, one-based page numbers, and `[x0, y0, x1, y1]` PDF-point clips in a `scientificfigure.pdf-clip-manifest.v1` file passed with `--clip-manifest`, or pass repeated `--figure-clip ID:PAGE:X0,Y0,X1,Y1` arguments. The installed skill intentionally has no paper-specific default figures. The runner accepts only a new or empty output directory, binds every figure to the source PDF SHA-256, records page/clip provenance and output hashes, rejects inherited/reuse path tokens, and writes `fresh_pdf_batch_manifest.json` plus `source_policy.json`. This route is `pixel_trace` / `pixel_primitives` / `visual_trace_pass` and does not recover raw experimental data.
+- When deriving clips from PDF text blocks, require an anchored caption that starts with `Fig. N.` or `Figure N.`. Use `select_anchored_caption_block()` rather than accepting the first body-text mention of the figure number.
 - Fresh PDF trace batches also write `trace_rerun_manifest.json`, a source-bound rerun contract listing each clip, per-figure script, output, visual-QA, and geometry-audit path. This contract is deliberately separate from `scientificfigure.data-swap-template.v1`: a PDF trace is not replacement-measurement data and must not be presented as a reusable data-swap renderer.
 - Use `scripts/shared_geometry.py` in project renderers when continuous curves, visible curve segments, fill boundaries, or filled vector regions must share one source. Run `audit_shared_geometry()` and store its report with QA artifacts.
 - Use `scripts/create_trace_figure_scripts.py` to generate one runnable trace script per target figure instead of hand-writing repeated wrappers.
@@ -206,8 +207,8 @@ If repeated geometry, color, typography, antialiasing, or legend tuning fails to
 - Every target figure must keep a dedicated runnable script, even when a combined batch runner also exists.
 - A manifest must list `per_figure_scripts` for every reproduced figure before claiming completion.
 - Every target figure must also be represented in a `scientificfigure.data-swap-template.v1` manifest. A PDF trace script, digitization script, or one-off batch runner alone is not a reusable template.
-- Each template figure record must point to a complete shape schema, example data, runnable renderer, and declared PNG/SVG/PDF outputs. The renderer must emit `scientificfigure.data-swap-run.v1` with input/output hashes and `historical_data_consumed: false`.
-- Validate templates with `scripts/validate_data_swap_template.py`; dispatch replacements through `scripts/run_data_swap.py` using `--figure`, `--data`, `--out-dir`, and `--input-mode`.
+- Each template figure record must point to a complete shape schema, example data, runnable renderer, and declared, non-duplicated PNG/SVG/PDF outputs. Template paths must be portable project-relative paths and must not resolve through symlinks outside the project root. The renderer must emit `scientificfigure.data-swap-run.v1` with input/output hashes and `historical_data_consumed: false`.
+- Validate templates with scripts/validate_data_swap_template.py; dispatch replacements through scripts/run_data_swap.py using --figure, --data, --out-dir, and --input-mode; prove data-driven behavior with scripts/verify_data_swap_change.py.
 - A manifest should store paths relative to the project root whenever files are inside the project. Do not write absolute source/export/script paths into the final manifest unless the file is intentionally outside the project and documented.
 - A bundle must keep `visualspec.json`, copied inputs under `inputs/`, runtime under `runtime/`, exports under `outputs/`, QA artifacts under `qa/`, immutable state in `bundle.lock.json`, per-run state in `run_attestation.json`, and hashes in `checksums.json` whenever `run_reproduction.py` is used.
 - A bundle must keep `environment/requirements.txt`, `environment/requirements-lock.txt`, `environment/environment.json`, `environment/fonts.json`, and `environment/environment_policy.json`. Child Python processes should run with `PYTHONDONTWRITEBYTECODE=1`, `MPLBACKEND=Agg`, fixed single-thread numeric environment variables, a temporary `MPLCONFIGDIR` outside the bundle, and deterministic Matplotlib metadata settings. Record resolved font family/style/weight/filename/hash and FreeType where possible; do not record host interpreter or font absolute paths in delivery JSON. Do not include Matplotlib font cache as immutable payload. `__pycache__`, `.pyc`, and `.pyo` files are unexpected in delivered bundles.
@@ -256,7 +257,7 @@ Before final delivery, freshly verify:
 
 - `scripts/run_reproduction.py` or an equivalent project runner completes from the project root,
 - `scripts/validate_data_swap_template.py --root <project> --template <template_manifest.json>` reports `status: pass` for every reproduced figure,
-- `scripts/run_data_swap.py` renders the example payload and a changed replacement payload into fresh isolated directories, and the manifest records changed input/output hashes,
+- scripts/run_data_swap.py independently recalculates input/output SHA-256 values for every template-declared output, captures renderer stdout/stderr under runner_logs, and scripts/verify_data_swap_change.py proves a changed payload changes at least one declared output hash,
 - `reproduce.py` can run from the bundle root without the original skill directory,
 - `bundle.lock.json` passes before rerendering and `verify.py` fails if tracked runtime, inputs, entrypoints, renderer configuration, or environment records are modified,
 - every expected SVG/PDF/PNG exists,

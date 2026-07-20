@@ -317,10 +317,10 @@ def render_visualspec(spec: dict[str, Any], output_dir: Path, spec_path: str = "
     svg = output_dir / "render.svg"
     pdf = output_dir / "render.pdf"
     project_root = output_dir.parent if output_dir.name == "outputs" else output_dir
-    metadata = {"Creator": "scientific-figure-reproduction", "Date": None}
-    fig.savefig(png, dpi=dpi, bbox_inches=bbox_inches, pad_inches=0, metadata={"Software": "scientific-figure-reproduction"})
+    metadata = {"Creator": "sciplot-figure-skill", "Date": None}
+    fig.savefig(png, dpi=dpi, bbox_inches=bbox_inches, pad_inches=0, metadata={"Software": "sciplot-figure-skill"})
     fig.savefig(svg, bbox_inches=bbox_inches, pad_inches=0, metadata=metadata)
-    fig.savefig(pdf, bbox_inches=bbox_inches, pad_inches=0, metadata={"Creator": "scientific-figure-reproduction", "Producer": "scientific-figure-reproduction", "CreationDate": None, "ModDate": None})
+    fig.savefig(pdf, bbox_inches=bbox_inches, pad_inches=0, metadata={"Creator": "sciplot-figure-skill", "Producer": "sciplot-figure-skill", "CreationDate": None, "ModDate": None})
     semantics = extract_matplotlib_semantics(fig, figure_id=str(figure_cfg.get("id", "figure_1")))
     plt.close(fig)
     write_json(output_dir / "render_semantics.json", semantics)

@@ -20,9 +20,35 @@ def load_module():
 
 
 class FreshPdfBatchTests(unittest.TestCase):
-    def test_default_declaration_is_exactly_the_five_named_figures(self) -> None:
+    def test_installed_skill_has_no_paper_specific_default_clips(self) -> None:
         module = load_module()
-        self.assertEqual(["3", "12", "14", "15", "16"], list(module.FIGURE_CLIPS))
+        self.assertEqual({}, module.FIGURE_CLIPS)
+
+    def test_caption_locator_prefers_anchored_caption_over_body_reference(self) -> None:
+        module = load_module()
+        body = (0, 0, 10, 10, "As shown in Fig. 12, the map changes.")
+        caption = (0, 20, 10, 30, "Fig. 12. Grain refinement mechanisms maps.")
+        self.assertIs(caption, module.select_anchored_caption_block([body, caption], "12"))
+        self.assertFalse(module.is_anchored_figure_caption(body[4], "12"))
+        self.assertTrue(module.is_anchored_figure_caption(caption[4], "12"))
+
+    def test_clip_manifest_is_generic_and_validated(self) -> None:
+        module = load_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "clips.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "schema": "scientificfigure.pdf-clip-manifest.v1",
+                        "figures": {"alpha": {"page": 2, "clip_pdf_points": [1, 2, 30, 40]}},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                {"alpha": {"page": 2, "clip_pdf_points": [1.0, 2.0, 30.0, 40.0]}},
+                module.load_clip_manifest(path),
+            )
 
     def test_rejects_inherited_output_path(self) -> None:
         module = load_module()
@@ -31,7 +57,13 @@ class FreshPdfBatchTests(unittest.TestCase):
             source = root / "paper.pdf"
             source.write_bytes(b"pdf")
             with self.assertRaisesRegex(ValueError, "E124_HISTORICAL_PATH_REJECTED"):
-                module.run_batch(source, root / "validated_reuse_run", figures=["3"], dpi=72)
+                module.run_batch(
+                    source,
+                    root / "validated_reuse_run",
+                    figures=["x"],
+                    dpi=72,
+                    figure_clips={"x": {"page": 1, "clip_pdf_points": [0, 0, 10, 10]}},
+                )
 
     def test_rejects_nonempty_output_before_work(self) -> None:
         module = load_module()
@@ -43,7 +75,13 @@ class FreshPdfBatchTests(unittest.TestCase):
             output.mkdir()
             (output / "prior.json").write_text("{}", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "E126_FRESH_OUTPUT_NOT_EMPTY"):
-                module.run_batch(source, output, figures=["3"], dpi=72)
+                module.run_batch(
+                    source,
+                    output,
+                    figures=["x"],
+                    dpi=72,
+                    figure_clips={"x": {"page": 1, "clip_pdf_points": [0, 0, 10, 10]}},
+                )
 
     def test_trace_manifest_records_fresh_identity(self) -> None:
         module = load_module()
@@ -59,8 +97,13 @@ class FreshPdfBatchTests(unittest.TestCase):
             page.draw_rect((10, 10, 60, 50), color=(0, 0, 1), fill=(0.8, 0.9, 1.0))
             document.save(source)
             document.close()
-            module.FIGURE_CLIPS["3"] = {"page": 1, "clip_pdf_points": [0.0, 0.0, 144.0, 72.0]}
-            result = module.run_batch(source, root / "out", figures=["3"], dpi=72)
+            result = module.run_batch(
+                source,
+                root / "out",
+                figures=["3"],
+                dpi=72,
+                figure_clips={"3": {"page": 1, "clip_pdf_points": [0.0, 0.0, 144.0, 72.0]}},
+            )
             self.assertTrue(result["fresh_extraction"])
             self.assertFalse(result["historical_data_consumed"])
             self.assertEqual("pass", result["status"])

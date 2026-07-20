@@ -15,6 +15,14 @@ The template manifest must contain:
 - `outputs`: the declared `png`, `svg`, and/or `pdf` outputs;
 - `historical_data_consumed: false` and an explicit `input_mode`.
 
+Template paths must be portable project-relative paths. Absolute paths, parent
+components, Windows drive forms, backslash-separated paths, and symlinks that
+resolve outside the project root fail validation. `outputs` must not contain
+duplicate formats. If a renderer can legitimately keep all declared outputs
+unchanged after replacement data changes, set `allow_unchanged_outputs: true`
+and provide a non-empty `unchanged_outputs_reason`; otherwise unchanged outputs
+are a failed changed-input proof.
+
 The renderer interface is:
 
 ```text
@@ -32,3 +40,8 @@ Use `scripts/validate_data_swap_template.py` before delivery and
 until the example data renders, the output manifest is valid, and a second run
 with a changed input produces a changed output hash.  The check is a required
 contract gate; it does not infer a renderer for an arbitrary figure.
+
+The generic runner captures renderer stdout/stderr under `runner_logs/` inside
+the isolated output directory. Do not print renderer logs to the runner's top
+level stdout; downstream automation should be able to parse exactly one JSON
+document from the runner process.

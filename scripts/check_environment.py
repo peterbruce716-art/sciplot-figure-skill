@@ -57,7 +57,7 @@ def check_environment() -> dict[str, object]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Check scientific figure reproduction runtime dependencies and fonts.")
+    parser = argparse.ArgumentParser(description="Check SciPlot figure runtime dependencies and fonts.")
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args()
     result = check_environment()

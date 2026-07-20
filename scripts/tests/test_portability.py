@@ -20,13 +20,13 @@ class PortabilityTests(ScientificFigureReproductionTestBase):
         portable = load_module("portable_paths", SCRIPTS / "portable_paths.py")
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            script = root / "runtime" / "scientific_figure_reproduction" / "audit_semantics.py"
+            script = root / "runtime" / "sciplot_figure_skill" / "audit_semantics.py"
             command = portable.portable_command(
                 [sys.executable, str(script), "--spec", str(root / "visualspec.json"), "--external", str(root.parent / "outside.dat")],
                 root,
             )
             self.assertEqual("python", command["executable_role"])
-            self.assertEqual("runtime/scientific_figure_reproduction/audit_semantics.py", command["script"])
+            self.assertEqual("runtime/sciplot_figure_skill/audit_semantics.py", command["script"])
             self.assertIn("visualspec.json", command["arguments"])
             self.assertIn("outside.dat", command["arguments"])
 

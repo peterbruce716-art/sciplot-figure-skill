@@ -190,7 +190,7 @@ sciplot-figure-skill/
 
 ## Version
 
-Current version: **v2.9.0**
+Current version: **v2.9.2**
 
 ### Reusing a renderer with new data
 
@@ -203,21 +203,25 @@ manifest with input/output hashes. Do not invoke a batch command that rebuilds
 canonical source crops or fresh measurements for an alternate-data run.
 
 Every reproduced figure also needs a reusable template manifest. Read
-`references/DATA_SWAP_TEMPLATE_PROTOCOL.md`, then validate it and run a
-replacement through the generic dispatcher:
+references/DATA_SWAP_TEMPLATE_PROTOCOL.md, then validate it and run a replacement
+through the generic dispatcher:
 
-```bash
-py -3.14 scripts/validate_data_swap_template.py \
-  --root path/to/project --template path/to/project/template_manifest.json
-py -3.14 scripts/run_data_swap.py \
-  --root path/to/project --template path/to/project/template_manifest.json \
-  --figure fig1 --data path/to/new-data/fig1.json \
-  --out-dir path/to/isolated-output --input-mode user_supplied
-```
+    py -3.14 scripts/validate_data_swap_template.py --root path/to/project --template path/to/project/template_manifest.json
+    py -3.14 scripts/run_data_swap.py --root path/to/project --template path/to/project/template_manifest.json --figure fig1 --data path/to/new-data/fig1.json --out-dir path/to/isolated-output --input-mode user_supplied
+    py -3.14 scripts/verify_data_swap_change.py --root path/to/project --template path/to/project/template_manifest.json --figure fig1 --baseline-data path/to/example/fig1.json --changed-data path/to/new-data/fig1.json --baseline-out-dir path/to/isolated-baseline --changed-out-dir path/to/isolated-changed
 
 The template must declare a complete data schema, example payload, per-figure
-renderer, and output formats. A second run with changed input is required to
-demonstrate that the renderer is actually data-driven.
+renderer, and output formats. run_data_swap.py independently recalculates the
+input SHA-256, verifies every template-declared output exists, enforces exact
+output-format coverage, resolves output paths inside out_dir, and recalculates
+each output SHA-256 instead of trusting the renderer's self-report. A second run
+with changed input is a machine-readable completion gate: at least one declared
+output hash must change unless the template explicitly documents invariant
+outputs.
+
+The generic runner captures renderer stdout/stderr under `runner_logs/` inside
+the isolated output directory. Its own stdout remains one parseable JSON
+document for both successful reports and fail-closed error payloads.
 
 ## Scope and Limitations
 

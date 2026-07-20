@@ -91,7 +91,7 @@ def verify_environment_policy(path: Path) -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Write or verify scientific figure reproduction environment policy.")
+    parser = argparse.ArgumentParser(description="Write or verify SciPlot figure environment policy.")
     parser.add_argument("--policy", required=True, type=Path)
     parser.add_argument("--write", action="store_true")
     parser.add_argument("--mode", choices=["exact", "compatible", "record_only"], default="exact")

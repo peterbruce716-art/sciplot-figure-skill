@@ -60,6 +60,8 @@ RUNTIME_FILES = [
     "validate_portability.py",
 ]
 
+RUNTIME_PACKAGE = "sciplot_figure_skill"
+
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -289,7 +291,7 @@ def prepare_companion_artifacts(project_root: Path, values: dict[str, Path | Non
 
 
 def prepare_runtime(script_dir: Path, out_dir: Path, *, custom_renderer: Path | None = None) -> dict[str, Any]:
-    package_dir = out_dir / "runtime" / "scientific_figure_reproduction"
+    package_dir = out_dir / "runtime" / RUNTIME_PACKAGE
     package_dir.mkdir(parents=True, exist_ok=True)
     for filename in RUNTIME_FILES:
         shutil.copyfile(script_dir / filename, package_dir / filename)
@@ -348,7 +350,7 @@ OUTPUTS = HERE / "outputs"
 
 def _render_builtin() -> int:
     sys.path.insert(0, str(HERE / "runtime"))
-    from scientific_figure_reproduction.render import render_file
+    from sciplot_figure_skill.render import render_file
 
     render_file(HERE / "visualspec.json", OUTPUTS, script_path=Path(__file__).resolve())
     return 0
@@ -404,7 +406,7 @@ os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 if __name__ == "__main__":
     raise SystemExit(subprocess.call([
         sys.executable,
-        str(HERE / "runtime" / "scientific_figure_reproduction" / "bundle_reproduce.py"),
+        str(HERE / "runtime" / "sciplot_figure_skill" / "bundle_reproduce.py"),
         "--bundle-root",
         str(HERE),
         "--qa-profile",
@@ -422,7 +424,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-RUNTIME = HERE / "runtime" / "scientific_figure_reproduction"
+RUNTIME = HERE / "runtime" / "sciplot_figure_skill"
 os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 
 def main() -> int:
@@ -487,7 +489,7 @@ def write_checksums(root: Path) -> Path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run the scientific figure reproduction closure: bundle, validate, render, score, audit, finalize, validate manifest.")
+    parser = argparse.ArgumentParser(description="Run the SciPlot figure closure: bundle, validate, render, score, audit, finalize, validate manifest.")
     parser.add_argument("--spec", required=True, type=Path)
     parser.add_argument("--source", type=Path, help="Source image for visual QA.")
     parser.add_argument("--out-dir", required=True, type=Path)

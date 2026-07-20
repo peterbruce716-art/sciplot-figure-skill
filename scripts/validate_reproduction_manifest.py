@@ -224,7 +224,7 @@ def validate_manifest(manifest_path: Path, *, root: Path | None = None, require_
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate scientific figure reproduction manifests.")
+    parser = argparse.ArgumentParser(description="Validate SciPlot figure reproduction manifests.")
     parser.add_argument("--manifest", required=True, type=Path)
     parser.add_argument("--root", type=Path, help="Project root for relative paths.")
     parser.add_argument("--require-strict", action="store_true", help="Require exact pixel match and zero MAE/RMSE.")

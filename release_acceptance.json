@@ -2,11 +2,13 @@
   "checks": {
     "build_zip": "pass",
     "bundle_verify": "pass",
+    "data_swap_hardening": "pass",
     "official_example": "semantic_strict_pass",
     "portability": "pass",
     "render_baseline": "pass",
     "root_package": "pass",
     "run_reproduction": "pass",
+    "version_consistency": "pass",
     "zip_package": "pass"
   },
   "details": {
@@ -17,6 +19,11 @@
     },
     "bundle_verify": {
       "name": "bundle_verify",
+      "returncode": 0,
+      "status": "pass"
+    },
+    "data_swap_hardening": {
+      "name": "data_swap_hardening",
       "returncode": 0,
       "status": "pass"
     },
@@ -40,6 +47,11 @@
       "returncode": 0,
       "status": "pass"
     },
+    "version_consistency": {
+      "name": "version_consistency",
+      "returncode": 0,
+      "status": "pass"
+    },
     "zip_package": {
       "name": "zip_package",
       "returncode": 0,
@@ -48,5 +60,5 @@
   },
   "schema": "scientificfigure.release_acceptance.v1",
   "status": "pass",
-  "version": "2.9.0"
+  "version": "2.9.2"
 }

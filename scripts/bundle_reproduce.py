@@ -460,7 +460,7 @@ def bundle_reproduce(bundle_root: Path, *, require_strict: bool = False, qa_prof
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run a prepared scientific figure reproduction bundle to completion.")
+    parser = argparse.ArgumentParser(description="Run a prepared SciPlot figure bundle to completion.")
     parser.add_argument("--bundle-root", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument("--require-strict", action="store_true")
     parser.add_argument("--qa-profile", choices=["semantic", "visual", "trace"], default="semantic")

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -17,13 +18,9 @@ from pdf_vector_trace import trace_pdf_clip
 from score_batch import score_batch
 
 
-FIGURE_CLIPS: dict[str, dict[str, Any]] = {
-    "3": {"page": 5, "clip_pdf_points": [99.2, 55.4, 496.1, 360.6]},
-    "12": {"page": 10, "clip_pdf_points": [96.4, 447.0, 496.0, 731.0]},
-    "14": {"page": 12, "clip_pdf_points": [37.5, 52.5, 291.0, 260.5]},
-    "15": {"page": 12, "clip_pdf_points": [98.5, 369.3, 496.7, 500.9]},
-    "16": {"page": 12, "clip_pdf_points": [124.0, 538.7, 471.2, 726.2]},
-}
+# Backward-compatible injection point for callers that import the module.
+# Installed skills must not ship paper-specific figure declarations.
+FIGURE_CLIPS: dict[str, dict[str, Any]] = {}
 FORBIDDEN_PATH_TOKENS = (
     "validated_reuse",
     "validated_crop_reextract",
@@ -97,6 +94,67 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def is_anchored_figure_caption(text: str, figure_id: str) -> bool:
+    """Match a figure caption, not an in-text reference to that figure."""
+
+    escaped = re.escape(str(figure_id))
+    return re.match(rf"^\s*Fig(?:ure)?\.?\s*{escaped}\s*\.", text, re.IGNORECASE) is not None
+
+
+def select_anchored_caption_block(blocks: list[Any], figure_id: str) -> Any | None:
+    """Return the first block whose text starts with the requested caption."""
+
+    for block in blocks:
+        if isinstance(block, dict):
+            text = block.get("text", "")
+        elif isinstance(block, (list, tuple)) and len(block) >= 5:
+            text = block[4]
+        else:
+            continue
+        if isinstance(text, str) and is_anchored_figure_caption(" ".join(text.split()), figure_id):
+            return block
+    return None
+
+
+def _normalize_figure_clips(raw: Any) -> dict[str, dict[str, Any]]:
+    if not isinstance(raw, dict) or not raw:
+        raise ValueError("E127_FIGURE_CLIPS_REQUIRED: declare at least one figure clip")
+    normalized: dict[str, dict[str, Any]] = {}
+    for raw_id, record in raw.items():
+        figure_id = str(raw_id).strip()
+        if not figure_id or not isinstance(record, dict):
+            raise ValueError("E128_INVALID_FIGURE_CLIP: figure id and object record are required")
+        try:
+            page = int(record["page"])
+            clip = [float(value) for value in record["clip_pdf_points"]]
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"E128_INVALID_FIGURE_CLIP: {figure_id}") from exc
+        if page < 1 or len(clip) != 4 or not (0 <= clip[0] < clip[2] and 0 <= clip[1] < clip[3]):
+            raise ValueError(f"E128_INVALID_FIGURE_CLIP: {figure_id}")
+        normalized[figure_id] = {"page": page, "clip_pdf_points": clip}
+    return normalized
+
+
+def load_clip_manifest(path: Path) -> dict[str, dict[str, Any]]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict) or payload.get("schema") != "scientificfigure.pdf-clip-manifest.v1":
+        raise ValueError("E129_INVALID_CLIP_MANIFEST: schema scientificfigure.pdf-clip-manifest.v1 required")
+    return _normalize_figure_clips(payload.get("figures"))
+
+
+def parse_figure_clip(value: str) -> tuple[str, dict[str, Any]]:
+    try:
+        figure_id, page_text, clip_text = value.split(":", 2)
+        record = {
+            "page": int(page_text),
+            "clip_pdf_points": [float(part.strip()) for part in clip_text.split(",")],
+        }
+    except (TypeError, ValueError) as exc:
+        raise argparse.ArgumentTypeError("figure clip must be ID:PAGE:X0,Y0,X1,Y1") from exc
+    normalized = _normalize_figure_clips({figure_id: record})
+    return figure_id, normalized[figure_id]
+
+
 def _ensure_fresh_output(out_dir: Path) -> None:
     if out_dir.exists() and any(out_dir.iterdir()):
         raise ValueError("E126_FRESH_OUTPUT_NOT_EMPTY: output directory must be new or empty")
@@ -138,6 +196,7 @@ def _write_trace_rerun_manifest(
     figures: list[str],
     results: dict[str, dict[str, Any]],
     per_figure_scripts: dict[str, str],
+    figure_clips: dict[str, dict[str, Any]],
     dpi: int,
 ) -> Path:
     """Write a portable rerun contract for pixel-trace batches.
@@ -157,8 +216,8 @@ def _write_trace_rerun_manifest(
         "dpi": dpi,
         "figures": {
             figure_id: {
-                "page_number": int(FIGURE_CLIPS[figure_id]["page"]),
-                "clip_pdf_points": list(FIGURE_CLIPS[figure_id]["clip_pdf_points"]),
+                "page_number": int(figure_clips[figure_id]["page"]),
+                "clip_pdf_points": list(figure_clips[figure_id]["clip_pdf_points"]),
                 "per_figure_script": per_figure_scripts[figure_id],
                 "outputs": results[figure_id]["outputs"],
                 "visual_qa": results[figure_id]["outputs"]["visual_qa"],
@@ -173,16 +232,24 @@ def _write_trace_rerun_manifest(
     return path
 
 
-def run_batch(pdf: Path, out_dir: Path, *, figures: list[str], dpi: int) -> dict[str, Any]:
+def run_batch(
+    pdf: Path,
+    out_dir: Path,
+    *,
+    figures: list[str],
+    dpi: int,
+    figure_clips: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     pdf = pdf.resolve()
     out_dir = out_dir.resolve()
+    declared_clips = _normalize_figure_clips(figure_clips if figure_clips is not None else FIGURE_CLIPS)
     if not pdf.is_file():
         raise FileNotFoundError(f"source PDF not found: {pdf}")
     serialized_paths = f"{pdf} {out_dir}".lower()
     rejected = [token for token in FORBIDDEN_PATH_TOKENS if token in serialized_paths]
     if rejected:
         raise ValueError(f"E124_HISTORICAL_PATH_REJECTED: {', '.join(rejected)}")
-    unknown = [figure_id for figure_id in figures if figure_id not in FIGURE_CLIPS]
+    unknown = [figure_id for figure_id in figures if figure_id not in declared_clips]
     if unknown:
         raise ValueError(f"unknown figure ids: {', '.join(unknown)}")
     if len(set(figures)) != len(figures):
@@ -193,7 +260,7 @@ def run_batch(pdf: Path, out_dir: Path, *, figures: list[str], dpi: int) -> dict
     results: dict[str, dict[str, Any]] = {}
     per_figure_scripts: dict[str, str] = {}
     for figure_id in figures:
-        config = FIGURE_CLIPS[figure_id]
+        config = declared_clips[figure_id]
         figure_dir = out_dir / f"fig{figure_id}"
         result = trace_pdf_clip(
             pdf,
@@ -244,6 +311,7 @@ def run_batch(pdf: Path, out_dir: Path, *, figures: list[str], dpi: int) -> dict
         figures=figures,
         results=results,
         per_figure_scripts=per_figure_scripts,
+        figure_clips=declared_clips,
         dpi=dpi,
     )
 
@@ -283,15 +351,31 @@ def run_batch(pdf: Path, out_dir: Path, *, figures: list[str], dpi: int) -> dict
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Reproduce declared paper figures from a fresh PDF source.")
+    parser = argparse.ArgumentParser(description="Reproduce manifest-declared paper figures from a fresh PDF source.")
     parser.add_argument("--pdf", required=True, type=Path)
     parser.add_argument("--out-dir", required=True, type=Path)
-    parser.add_argument("--figure", dest="figures", action="append", choices=sorted(FIGURE_CLIPS))
+    parser.add_argument("--clip-manifest", type=Path)
+    parser.add_argument("--figure-clip", action="append", type=parse_figure_clip)
+    parser.add_argument("--figure", dest="figures", action="append")
     parser.add_argument("--dpi", type=int, default=300)
     args = parser.parse_args()
-    figures = args.figures or ["3", "12", "14", "15", "16"]
     try:
-        manifest = run_batch(args.pdf, args.out_dir, figures=figures, dpi=args.dpi)
+        declared: dict[str, dict[str, Any]] = {}
+        if args.clip_manifest:
+            declared.update(load_clip_manifest(args.clip_manifest))
+        for figure_id, record in args.figure_clip or []:
+            if figure_id in declared:
+                raise ValueError(f"duplicate figure id: {figure_id}")
+            declared[figure_id] = record
+        declared = _normalize_figure_clips(declared)
+        figures = args.figures or list(declared)
+        manifest = run_batch(
+            args.pdf,
+            args.out_dir,
+            figures=figures,
+            dpi=args.dpi,
+            figure_clips=declared,
+        )
     except (OSError, ValueError, RuntimeError) as exc:
         print(json.dumps({"schema": "sciplot.fresh_pdf_batch.v1", "status": "failed", "error": str(exc)}, indent=2))
         return 2

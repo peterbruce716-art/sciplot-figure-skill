@@ -42,7 +42,7 @@ def run_step(name: str, cmd: list[str], *, timeout: int = 180) -> dict[str, Any]
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run release acceptance for the scientific figure reproduction skill.")
+    parser = argparse.ArgumentParser(description="Run release acceptance for sciplot-figure-skill.")
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args()
 
@@ -53,13 +53,15 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="sfr-release-") as tmp:
         workspace = Path(tmp)
-        zip_path = workspace / "scientific-figure-reproduction.zip"
+        zip_path = workspace / "sciplot-figure-skill.zip"
         baseline = workspace / "baseline"
         bundle = workspace / "bundle"
         spec = ROOT / "examples" / "line_plot" / "visualspec_v2.json"
 
         steps = [
             ("root_package", [sys.executable, str(SCRIPTS / "validate_skill_package.py"), "--root", str(ROOT)]),
+            ("version_consistency", [sys.executable, str(SCRIPTS / "check_version_consistency.py"), "--root", str(ROOT)]),
+            ("data_swap_hardening", [sys.executable, "-m", "unittest", "discover", "-s", str(SCRIPTS / "tests"), "-p", "test_data_swap_template.py"]),
             ("build_zip", [sys.executable, str(SCRIPTS / "build_skill_package.py"), "--root", str(ROOT), "--out", str(zip_path)]),
             ("zip_package", [sys.executable, str(SCRIPTS / "validate_skill_package.py"), "--root", str(ROOT), "--zip", str(zip_path)]),
             ("render_baseline", [sys.executable, str(SCRIPTS / "render_matplotlib.py"), "--spec", str(spec), "--out-dir", str(baseline)]),

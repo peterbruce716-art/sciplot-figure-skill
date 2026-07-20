@@ -166,7 +166,7 @@ def write_run_attestation(root: Path, *, status: str, steps: dict[str, Any] | No
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Write or verify the immutable scientific figure reproduction bundle lock.")
+    parser = argparse.ArgumentParser(description="Write or verify the immutable SciPlot figure bundle lock.")
     parser.add_argument("--root", required=True, type=Path)
     parser.add_argument("--lock", type=Path)
     parser.add_argument("--write", action="store_true")

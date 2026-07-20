@@ -5,7 +5,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from pathlib import Path
+import os
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 from visualspec import _json_schema_errors, schema_path
@@ -22,9 +23,32 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _same_or_descendant(candidate: Path, parent: Path) -> bool:
+    candidate_text = os.path.normcase(str(candidate))
+    parent_text = os.path.normcase(str(parent))
+    if candidate_text == parent_text:
+        return True
+    try:
+        return os.path.commonpath([candidate_text, parent_text]) == parent_text
+    except ValueError:
+        return False
+
+
+def _portable_relative(raw: str) -> bool:
+    if "\\" in raw:
+        return False
+    windows_path = PureWindowsPath(raw)
+    if windows_path.drive or windows_path.root:
+        return False
+    return True
+
+
 def _safe_relative(root: Path, raw: Any, *, field: str, failures: list[dict[str, str]]) -> Path | None:
     if not isinstance(raw, str) or not raw:
         failures.append({"check": field, "message": "relative path required"})
+        return None
+    if not _portable_relative(raw):
+        failures.append({"check": field, "path": raw, "message": "absolute, parent path, Windows drive, or backslash path is forbidden"})
         return None
     path = Path(raw)
     if path.is_absolute() or ".." in path.parts:
@@ -33,6 +57,10 @@ def _safe_relative(root: Path, raw: Any, *, field: str, failures: list[dict[str,
     candidate = root / path
     if not candidate.is_file():
         failures.append({"check": field, "path": raw, "message": "file does not exist"})
+        return None
+    resolved = candidate.resolve(strict=True)
+    if not _same_or_descendant(resolved, root):
+        failures.append({"check": field, "path": raw, "message": "path resolves outside project root"})
         return None
     return candidate
 
@@ -67,6 +95,12 @@ def validate_template(template_path: Path, *, root: Path | None = None) -> dict[
         outputs = record.get("outputs")
         if not isinstance(outputs, list) or not outputs or any(value not in {"png", "svg", "pdf"} for value in outputs):
             failures.append({"check": "outputs", "figure": str(figure_id), "message": "outputs must contain png, svg, and/or pdf"})
+        elif len(set(outputs)) != len(outputs):
+            failures.append({"check": "outputs", "figure": str(figure_id), "message": "outputs must not contain duplicate formats"})
+        if record.get("allow_unchanged_outputs") is True:
+            reason = record.get("unchanged_outputs_reason")
+            if not isinstance(reason, str) or not reason.strip():
+                failures.append({"check": "unchanged_outputs_reason", "figure": str(figure_id), "message": "allow_unchanged_outputs requires a non-empty unchanged_outputs_reason"})
         if renderer is not None and renderer.suffix.lower() != ".py":
             failures.append({"check": "renderer", "figure": str(figure_id), "message": "renderer must be a Python file"})
         observed_hash = _sha256(example_data) if example_data is not None else None

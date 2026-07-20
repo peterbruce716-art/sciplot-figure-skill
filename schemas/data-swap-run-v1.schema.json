@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "schema",
+    "figure",
+    "input_mode",
+    "historical_data_consumed",
+    "input",
+    "outputs"
+  ],
+  "properties": {
+    "schema": {"const": "scientificfigure.data-swap-run.v1"},
+    "figure": {"type": "string", "minLength": 1},
+    "input_mode": {"enum": ["user_supplied", "fresh_digitization"]},
+    "historical_data_consumed": {"const": false},
+    "input": {
+      "type": "object",
+      "required": ["sha256"],
+      "properties": {
+        "path": {"type": "string"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      },
+      "additionalProperties": true
+    },
+    "outputs": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"enum": ["png", "svg", "pdf"]},
+      "additionalProperties": {
+        "type": "object",
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

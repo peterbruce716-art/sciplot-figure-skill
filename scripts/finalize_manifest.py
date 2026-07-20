@@ -385,7 +385,7 @@ def finalize_manifest(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Finalize a scientific figure reproduction manifest with score and script evidence.")
+    parser = argparse.ArgumentParser(description="Finalize a SciPlot figure manifest with score and script evidence.")
     parser.add_argument("--manifest", required=True, type=Path)
     parser.add_argument("--score", type=Path)
     parser.add_argument("--script", type=Path)

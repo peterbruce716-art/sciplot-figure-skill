@@ -63,7 +63,7 @@ def scan_zip(path: Path) -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate the scientific figure reproduction skill package.")
+    parser = argparse.ArgumentParser(description="Validate the sciplot-figure-skill package.")
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--zip", type=Path)
     parser.add_argument("--json-out", type=Path)

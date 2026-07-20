@@ -52,7 +52,8 @@ class BundleWorkflowTests(ScientificFigureReproductionTestBase):
             self.assertIn("A", manifest["figures"]["figure_1"]["panels"])
             self.assertEqual("completed", manifest["figures"]["figure_1"]["panels"]["A"]["qa"]["execution_status"])
             self.assertTrue((out_dir / "checksums.json").exists())
-            self.assertTrue((out_dir / "runtime" / "scientific_figure_reproduction" / "render.py").exists())
+            self.assertTrue((out_dir / "runtime" / "sciplot_figure_skill" / "render.py").exists())
+            self.assertTrue((out_dir / "runtime" / "sciplot_figure_skill" / "validate_data_swap_template.py").exists())
             self.assertTrue((out_dir / "outputs" / "render.png").exists())
             self.assertTrue((out_dir / "comparison" / "difference.png").exists())
 
@@ -534,7 +535,7 @@ if __name__ == "__main__":
             attestation = out_dir / "run_attestation.json"
             self.assertTrue(lock.exists())
             self.assertTrue(attestation.exists())
-            runtime_file = out_dir / "runtime" / "scientific_figure_reproduction" / "capabilities.py"
+            runtime_file = out_dir / "runtime" / "sciplot_figure_skill" / "capabilities.py"
             runtime_file.write_text(runtime_file.read_text(encoding="utf-8") + "\nTAMPERED = True\n", encoding="utf-8")
             rerun = subprocess.run([sys.executable, str(out_dir / "reproduce.py")], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=180)
             self.assertNotEqual(0, rerun.returncode)

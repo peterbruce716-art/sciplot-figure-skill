@@ -1,3 +1,19 @@
+## 2026-07-21 v2.9.2 Generic Fresh-PDF Batch Declarations
+
+- Removed AA2195-specific figure IDs, page numbers, and crop rectangles from the installed skill.
+- Added `scientificfigure.pdf-clip-manifest.v1` loading and repeated `--figure-clip ID:PAGE:X0,Y0,X1,Y1` declarations for generic fresh-PDF trace batches.
+- Added anchored caption matching so body-text references such as 'shown in Fig. N' are not mistaken for figure captions.
+- Added regression coverage for generic clip manifests, no paper-specific defaults, and caption anchoring.
+
+## 2026-07-20 v2.9.1 Data-Swap Runner Hardening
+
+- Fixed output isolation so replacement output directories cannot equal the input file or resolve inside the input data directory, including normalized and symlinked paths.
+- Added scientificfigure.data-swap-run.v1 schema validation plus runner-side input SHA-256, output existence, output-format coverage, output path, and output SHA-256 checks.
+- Added scripts/verify_data_swap_change.py to make changed-input proof a machine-readable completion gate with positive and negative regression coverage.
+- Captured renderer stdout/stderr under runner_logs so the generic runner's stdout remains a single parseable JSON document on both pass and fail paths.
+- Added data-swap hardening and version consistency to release_acceptance.py so release metadata cannot report a pending hardening gate as pass.
+- Added validate_data_swap_template.py to the portable bundle runtime so bundle-local manifest validation keeps working after data-swap enforcement.
+- Documented the trust boundary: renderer-reported hashes are claims, PDF trace is not a data-swap template, and data-swap proof does not imply arbitrary paper-image fidelity.
 ## 2026-07-20 v2.9.0 Universal Data-Swap Template Contract
 
 - Made a reusable `scientificfigure.data-swap-template.v1` manifest mandatory for every reproduced figure, not only the AA2195 example.
@@ -5,8 +21,6 @@
 - Added a schema validator and generic isolated runner with explicit input mode, replacement-data schema validation, output hashes, and historical-data fail-closed checks.
 - Added `validate_reproduction_manifest.py --require-data-swap-template` to enforce template coverage for every declared figure.
 - Added regression tests and documented the changed-input hash proof required before completion.
-- Included the data-swap validator in portable reproduction runtimes so source-free bundles verify after relocation.
-
 ## 2026-07-20 v2.8.12 Per-Figure Fresh Trace Reruns
 
 - Added one independently runnable `scripts/figN_trace.py` entry point per fresh PDF target.
