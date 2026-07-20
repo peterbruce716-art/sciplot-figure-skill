@@ -249,6 +249,7 @@ def trace_pdf_clip(
 ) -> dict[str, Any]:
     fitz = _fitz()
     out_dir.mkdir(parents=True, exist_ok=True)
+    source_pdf_sha256 = hashlib.sha256(pdf_path.read_bytes()).hexdigest()
     document = fitz.open(pdf_path)
     try:
         page = document[page_number - 1]
@@ -298,6 +299,15 @@ def trace_pdf_clip(
             and visual_score["mae_0_1"] is not None
             and float(visual_score["mae_0_1"]) <= 0.08
         )
+        output_hashes = {
+            name: hashlib.sha256((out_dir / filename).read_bytes()).hexdigest()
+            for name, filename in {
+                "reference_png": reference_path.name,
+                "png": render_path.name,
+                "svg": svg_path.name,
+                "pdf": pdf_out_path.name,
+            }.items()
+        }
         return {
             "schema": "sciplot.pdf_vector_trace.v1",
             "status": "visual_trace_pass" if visual_pass else "failed",
@@ -306,6 +316,8 @@ def trace_pdf_clip(
             "render_method": "native_pdf_clip",
             "representation": "pixel_primitives",
             "semantic_data_recovered": False,
+            "source_pdf_sha256": source_pdf_sha256,
+            "historical_data_consumed": False,
             "page_number": page_number,
             "clip_pdf_points": list(clip_values),
             "dpi": dpi,
@@ -322,6 +334,7 @@ def trace_pdf_clip(
                 "geometry_audit": geometry_path.name,
                 "visual_qa": qa_path.name,
             },
+            "output_sha256": output_hashes,
         }
     finally:
         document.close()

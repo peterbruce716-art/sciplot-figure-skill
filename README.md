@@ -190,7 +190,7 @@ sciplot-figure-skill/
 
 ## Version
 
-Current version: **v2.8.11**
+Current version: **v2.9.0**
 
 ### Reusing a renderer with new data
 
@@ -201,6 +201,23 @@ against the complete figure-specific shape before rendering. Keep outputs
 outside the data directory and emit a `scientificfigure.data-swap-run.v1`
 manifest with input/output hashes. Do not invoke a batch command that rebuilds
 canonical source crops or fresh measurements for an alternate-data run.
+
+Every reproduced figure also needs a reusable template manifest. Read
+`references/DATA_SWAP_TEMPLATE_PROTOCOL.md`, then validate it and run a
+replacement through the generic dispatcher:
+
+```bash
+py -3.14 scripts/validate_data_swap_template.py \
+  --root path/to/project --template path/to/project/template_manifest.json
+py -3.14 scripts/run_data_swap.py \
+  --root path/to/project --template path/to/project/template_manifest.json \
+  --figure fig1 --data path/to/new-data/fig1.json \
+  --out-dir path/to/isolated-output --input-mode user_supplied
+```
+
+The template must declare a complete data schema, example payload, per-figure
+renderer, and output formats. A second run with changed input is required to
+demonstrate that the renderer is actually data-driven.
 
 ## Scope and Limitations
 

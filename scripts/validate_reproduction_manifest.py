@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from visualspec import _json_schema_errors, schema_path
+from validate_data_swap_template import validate_template
 
 
 def resolve_path(root: Path, value: str | None) -> Path | None:
@@ -84,7 +85,7 @@ def source_free_validation_ok(manifest: dict[str, Any], figure: dict[str, Any]) 
 
 
 
-def validate_manifest(manifest_path: Path, *, root: Path | None = None, require_strict: bool = False) -> dict[str, Any]:
+def validate_manifest(manifest_path: Path, *, root: Path | None = None, require_strict: bool = False, require_data_swap_template: bool = False) -> dict[str, Any]:
     declared_root = root if root is not None else manifest_path.parent
     root = declared_root.resolve()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -95,6 +96,21 @@ def validate_manifest(manifest_path: Path, *, root: Path | None = None, require_
     figures = manifest.get("figures")
     scripts = manifest.get("per_figure_scripts")
     schema = manifest.get("schema")
+
+    if require_data_swap_template:
+        template_value = manifest.get("data_swap_template")
+        template_path = resolve_path(root, str(template_value or ""))
+        if template_path is None or not template_path.is_file():
+            failures.append({"code": "missing_data_swap_template", "message": "manifest must declare an existing data_swap_template path"})
+        else:
+            template_report = validate_template(template_path, root=template_path.parent)
+            if template_report["status"] != "pass":
+                failures.append({"code": "invalid_data_swap_template", "path": str(template_value), "message": "template validation failed"})
+            elif isinstance(figures, dict):
+                declared = set(template_report.get("figures", {}))
+                missing = sorted(set(figures) - declared)
+                for fig_id in missing:
+                    failures.append({"code": "figure_missing_from_data_swap_template", "figure": str(fig_id)})
 
     for artifact_id, artifact in (manifest.get("companion_artifacts") or {}).items():
         if not isinstance(artifact, dict) or not artifact.get("path"):
@@ -201,6 +217,7 @@ def validate_manifest(manifest_path: Path, *, root: Path | None = None, require_
         # Keep a relative CLI root portable while resolving it internally above.
         "root": str(declared_root),
         "require_strict": require_strict,
+        "require_data_swap_template": require_data_swap_template,
         "status": "ok" if not failures else "failed",
         "failures": failures,
     }
@@ -211,9 +228,10 @@ def main() -> int:
     parser.add_argument("--manifest", required=True, type=Path)
     parser.add_argument("--root", type=Path, help="Project root for relative paths.")
     parser.add_argument("--require-strict", action="store_true", help="Require exact pixel match and zero MAE/RMSE.")
+    parser.add_argument("--require-data-swap-template", action="store_true", help="Require and validate a manifest data_swap_template covering every figure.")
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args()
-    result = validate_manifest(args.manifest, root=args.root, require_strict=args.require_strict)
+    result = validate_manifest(args.manifest, root=args.root, require_strict=args.require_strict, require_data_swap_template=args.require_data_swap_template)
     payload = json.dumps(result, ensure_ascii=False, indent=2)
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)

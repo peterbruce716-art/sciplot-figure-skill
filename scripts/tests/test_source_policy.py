@@ -60,6 +60,49 @@ class SourcePolicyTests(unittest.TestCase):
         )
         return temp, policy, consumed
 
+    def test_accepts_fresh_pdf_trace_source_identity(self) -> None:
+        root = Path(tempfile.mkdtemp())
+        source_pdf = root / "paper.pdf"
+        source_pdf.write_bytes(b"fresh-pdf")
+        digest = hashlib.sha256(source_pdf.read_bytes()).hexdigest()
+        policy = root / "source-policy.json"
+        policy.write_text(json.dumps({
+            "data_policy": "fresh_pdf_trace",
+            "historical_data_allowed": False,
+            "historical_data_consumed": False,
+            "source_pdf_sha256": digest,
+            "figures": ["3"],
+        }), encoding="utf-8")
+        consumed = root / "consumed.json"
+        consumed.write_text(json.dumps({
+            "historical_data_consumed": False,
+            "source_pdf": {"name": source_pdf.name, "sha256": digest},
+            "figure_order": ["3"],
+        }), encoding="utf-8")
+        report = validate_source_policy(root=root, policy_path=policy, consumed_path=consumed, source_pdf_path=source_pdf)
+        self.assertEqual(report["status"], "pass")
+
+    def test_rejects_stale_fresh_pdf_trace_source(self) -> None:
+        root = Path(tempfile.mkdtemp())
+        source_pdf = root / "paper.pdf"
+        source_pdf.write_bytes(b"fresh-pdf")
+        policy = root / "source-policy.json"
+        policy.write_text(json.dumps({
+            "data_policy": "fresh_pdf_trace",
+            "historical_data_allowed": False,
+            "source_pdf_sha256": "stale",
+            "figures": ["3"],
+        }), encoding="utf-8")
+        consumed = root / "consumed.json"
+        consumed.write_text(json.dumps({
+            "historical_data_consumed": False,
+            "source_pdf": {"name": source_pdf.name, "sha256": "stale"},
+            "figure_order": ["3"],
+        }), encoding="utf-8")
+        report = validate_source_policy(root=root, policy_path=policy, consumed_path=consumed, source_pdf_path=source_pdf)
+        self.assertEqual(report["status"], "failed")
+        self.assertTrue(any(item["check"] == "source_pdf_current_hash" for item in report["failures"]))
+
     def test_accepts_current_png_and_hash(self) -> None:
         root, policy, consumed = self._fixture()
         report = validate_source_policy(root=root, policy_path=policy, consumed_path=consumed)

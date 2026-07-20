@@ -1,3 +1,25 @@
+## 2026-07-20 v2.9.0 Universal Data-Swap Template Contract
+
+- Made a reusable `scientificfigure.data-swap-template.v1` manifest mandatory for every reproduced figure, not only the AA2195 example.
+- Added `trace_rerun_manifest.json` to fresh PDF trace batches so pixel-trace deliveries have an auditable, source-bound rerun contract without being mislabeled as data-swap templates.
+- Added a schema validator and generic isolated runner with explicit input mode, replacement-data schema validation, output hashes, and historical-data fail-closed checks.
+- Added `validate_reproduction_manifest.py --require-data-swap-template` to enforce template coverage for every declared figure.
+- Added regression tests and documented the changed-input hash proof required before completion.
+- Included the data-swap validator in portable reproduction runtimes so source-free bundles verify after relocation.
+
+## 2026-07-20 v2.8.12 Per-Figure Fresh Trace Reruns
+
+- Added one independently runnable `scripts/figN_trace.py` entry point per fresh PDF target.
+- Bound each generated rerun script to the current source PDF SHA-256 and fail closed on stale or substituted inputs.
+- Recorded `per_figure_scripts` in the fresh batch manifest so the five-figure completion gate is auditable.
+
+## 2026-07-20 v2.8.11 Fresh PDF Batch Trace
+
+- Added a source-bound fresh PDF batch runner for the AA2195 Fig. 3/12/14/15/16 set.
+- Added fail-closed output freshness and historical-path rejection, source PDF identity, per-figure clip provenance, and output hashes.
+- Extended native PDF trace manifests with source and output hashes for independent audit.
+- Added regression tests for the five-figure declaration and fresh-lineage controls.
+
 ## 2026-07-19 v2.8.11 Reusable Data-Swap Contract
 
 - Added `references/DATA_SWAP_PROTOCOL.md` for isolated replacement-data runs.
@@ -251,3 +273,8 @@
 - Added explicit required continuous panel-baseline regions for grouped-bar references that include an x-axis baseline, while retaining optional gap rejection for references without one.
 - Kept required per-bar bottom-frame checks and complete legend top-clearance checks in the same final-PNG validator.
 - Added regression coverage for accepted continuous baselines and rejection of missing baselines plus clipped legends.
+## 2026-07-20 v2.9.0 Universal Data-Swap Template Contract
+
+- Made a reusable `scientificfigure.data-swap-template.v1` manifest mandatory for every reproduced figure, not only the AA2195 example.
+- Added a schema validator and generic isolated runner with explicit input mode, complete shape/schema declarations, output hashes, and historical-data fail-closed checks.
+- Added regression tests and documented the changed-input hash proof required before completion.

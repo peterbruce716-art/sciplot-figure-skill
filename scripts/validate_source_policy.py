@@ -88,11 +88,47 @@ def _validate_fresh_outputs(
 
 
 def validate_source_policy(
-    *, root: Path, policy_path: Path, consumed_path: Path
+    *, root: Path, policy_path: Path, consumed_path: Path, source_pdf_path: Path | None = None
 ) -> dict[str, Any]:
     policy = _load(policy_path)
     consumed = _load(consumed_path)
     failures: list[dict[str, str]] = []
+
+    # PDF pixel traces use the source PDF itself as the immutable reference;
+    # they do not have project-relative PNG inputs or digitized JSON outputs.
+    # Validate the source identity directly and keep this path separate from
+    # the fresh-digitization contract below.
+    if policy.get("data_policy") == "fresh_pdf_trace":
+        policy_hash = policy.get("source_pdf_sha256")
+        consumed_source = consumed.get("source_pdf")
+        consumed_hash = consumed_source.get("sha256") if isinstance(consumed_source, dict) else None
+        if not isinstance(policy_hash, str) or not policy_hash:
+            failures.append({"check": "source_pdf_sha256", "message": "non-empty source PDF hash required"})
+        if consumed_hash != policy_hash:
+            failures.append({"check": "source_pdf_hash", "message": "consumed source PDF hash does not match policy"})
+        if source_pdf_path is not None:
+            if not source_pdf_path.is_file():
+                failures.append({"check": "source_pdf_exists", "path": str(source_pdf_path)})
+            elif _sha256(source_pdf_path) != policy_hash:
+                failures.append({"check": "source_pdf_current_hash", "message": "source PDF hash mismatch"})
+        if policy.get("historical_data_allowed") is not False:
+            failures.append({"check": "historical_data_allowed", "message": "historical inputs must be disabled"})
+        if consumed.get("historical_data_consumed") is not False:
+            failures.append({"check": "historical_data_consumed", "message": "must be false"})
+        policy_figures = policy.get("figures")
+        consumed_figures = consumed.get("figure_order")
+        if isinstance(policy_figures, list) and isinstance(consumed_figures, list) and policy_figures != consumed_figures:
+            failures.append({"check": "figure_order", "message": "policy and consumed figure declarations differ"})
+        return {
+            "schema": "scientificfigure.source-policy-validation.v1",
+            "status": "pass" if not failures else "failed",
+            "root": ".",
+            "policy": policy_path.name,
+            "consumed_inputs": consumed_path.name,
+            "checked_inputs": [],
+            "checked_fresh_outputs": [],
+            "failures": failures,
+        }
 
     if policy.get("data_policy") != "fresh_digitization":
         failures.append({"check": "data_policy", "message": "data_policy must be fresh_digitization"})
@@ -173,9 +209,10 @@ def main() -> int:
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--policy", type=Path, required=True)
     parser.add_argument("--consumed", type=Path, required=True)
+    parser.add_argument("--source-pdf", type=Path, help="Optional current PDF to hash-check for fresh_pdf_trace policies")
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args()
-    report = validate_source_policy(root=args.root, policy_path=args.policy, consumed_path=args.consumed)
+    report = validate_source_policy(root=args.root, policy_path=args.policy, consumed_path=args.consumed, source_pdf_path=args.source_pdf)
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
         args.json_out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

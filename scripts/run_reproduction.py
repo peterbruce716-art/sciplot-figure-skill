@@ -50,6 +50,7 @@ RUNTIME_FILES = [
     "finalize_manifest.py",
     "validate_manifest.py",
     "validate_reproduction_manifest.py",
+    "validate_data_swap_template.py",
     "check_environment.py",
     "environment_policy.py",
     "verify_checksums.py",

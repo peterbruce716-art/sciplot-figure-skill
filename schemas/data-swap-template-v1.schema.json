@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "schema",
+    "template_id",
+    "template_version",
+    "renderer_entrypoint",
+    "figures",
+    "input_mode",
+    "historical_data_consumed"
+  ],
+  "properties": {
+    "schema": {"const": "scientificfigure.data-swap-template.v1"},
+    "template_id": {"type": "string", "minLength": 1},
+    "template_version": {"type": "string", "minLength": 1},
+    "renderer_entrypoint": {"type": "string", "minLength": 1},
+    "input_mode": {"enum": ["user_supplied", "fresh_digitization"]},
+    "historical_data_consumed": {"const": false},
+    "figures": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["data_schema", "example_data", "renderer", "outputs"],
+        "properties": {
+          "data_schema": {"type": "string", "minLength": 1},
+          "example_data": {"type": "string", "minLength": 1},
+          "renderer": {"type": "string", "minLength": 1},
+          "outputs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"enum": ["png", "svg", "pdf"]}
+          },
+          "data_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}
