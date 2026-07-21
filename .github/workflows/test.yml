@@ -31,6 +31,11 @@ jobs:
       - run: python -m unittest discover -s scripts/tests -p "test_fresh_pdf_batch.py"
       - run: python -m unittest discover -s scripts/tests -p "test_contract_statistics.py"
       - run: python -m unittest discover -s scripts/tests -p "test_figure_priors_mixed_backend.py"
+      - run: python -m unittest discover -s scripts/tests -p "test_ai_and_version.py"
+      - run: python -m unittest discover -s scripts/tests -p "test_execution_profiles.py"
+      - run: python -m unittest discover -s scripts/tests -p "test_sciplot_cli.py"
+      - run: python -m unittest discover -s scripts/tests -p "test_pdf_vector_trace_safety.py"
+      - run: python -m unittest discover -s scripts/tests -p "test_benchmark_workflow_profiles.py"
       - name: bundle strict success
         run: PYTHONPATH=scripts/tests python -m unittest test_bundle_workflow.BundleWorkflowTests.test_run_reproduction_strict_success_checks_statuses
       - name: bundle canvas safety failure

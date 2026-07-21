@@ -136,7 +136,7 @@ def _native_vector_clip(page: Any, document: Any, clip: Any, svg_path: Path, pdf
     try:
         output_page = output.new_page(width=float(clip.width), height=float(clip.height))
         output_page.show_pdf_page(output_page.rect, document, page.number, clip=clip, keep_proportion=False)
-        output.save(pdf_path, garbage=4, deflate=True)
+        output.save(pdf_path, garbage=4, deflate=True, no_new_id=True)
     finally:
         output.close()
     return _svg_path_audit(svg_text)
@@ -238,6 +238,77 @@ def _score(source_path: Path, render_path: Path) -> dict[str, Any]:
     }
 
 
+def _edge_ink_report(
+    image_path: Path,
+    *,
+    edge_band_px: int = 12,
+    color_tolerance: int = 12,
+) -> dict[str, Any]:
+    """Flag visible ink that reaches a raster canvas edge.
+
+    This is advisory because some legitimate PDF crops are intentionally
+    full-bleed. For ordinary plots, an attention result is a strong signal
+    that axis labels or annotations may have been clipped too tightly.
+    """
+
+    values = np.asarray(Image.open(image_path).convert("RGB"), dtype=np.uint8)
+    height, width = values.shape[:2]
+    band = max(1, min(int(edge_band_px), height, width))
+    corner = max(1, min(band, 4))
+    corner_pixels = np.concatenate(
+        [
+            values[:corner, :corner].reshape(-1, 3),
+            values[:corner, -corner:].reshape(-1, 3),
+            values[-corner:, :corner].reshape(-1, 3),
+            values[-corner:, -corner:].reshape(-1, 3),
+        ],
+        axis=0,
+    )
+    inferred_background = np.median(corner_pixels, axis=0).round().astype(np.int16)
+    color_delta = np.max(np.abs(values.astype(np.int16) - inferred_background), axis=2)
+    ink = color_delta > int(color_tolerance)
+    edge_mask = np.zeros((height, width), dtype=bool)
+    edge_mask[:band, :] = True
+    edge_mask[-band:, :] = True
+    edge_mask[:, :band] = True
+    edge_mask[:, -band:] = True
+    per_edge = {
+        "top": int(np.count_nonzero(ink[:band, :])),
+        "bottom": int(np.count_nonzero(ink[-band:, :])),
+        "left": int(np.count_nonzero(ink[:, :band])),
+        "right": int(np.count_nonzero(ink[:, -band:])),
+    }
+    edge_ink_pixels = int(np.count_nonzero(ink & edge_mask))
+    background_luminance = float(
+        0.2126 * inferred_background[0]
+        + 0.7152 * inferred_background[1]
+        + 0.0722 * inferred_background[2]
+    )
+    background_chroma = int(np.max(inferred_background) - np.min(inferred_background))
+    uniform_edge_attention = edge_ink_pixels == 0 and (
+        background_luminance < 220.0 or background_chroma > 45
+    )
+    status = "attention" if edge_ink_pixels > 0 or uniform_edge_attention else "pass"
+    if edge_ink_pixels > 0:
+        interpretation = "inspect_clip_for_truncated_labels_or_intentional_full_bleed_content"
+    elif uniform_edge_attention:
+        interpretation = "inspect_uniform_dark_or_high_chroma_edge_for_full_bleed_content"
+    else:
+        interpretation = "clear_canvas_edges"
+    return {
+        "status": status,
+        "edge_band_px": band,
+        "inferred_background_rgb": [int(value) for value in inferred_background],
+        "inferred_background_luminance": background_luminance,
+        "inferred_background_chroma": background_chroma,
+        "color_tolerance": int(color_tolerance),
+        "edge_ink_pixels": edge_ink_pixels,
+        "uniform_edge_attention": uniform_edge_attention,
+        "per_edge_ink_pixels": per_edge,
+        "interpretation": interpretation,
+    }
+
+
 def trace_pdf_clip(
     pdf_path: Path,
     page_number: int,
@@ -290,6 +361,8 @@ def trace_pdf_clip(
                 "render_method": "native_pdf_clip",
                 "output_raster_scale": [output_scale_x, output_scale_y],
                 "output_canvas_basis": "source_clip_pixel_dimensions",
+                "source_canvas_edge_safety": _edge_ink_report(reference_path),
+                "render_canvas_edge_safety": _edge_ink_report(render_path),
             }
         )
         qa_path.write_text(json.dumps(visual_score, indent=2) + "\n", encoding="utf-8")

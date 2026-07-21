@@ -255,6 +255,10 @@ COMPANION_SPECS = {
     "style_profile": ("style", "resolved_style_profile.json", "style-profile-v1.schema.json"),
     "font_resolution": ("style", "font_resolution.json", "font-resolution-v1.schema.json"),
     "ai_review": ("qa", "ai_visual_review.json", "ai-visual-review-v1.schema.json"),
+    "data_swap_template": ("data_swap", "data_swap_template.json", "data-swap-template-v1.schema.json"),
+    "data_swap_proof": ("data_swap", "data_swap_change_proof.json", None),
+    "release_acceptance": ("qa", "release_acceptance.json", None),
+    "execution_plan": ("qa", "execution_plan.json", None),
 }
 
 
@@ -505,6 +509,10 @@ def main() -> int:
     parser.add_argument("--style-profile", type=Path)
     parser.add_argument("--font-resolution", type=Path)
     parser.add_argument("--ai-review", type=Path)
+    parser.add_argument("--data-swap-template", type=Path, help="Optional reusable data-swap template to archive in the bundle.")
+    parser.add_argument("--data-swap-proof", type=Path, help="Optional changed-input proof to archive in the bundle.")
+    parser.add_argument("--release-acceptance-report", type=Path, help="Optional release acceptance report to archive in the bundle.")
+    parser.add_argument("--execution-plan", type=Path, help="Optional unified CLI execution plan to archive in the bundle.")
     parser.add_argument("--project-root", type=Path, help="Deprecated in v2.2; out-dir is the portable project root.")
     args = parser.parse_args()
     if args.require_strict and args.source is None:
@@ -543,6 +551,10 @@ def main() -> int:
         "style_profile": args.style_profile,
         "font_resolution": args.font_resolution,
         "ai_review": args.ai_review,
+        "data_swap_template": args.data_swap_template,
+        "data_swap_proof": args.data_swap_proof,
+        "release_acceptance": args.release_acceptance_report,
+        "execution_plan": args.execution_plan,
     })
     report["companion_artifacts"] = companion
     write_environment_files(project_root)

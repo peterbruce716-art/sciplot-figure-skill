@@ -1,3 +1,14 @@
+## 2026-07-21 v2.9.3 Profile-Aware Workflow Simplification
+
+- Added `scripts/sciplot.py` with `run`, `validate`, `finalize`, and `trace-pdf` subcommands.
+- Added `quick`, `standard`, `audit`, and machine-readable `auto` planning with explicit gate lists and output-format reasons.
+- Made ordinary `standard` work a one-render project path with semantic/vector QA and no automatic data-swap template, changed-input proof, bundle lock, attestation, or release acceptance.
+- Kept `run_reproduction.py`, data-swap tools, fresh-PDF tools, schemas, and the existing audit bundle path backward compatible.
+- Added conditional data-swap enforcement for explicit reusable/data-driven claims and fail-closed evidence requirements during audit finalization.
+- Added selective renderer formats so quick/raster-dominant runs do not create unnecessary PDF or pseudo-vector SVG files.
+- Added a reproducible line-plot workflow benchmark and expanded audit-only gate declarations to match the strict runner's existing runtime, bundle, checksum, portability, and verification stages.
+- Hardened fresh-PDF tracing with page and clip bounds checks, anchored caption selection, background-aware edge-safety evidence, and regression coverage for clipped-axis risks.
+
 ## 2026-07-21 v2.9.2 Generic Fresh-PDF Batch Declarations
 
 - Removed AA2195-specific figure IDs, page numbers, and crop rectangles from the installed skill.

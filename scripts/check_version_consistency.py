@@ -20,10 +20,18 @@ def find_versions(root: Path) -> dict[str, str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Check package version declarations for consistency.")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--expected", help="Require every declaration to match this release version.")
     args = parser.parse_args()
     versions = find_versions(args.root)
     unique = sorted(set(versions.values()))
-    payload = {"status": "pass" if len(unique) == 1 else "failed", "versions": versions, "unique_versions": unique}
+    consistent = len(unique) == 1
+    expected_match = args.expected is None or unique == [args.expected]
+    payload = {
+        "status": "pass" if consistent and expected_match else "failed",
+        "versions": versions,
+        "unique_versions": unique,
+        "expected_version": args.expected,
+    }
     print(json.dumps(payload, indent=2))
     return 0 if payload["status"] == "pass" else 1
 

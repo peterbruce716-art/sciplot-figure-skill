@@ -167,6 +167,62 @@ if MODE == 'tamper_output_after_manifest':
             self.assertEqual(result["input_sha256"], hashlib.sha256((root / "data" / "fig.json").read_bytes()).hexdigest())
             self.assertTrue((out / "data_swap_manifest.json").is_file())
 
+    def test_unified_reusable_finalize_archives_template_and_changed_input_proof(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            template = self._write_fixture(root)
+            project = root / "project"
+            bundle = root / "bundle"
+            spec = ROOT.parent / "examples" / "line_plot" / "visualspec_v2.json"
+            run = subprocess.run(
+                [sys.executable, str(ROOT / "sciplot.py"), "run", "--spec", str(spec), "--profile", "standard", "--out-dir", str(project), "--json"],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                timeout=180,
+            )
+            self.assertEqual(0, run.returncode, run.stdout + run.stderr)
+            finalize = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "sciplot.py"),
+                    "finalize",
+                    "--project",
+                    str(project),
+                    "--profile",
+                    "audit",
+                    "--claim",
+                    "reusable",
+                    "--template",
+                    str(template),
+                    "--figure",
+                    "fig",
+                    "--baseline-data",
+                    str(root / "data" / "fig.json"),
+                    "--changed-data",
+                    str(root / "data" / "fig_changed.json"),
+                    "--bundle",
+                    str(bundle),
+                    "--json",
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                timeout=300,
+            )
+            self.assertEqual(0, finalize.returncode, finalize.stdout + finalize.stderr)
+            payload = json.loads(finalize.stdout)
+            self.assertEqual("pass", payload["data_swap_proof"]["status"])
+            manifest = json.loads((bundle / "reproduction_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual("data_swap/data_swap_template.json", manifest["data_swap_template"])
+            self.assertEqual("data_swap/data_swap_change_proof.json", manifest["data_swap_change_proof"])
+            self.assertTrue((bundle / manifest["data_swap_template"]).is_file())
+            self.assertTrue((bundle / manifest["data_swap_change_proof"]).is_file())
+            verify = subprocess.run([sys.executable, str(bundle / "verify.py")], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=180)
+            self.assertEqual(0, verify.returncode, verify.stdout + verify.stderr)
+
     def test_cli_stdout_stays_json_when_renderer_is_noisy(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

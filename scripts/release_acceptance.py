@@ -60,7 +60,9 @@ def main() -> int:
 
         steps = [
             ("root_package", [sys.executable, str(SCRIPTS / "validate_skill_package.py"), "--root", str(ROOT)]),
-            ("version_consistency", [sys.executable, str(SCRIPTS / "check_version_consistency.py"), "--root", str(ROOT)]),
+            ("version_consistency", [sys.executable, str(SCRIPTS / "check_version_consistency.py"), "--root", str(ROOT), "--expected", version]),
+            ("execution_profiles", [sys.executable, "-m", "unittest", "discover", "-s", str(SCRIPTS / "tests"), "-p", "test_execution_profiles.py"]),
+            ("unified_cli", [sys.executable, "-m", "unittest", "discover", "-s", str(SCRIPTS / "tests"), "-p", "test_sciplot_cli.py"]),
             ("data_swap_hardening", [sys.executable, "-m", "unittest", "discover", "-s", str(SCRIPTS / "tests"), "-p", "test_data_swap_template.py"]),
             ("build_zip", [sys.executable, str(SCRIPTS / "build_skill_package.py"), "--root", str(ROOT), "--out", str(zip_path)]),
             ("zip_package", [sys.executable, str(SCRIPTS / "validate_skill_package.py"), "--root", str(ROOT), "--zip", str(zip_path)]),

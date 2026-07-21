@@ -1,8 +1,8 @@
 interface:
   display_name: "SciPlot Figure Skill"
-  version: "2.9.2"
-  short_description: "Plan, render, audit, and package scientific figures with deterministic bundle gates."
-  default_prompt: "Use $sciplot-figure-skill to build a FigureContract, profile data, resolve VisualSpec-compatible priors, render deterministically, audit semantics/vector output, and verify the portable bundle."
+  version: "2.9.3"
+  short_description: "Render scientific figures with quick, standard, or audit validation profiles."
+  default_prompt: "Use $sciplot-figure-skill with the standard profile for ordinary manuscript figures; select quick for previews and audit only for archival, reusable-data, benchmark, strict bundle, or release delivery."
   trigger_examples:
     - "Reproduce this paper figure with editable scientific plots and QA."
     - "Build a manuscript-ready multi-panel figure from these data and scientific question."

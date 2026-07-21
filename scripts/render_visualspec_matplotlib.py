@@ -292,8 +292,23 @@ def _lock_rcparams(spec: dict[str, Any]) -> None:
     spec.setdefault("_resolved_runtime", {})["font"] = resolved
 
 
-def render_visualspec(spec: dict[str, Any], output_dir: Path, spec_path: str = "", script_path: str | None = None) -> dict[str, Any]:
+def render_visualspec(
+    spec: dict[str, Any],
+    output_dir: Path,
+    spec_path: str = "",
+    script_path: str | None = None,
+    *,
+    output_formats: tuple[str, ...] | None = None,
+    basename: str = "render",
+    write_support_files: bool = True,
+) -> dict[str, Any]:
     require_valid_visualspec(spec)
+    formats = tuple(output_formats or ("png", "svg", "pdf"))
+    invalid_formats = sorted(set(formats) - {"png", "svg", "pdf"})
+    if not formats or invalid_formats:
+        raise ValueError(f"output_formats must contain png/svg/pdf; invalid={invalid_formats}")
+    if not basename or Path(basename).name != basename:
+        raise ValueError("basename must be a simple file stem")
     output_dir.mkdir(parents=True, exist_ok=True)
     _lock_rcparams(spec)
     figure_cfg = spec["figure"]
@@ -313,19 +328,24 @@ def render_visualspec(spec: dict[str, Any], output_dir: Path, spec_path: str = "
             _draw_annotation(ax, annotation)
         if any(plot.get("label") for plot in panel.get("plots", [])) or any(group.get("label") for plot in panel.get("plots", []) for group in (plot.get("data") or {}).get("groups", [])):
             _apply_legend(ax, panel)
-    png = output_dir / "render.png"
-    svg = output_dir / "render.svg"
-    pdf = output_dir / "render.pdf"
+    png = output_dir / f"{basename}.png"
+    svg = output_dir / f"{basename}.svg"
+    pdf = output_dir / f"{basename}.pdf"
+    export_paths = {"png": png, "svg": svg, "pdf": pdf}
     project_root = output_dir.parent if output_dir.name == "outputs" else output_dir
     metadata = {"Creator": "sciplot-figure-skill", "Date": None}
-    fig.savefig(png, dpi=dpi, bbox_inches=bbox_inches, pad_inches=0, metadata={"Software": "sciplot-figure-skill"})
-    fig.savefig(svg, bbox_inches=bbox_inches, pad_inches=0, metadata=metadata)
-    fig.savefig(pdf, bbox_inches=bbox_inches, pad_inches=0, metadata={"Creator": "sciplot-figure-skill", "Producer": "sciplot-figure-skill", "CreationDate": None, "ModDate": None})
-    semantics = extract_matplotlib_semantics(fig, figure_id=str(figure_cfg.get("id", "figure_1")))
+    if "png" in formats:
+        fig.savefig(png, dpi=dpi, bbox_inches=bbox_inches, pad_inches=0, metadata={"Software": "sciplot-figure-skill"})
+    if "svg" in formats:
+        fig.savefig(svg, bbox_inches=bbox_inches, pad_inches=0, metadata=metadata)
+    if "pdf" in formats:
+        fig.savefig(pdf, bbox_inches=bbox_inches, pad_inches=0, metadata={"Creator": "sciplot-figure-skill", "Producer": "sciplot-figure-skill", "CreationDate": None, "ModDate": None})
+    semantics = extract_matplotlib_semantics(fig, figure_id=str(figure_cfg.get("id", "figure_1"))) if write_support_files else None
     plt.close(fig)
-    write_json(output_dir / "render_semantics.json", semantics)
+    if semantics is not None:
+        write_json(output_dir / "render_semantics.json", semantics)
     manifest = make_manifest(spec_path=portable_path(spec_path, project_root) or "", output_dir=portable_path(output_dir, project_root) or output_dir.name)
-    exports_ok = all(path.exists() and path.stat().st_size > 0 for path in [png, svg, pdf])
+    exports_ok = all(export_paths[key].exists() and export_paths[key].stat().st_size > 0 for key in formats)
     panel_sources = [panel.get("source_crop") for panel in spec["panels"] if panel.get("source_crop")]
     panel_strategies = {panel.get("source_strategy", "raw_data") for panel in spec["panels"]}
     panel_representations = {panel.get("representation", "semantic_vector") for panel in spec["panels"]}
@@ -348,7 +368,7 @@ def render_visualspec(spec: dict[str, Any], output_dir: Path, spec_path: str = "
             "spec": portable_path(spec_path, project_root) if spec_path else None,
             "script": portable_path(script_path, project_root) if script_path else None,
             "runner": portable_path(Path(__file__).resolve(), project_root),
-            "exports": {"png": portable_path(png, project_root), "svg": portable_path(svg, project_root), "pdf": portable_path(pdf, project_root)},
+            "exports": {key: portable_path(export_paths[key], project_root) for key in formats},
             "qa": {"execution_status": "not_run", "result": "not_applicable", "score_report": None},
             "source_strategy": source_strategy,
             "representation": representation,
@@ -361,8 +381,8 @@ def render_visualspec(spec: dict[str, Any], output_dir: Path, spec_path: str = "
         {
             "source_code_status": "pass" if script_path else "incomplete",
             "render_status": "pass",
-            "raster_export_status": "pass" if png.exists() and png.stat().st_size > 0 else "failed",
-            "vector_export_status": "pass" if all(path.exists() and path.stat().st_size > 0 for path in [svg, pdf]) else "failed",
+            "raster_export_status": "pass" if "png" in formats and png.exists() and png.stat().st_size > 0 else "not_requested",
+            "vector_export_status": "pass" if all(key in formats and export_paths[key].exists() and export_paths[key].stat().st_size > 0 for key in ("svg", "pdf")) else "not_requested",
             "export_status": "pass" if exports_ok else "failed",
             "vector_validation_status": "not_run",
             "semantic_reconstruction_status": "not_run",
@@ -371,8 +391,7 @@ def render_visualspec(spec: dict[str, Any], output_dir: Path, spec_path: str = "
             "status": "render_only",
             "source_strategy": source_strategy,
             "representation": representation,
-            "exports": {"png": portable_path(png, project_root), "svg": portable_path(svg, project_root), "pdf": portable_path(pdf, project_root)},
-            "semantics": portable_path(output_dir / "render_semantics.json", project_root),
+            "exports": {key: portable_path(export_paths[key], project_root) for key in formats},
             "figures": figures,
             "per_figure_scripts": per_figure_scripts,
             "backend": "python_matplotlib",
@@ -380,18 +399,32 @@ def render_visualspec(spec: dict[str, Any], output_dir: Path, spec_path: str = "
             "resolved_fonts": {"default": spec.get("_resolved_runtime", {}).get("font", "unknown")},
         }
     )
+    if write_support_files:
+        manifest["semantics"] = portable_path(output_dir / "render_semantics.json", project_root)
     manifest["overall_status"] = manifest_overall_status(manifest)
-    write_json(output_dir / "render_manifest.json", manifest)
+    if write_support_files:
+        write_json(output_dir / "render_manifest.json", manifest)
     return manifest
 
 
-def render_file(spec_path: Path | str, output_dir: Path | str, script_path: Path | str | None = None) -> dict[str, Any]:
+def render_file(
+    spec_path: Path | str,
+    output_dir: Path | str,
+    script_path: Path | str | None = None,
+    *,
+    output_formats: tuple[str, ...] | None = None,
+    basename: str = "render",
+    write_support_files: bool = True,
+) -> dict[str, Any]:
     spec_file = Path(spec_path)
     return render_visualspec(
         load_json(spec_file),
         Path(output_dir),
         spec_path=str(spec_file),
         script_path=str(script_path) if script_path else None,
+        output_formats=output_formats,
+        basename=basename,
+        write_support_files=write_support_files,
     )
 
 
@@ -400,8 +433,18 @@ def main() -> int:
     parser.add_argument("--spec", required=True, type=Path)
     parser.add_argument("--out-dir", required=True, type=Path)
     parser.add_argument("--script", type=Path, help="Runnable per-figure script path to record in the manifest.")
+    parser.add_argument("--formats", default="png,svg,pdf", help="Comma-separated output formats; legacy default is png,svg,pdf.")
+    parser.add_argument("--basename", default="render", help="Output file stem; legacy default is render.")
+    parser.add_argument("--no-support-files", action="store_true", help="Do not write render_semantics.json or render_manifest.json.")
     args = parser.parse_args()
-    manifest = render_file(args.spec, args.out_dir, script_path=args.script)
+    manifest = render_file(
+        args.spec,
+        args.out_dir,
+        script_path=args.script,
+        output_formats=tuple(item.strip() for item in args.formats.split(",") if item.strip()),
+        basename=args.basename,
+        write_support_files=not args.no_support_files,
+    )
     print(json.dumps(manifest, ensure_ascii=False, indent=2))
     return 0 if manifest["render_status"] == "pass" and manifest["export_status"] == "pass" else 2
 

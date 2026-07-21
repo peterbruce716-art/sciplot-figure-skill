@@ -161,6 +161,34 @@ def _ensure_fresh_output(out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
 
+def _validate_pdf_clips(pdf: Path, figure_clips: dict[str, dict[str, Any]]) -> None:
+    """Fail closed when declared page/clip geometry cannot exist in the source PDF."""
+
+    try:
+        import fitz
+    except ImportError as exc:  # pragma: no cover - environment dependent
+        raise RuntimeError("E130_PDF_VALIDATION_UNAVAILABLE: PyMuPDF is required to validate PDF clips") from exc
+    document = fitz.open(pdf)
+    try:
+        for figure_id, config in figure_clips.items():
+            page_number = int(config["page"])
+            if page_number < 1 or page_number > document.page_count:
+                raise ValueError(
+                    f"E130_PAGE_OUT_OF_RANGE: figure {figure_id} declares page {page_number}, "
+                    f"but the PDF has {document.page_count} pages"
+                )
+            page = document[page_number - 1]
+            x0, y0, x1, y1 = (float(value) for value in config["clip_pdf_points"])
+            width, height = float(page.rect.width), float(page.rect.height)
+            if not (0 <= x0 < x1 <= width and 0 <= y0 < y1 <= height):
+                raise ValueError(
+                    f"E131_CLIP_OUT_OF_PAGE: figure {figure_id} clip "
+                    f"[{x0}, {y0}, {x1}, {y1}] exceeds page {page_number} bounds [0, 0, {width}, {height}]"
+                )
+    finally:
+        document.close()
+
+
 def _write_per_figure_script(
     out_dir: Path,
     figure_id: str,
@@ -255,6 +283,7 @@ def run_batch(
     if len(set(figures)) != len(figures):
         raise ValueError("duplicate figure ids are not allowed")
     _ensure_fresh_output(out_dir)
+    _validate_pdf_clips(pdf, declared_clips)
 
     pdf_hash = sha256(pdf)
     results: dict[str, dict[str, Any]] = {}

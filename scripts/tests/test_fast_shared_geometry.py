@@ -69,3 +69,5 @@ class SharedGeometryTests(ScientificFigureReproductionTestBase):
             audit = json.loads((root / "out" / "demo_geometry_audit.json").read_text(encoding="utf-8"))
             self.assertEqual("pass", audit["status"])
             self.assertEqual("pdf_compound_path", audit["source_identity_scope"])
+            second = tracer.trace_pdf_clip(source, 1, (0, 0, 144, 72), root / "out_second", "demo", dpi=100)
+            self.assertEqual(result["output_sha256"]["pdf"], second["output_sha256"]["pdf"])

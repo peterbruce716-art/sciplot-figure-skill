@@ -200,6 +200,11 @@ def finalize_manifest(
         companion_index = load_json(companion_path)
         manifest["companion_artifacts"] = companion_index.get("artifacts", {})
 
+        for artifact_key, manifest_key in (("data_swap_template", "data_swap_template"), ("data_swap_proof", "data_swap_change_proof"), ("release_acceptance", "release_acceptance"), ("execution_plan", "execution_plan")):
+            artifact = (companion_index.get("artifacts") or {}).get(artifact_key) or {}
+            if artifact.get("path"):
+                manifest[manifest_key] = artifact["path"]
+
     def companion_artifact_path(key: str) -> Path | None:
         if not companion_index:
             return None

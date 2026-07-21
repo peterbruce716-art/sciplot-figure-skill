@@ -3,11 +3,13 @@
     "build_zip": "pass",
     "bundle_verify": "pass",
     "data_swap_hardening": "pass",
+    "execution_profiles": "pass",
     "official_example": "semantic_strict_pass",
     "portability": "pass",
     "render_baseline": "pass",
     "root_package": "pass",
     "run_reproduction": "pass",
+    "unified_cli": "pass",
     "version_consistency": "pass",
     "zip_package": "pass"
   },
@@ -24,6 +26,11 @@
     },
     "data_swap_hardening": {
       "name": "data_swap_hardening",
+      "returncode": 0,
+      "status": "pass"
+    },
+    "execution_profiles": {
+      "name": "execution_profiles",
       "returncode": 0,
       "status": "pass"
     },
@@ -47,6 +54,11 @@
       "returncode": 0,
       "status": "pass"
     },
+    "unified_cli": {
+      "name": "unified_cli",
+      "returncode": 0,
+      "status": "pass"
+    },
     "version_consistency": {
       "name": "version_consistency",
       "returncode": 0,
@@ -60,5 +72,5 @@
   },
   "schema": "scientificfigure.release_acceptance.v1",
   "status": "pass",
-  "version": "2.9.2"
+  "version": "2.9.3"
 }

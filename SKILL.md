@@ -5,6 +5,20 @@ description: Use when reproducing, redrawing, auditing, or visually optimizing s
 
 # SciPlot Figure Skill
 
+## Default Profile Workflow (v2.9.3)
+
+Use `scripts/sciplot.py` as the default user-facing entry point. Select the smallest profile that supports the requested claim:
+
+| Profile | Use | Default validation |
+|---|---|---|
+| `quick` | Preview, style, typography, and axis iteration | One render, input hash/schema/mapping, selected-output parsing, path isolation, and basic canvas safety |
+| `standard` | Ordinary manuscript and collaborator delivery | Quick gates plus semantic audit, render integrity, vector validation, plot geometry when declared, checksums, and a compact environment summary |
+| `audit` | Archival, reusable-data, benchmark, strict bundle, or release delivery | Existing bundle lock, full environment, attestation, portability, source policy, and final manifest closure |
+
+Default ordinary data-driven work to `standard`; use `quick` only for an explicit preview and `audit` when the claim needs a bundle, reusable proof, release checks, or reference-backed visual fidelity. `--profile auto` writes `execution_plan.json` with its selected profile, reason, enabled gates, and disabled gates; audit archives that plan in the bundle. Read `references/WORKFLOW_PROFILES.md` before changing profile routing, output policy, or gate meanings.
+
+Data-swap is conditional. Require `scientificfigure.data-swap-template.v1` and changed-input proof only for `--enable-data-swap`, `--verify-data-driven`, `--claim reusable`, an explicit reusable-data request, or an equivalent audit delivery requirement. Quick/standard runs without those claims must not render baseline/changed pairs or create an audit bundle.
+
 ## Advisor Layer (v2.6)
 
 For CSV/TSV/Excel redraws, think before rendering. The optional Advisor Layer creates deterministic, reviewable artifacts and never replaces the VisualSpec renderer or QA gates:
@@ -61,7 +75,7 @@ Run this skill with Python 3.14 only. Use `py -3.14` on Windows or `python3.14` 
 
 ## Overview
 
-Use this skill to reproduce scientific figures with open Python-first workflows. The v2.9.2 primary deliverable is a self-contained deterministic reproduction bundle with optional Advisor artifacts, semantic coverage, verifiable attestation, shared-geometry QA, batch visual gates, object-level reconstruction, path-portable delivery JSON, and a mandatory reusable data-swap template for every reproduced figure. Read `references/DATA_SWAP_PROTOCOL.md` for lineage rules and `references/DATA_SWAP_TEMPLATE_PROTOCOL.md` when a renderer must accept replacement measurements. When no reference image is supplied for a raw-data figure, successful semantic and vector checks produce `semantic_validated_pass`; this is intentionally not a visual strict claim. Do not use proprietary project conversion, desktop GUI automation, or approval-chain-dependent plotting tools in this skill.
+Use this skill to reproduce scientific figures with open Python-first workflows. The v2.9.3 default is a profile-aware working project: standard covers ordinary manuscript figures, while audit retains the self-contained deterministic bundle, optional Advisor artifacts, semantic coverage, verifiable attestation, shared-geometry QA, batch visual gates, object-level reconstruction, and path-portable delivery JSON. Read `references/DATA_SWAP_PROTOCOL.md` for lineage rules and `references/DATA_SWAP_TEMPLATE_PROTOCOL.md` only when a renderer must accept replacement measurements. When no reference image is supplied for a raw-data figure, successful semantic and vector checks produce `semantic_validated_pass`; this is intentionally not a visual strict claim. Do not use proprietary project conversion, desktop GUI automation, or approval-chain-dependent plotting tools in this skill.
 
 ## Workflow
 
@@ -69,15 +83,15 @@ Use this skill to reproduce scientific figures with open Python-first workflows.
 2. Inventory every requested figure/panel and classify it as data plot, schematic geometry, contour/heatmap/map, image/micrograph, or mixed.
 3. If only raster images are available and web use is allowed, search targeted labels, annotations, and captions for the source paper, high-resolution original, or raw data. If no reliable hit is found, record that fallback and continue from the raster.
 4. Create or update a `scientificfigure.visualspec.v2` file for metadata, simple standard plots, panel layout, QA requirements, and output tracking. Accept v1 files only as legacy inputs to migrate.
-5. Use `scripts/run_reproduction.py` for the normal closure. It preflights external inputs, builds a self-contained bundle, writes environment records, writes `bundle.lock.json` over immutable inputs/runtime/environment/entrypoints, validates the spec, runs bundle-local `reproduce.py`, scores whole-figure and panels, audits semantics from actual renderer objects, checks SVG/PDF vector output, finalizes the manifest, writes per-run attestation, validates path portability, writes and verifies canonical checksums, validates the manifest, and returns non-zero when incomplete.
+5. Use `scripts/sciplot.py run --profile standard` for normal closure. Use `scripts/sciplot.py finalize --profile audit` or the compatible `scripts/run_reproduction.py` entry point only when the delivery needs a self-contained bundle, environment records, `bundle.lock.json`, attestation, portability, and full audit closure.
 6. For complex schematics, EBSD/phase maps, irregular fills, broken axes, custom paths, or domain-specific image processing, create a project-level Python/R script and still route it through the manifest/QA closure.
 7. Export PNG, SVG, and PDF.
 8. Compare source and render with image metrics that preserve source scale; never stretch the source image to hide canvas errors.
 9. Patch geometry, axes, plots, labels, colors, and typography in that order.
 10. When a logical curve is split into visible pieces, reused as a fill boundary, or paired with a local fill, load its geometry once and derive every artist from the same immutable source object and hash. Read `references/SHARED_GEOMETRY_PROTOCOL.md` and retain the geometry audit.
 11. Preserve one runnable script per reproduced figure, or a batch runner plus documented per-figure functions/sections when that is more practical. Record each script path in the manifest or notes.
-12. Create a `scientificfigure.data-swap-template.v1` manifest for every reproduced figure, including a complete data schema, example payload, renderer entrypoint, declared output formats, and relative paths.
-13. Run scripts/validate_data_swap_template.py, scripts/run_data_swap.py, and scripts/verify_data_swap_change.py with isolated output directories. Repeat with one changed input and require a machine-readable proof that the input and at least one declared output hash changed. The generic runner must keep top-level stdout as one parseable JSON payload; renderer chatter belongs under runner_logs.
+12. When reusable data is claimed or explicitly requested, create a `scientificfigure.data-swap-template.v1` manifest with a complete data schema, example payload, renderer entrypoint, declared output formats, and relative paths.
+13. For that reusable-data path, run scripts/validate_data_swap_template.py, scripts/run_data_swap.py, and scripts/verify_data_swap_change.py with isolated output directories. Require a machine-readable proof that the input and at least one declared output hash changed. The generic runner must keep top-level stdout as one parseable JSON payload; renderer chatter belongs under runner_logs. Skip this double render for ordinary quick/standard work.
 14. Record deviations honestly; do not mark the result strict when it still differs.
 
 ## Mode Selection
@@ -136,7 +150,9 @@ If repeated geometry, color, typography, antialiasing, or legend tuning fails to
 
 ## Tool Routing
 
-- Use `scripts/run_reproduction.py` as the default one-command closure. It treats `--out-dir` as the portable bundle root, copies source/spec/data/runtime/custom renderer into that root, writes concise `run_report.json` summaries, and keeps detailed child-process logs under `logs/`.
+- Use `scripts/sciplot.py run` as the default one-command closure. `standard` is the ordinary default; `quick` minimizes iteration artifacts; `audit` delegates to the existing strict bundle runner.
+- Use `scripts/sciplot.py validate` to rerun profile-specific QA, `scripts/sciplot.py finalize` to upgrade an existing working project to audit, and `scripts/sciplot.py trace-pdf` to delegate fresh PDF batches without duplicating trace logic.
+- Use `scripts/run_reproduction.py` as the backward-compatible direct audit entry point. It treats `--out-dir` as the portable bundle root, copies source/spec/data/runtime/custom renderer into that root, writes concise `run_report.json` summaries, and keeps detailed child-process logs under `logs/`.
 - In bundles, use `render.py` only to draw exports, `reproduce.py` to rerun the full validate/render/QA/audit/vector/finalize/checksum/manifest closure after first verifying `bundle.lock.json`, and `verify.py` to verify `bundle.lock.json`, checksums, and manifest status without redrawing.
 - Use `scripts/scaffold_figurespec.py` to create a VisualSpec skeleton.
 - Use `scripts/validate_visualspec.py` before rendering. `validate_visualspec_v1.py` remains only as a compatibility wrapper target.
@@ -171,9 +187,11 @@ If repeated geometry, color, typography, antialiasing, or legend tuning fails to
 - Use `scripts/trace_image_primitives.py` only when the user explicitly accepts visual trace mode; label it `pixel_trace` / `visual_trace_pass`, never semantic scientific reconstruction.
 - When the requirement is strict visual identity against a supplied raster reference, route the authoritative delivery through `trace_image_primitives.py` (or an equivalent pixel-trace workflow), compare the exported PNG to the reference without resizing, and keep any semantic/corrected redraw as a clearly secondary candidate. Never promote a semantically adjusted redraw to the strict delivery just because its layout metrics pass.
 - When the requester explicitly selects a corrected reference format and says not to provide other versions, use a canonical corrected-delivery mode: publish one contract-checked semantic export per figure under the declared delivery directory (for example `final_corrected/figN/figN.*`), apply the same delivery contract to every figure in the declared set, and label trace/semantic/intermediate directories as internal QA only. Do not advertise or present those internal tracks as alternate user-facing versions.
-- Use `scripts/pdf_vector_trace.py` when the requested reference is a PDF and exact visual clipping is required. It preserves native PDF paths when present, records target-region raster image hashes when the paper embeds a figure as an image, and scores a fresh rasterization of the exported PDF against the source-page clip. Keep its result at `pixel_primitives` / `visual_trace_pass`; neither path recovery nor image extraction recovers primary scientific data.
+- Use `scripts/pdf_vector_trace.py` when the requested reference is a PDF and exact visual clipping is required. It preserves native PDF paths when present, records target-region raster image hashes when the paper embeds a figure as an image, and scores a fresh rasterization of the exported PDF against the source-page clip. PDF export suppresses regenerated document IDs so repeated runs produce stable PDF bytes. Keep its result at `pixel_primitives` / `visual_trace_pass`; neither path recovery nor image extraction recovers primary scientific data.
 - For repeated PDF figure sets, run a deterministic extraction stage first, then validate its `reference-extraction.json` with `scripts/pdf_reference_set.py`. The extraction stage must regenerate the reference PNGs from the current PDF before any digitizer reads them; retaining a previous PNG without a current PDF hash is not fresh evidence.
 - For a declared paper batch that must be rebuilt from the original PDF, use `scripts/fresh_pdf_batch.py`. Declare figure IDs, one-based page numbers, and `[x0, y0, x1, y1]` PDF-point clips in a `scientificfigure.pdf-clip-manifest.v1` file passed with `--clip-manifest`, or pass repeated `--figure-clip ID:PAGE:X0,Y0,X1,Y1` arguments. The installed skill intentionally has no paper-specific default figures. The runner accepts only a new or empty output directory, binds every figure to the source PDF SHA-256, records page/clip provenance and output hashes, rejects inherited/reuse path tokens, and writes `fresh_pdf_batch_manifest.json` plus `source_policy.json`. This route is `pixel_trace` / `pixel_primitives` / `visual_trace_pass` and does not recover raw experimental data.
+- Before tracing, `fresh_pdf_batch.py` validates every declared page number and PDF-point clip against the current PDF's actual page count and page rectangle. Invalid declarations fail closed with `E130_PAGE_OUT_OF_RANGE` or `E131_CLIP_OUT_OF_PAGE` instead of relying on downstream renderer errors or silent PDF clipping.
+- PDF trace visual QA records `source_canvas_edge_safety` and `render_canvas_edge_safety` over a 12 px edge band. Edge content is measured by color distance from the median corner background, so uniform light, low-chroma paper backgrounds do not trigger by themselves; uniform dark or high-chroma edges still produce `attention` as likely full-bleed content. Treat `attention` as a required manual clip review for truncated axis labels or annotations unless the figure is intentionally full-bleed; expand the PDF-point clip and rerun from the current source PDF rather than padding an exported image. Uniform light full-bleed content remains pixel-ambiguous with a paper background and requires explicit manual review when that source type is expected.
 - When deriving clips from PDF text blocks, require an anchored caption that starts with `Fig. N.` or `Figure N.`. Use `select_anchored_caption_block()` rather than accepting the first body-text mention of the figure number.
 - Fresh PDF trace batches also write `trace_rerun_manifest.json`, a source-bound rerun contract listing each clip, per-figure script, output, visual-QA, and geometry-audit path. This contract is deliberately separate from `scientificfigure.data-swap-template.v1`: a PDF trace is not replacement-measurement data and must not be presented as a reusable data-swap renderer.
 - Use `scripts/shared_geometry.py` in project renderers when continuous curves, visible curve segments, fill boundaries, or filled vector regions must share one source. Run `audit_shared_geometry()` and store its report with QA artifacts.
@@ -206,9 +224,9 @@ If repeated geometry, color, typography, antialiasing, or legend tuning fails to
 - Do not default to Arial-only rendering. Use font candidates and record resolved fonts.
 - Every target figure must keep a dedicated runnable script, even when a combined batch runner also exists.
 - A manifest must list `per_figure_scripts` for every reproduced figure before claiming completion.
-- Every target figure must also be represented in a `scientificfigure.data-swap-template.v1` manifest. A PDF trace script, digitization script, or one-off batch runner alone is not a reusable template.
-- Each template figure record must point to a complete shape schema, example data, runnable renderer, and declared, non-duplicated PNG/SVG/PDF outputs. Template paths must be portable project-relative paths and must not resolve through symlinks outside the project root. The renderer must emit `scientificfigure.data-swap-run.v1` with input/output hashes and `historical_data_consumed: false`.
-- Validate templates with scripts/validate_data_swap_template.py; dispatch replacements through scripts/run_data_swap.py using --figure, --data, --out-dir, and --input-mode; prove data-driven behavior with scripts/verify_data_swap_change.py.
+- Every figure claimed as reusable or explicitly routed through data-swap must be represented in a `scientificfigure.data-swap-template.v1` manifest. A PDF trace script, digitization script, or one-off batch runner alone is not a reusable template.
+- Each enabled template figure record must point to a complete shape schema, example data, runnable renderer, and declared, non-duplicated outputs. Template paths must be portable project-relative paths and must not resolve through symlinks outside the project root. The renderer must emit `scientificfigure.data-swap-run.v1` with input/output hashes and `historical_data_consumed: false`.
+- When data-swap is enabled, validate templates with scripts/validate_data_swap_template.py; dispatch replacements through scripts/run_data_swap.py using --figure, --data, --out-dir, and --input-mode; prove data-driven behavior with scripts/verify_data_swap_change.py.
 - A manifest should store paths relative to the project root whenever files are inside the project. Do not write absolute source/export/script paths into the final manifest unless the file is intentionally outside the project and documented.
 - A bundle must keep `visualspec.json`, copied inputs under `inputs/`, runtime under `runtime/`, exports under `outputs/`, QA artifacts under `qa/`, immutable state in `bundle.lock.json`, per-run state in `run_attestation.json`, and hashes in `checksums.json` whenever `run_reproduction.py` is used.
 - A bundle must keep `environment/requirements.txt`, `environment/requirements-lock.txt`, `environment/environment.json`, `environment/fonts.json`, and `environment/environment_policy.json`. Child Python processes should run with `PYTHONDONTWRITEBYTECODE=1`, `MPLBACKEND=Agg`, fixed single-thread numeric environment variables, a temporary `MPLCONFIGDIR` outside the bundle, and deterministic Matplotlib metadata settings. Record resolved font family/style/weight/filename/hash and FreeType where possible; do not record host interpreter or font absolute paths in delivery JSON. Do not include Matplotlib font cache as immutable payload. `__pycache__`, `.pyc`, and `.pyo` files are unexpected in delivered bundles.
@@ -221,10 +239,18 @@ If repeated geometry, color, typography, antialiasing, or legend tuning fails to
 ## Python Quick Start
 
 ```powershell
-py -3.14 scripts\scaffold_figurespec.py --figures fig1 --json-out visualspec.json
-py -3.14 scripts\check_environment.py --json-out outputs\environment.json
-py -3.14 scripts\run_reproduction.py --spec visualspec.json --source source.png --out-dir outputs\fig1 --require-strict
-py -3.14 scripts\release_acceptance.py
+py -3.14 scripts\sciplot.py run --input data.csv --profile standard --out-dir out\figure
+py -3.14 scripts\sciplot.py validate --project out\figure --profile standard
+py -3.14 scripts\sciplot.py finalize --project out\figure --profile audit --bundle delivery\figure_bundle
+py -3.14 scripts\sciplot.py trace-pdf --pdf source.pdf --clip-manifest clips.json --out-dir out\trace
+```
+
+Use `py -3.14 scripts\benchmark_workflow_profiles.py` only when measuring workflow overhead. It runs one local line-plot fixture through the compatible v2.9.3 full runner and all three profiles, then records subprocess, render, file, gate, and wall-time counts.
+
+For a direct strict reference-image bundle, the compatible low-level command remains:
+
+```powershell
+py -3.14 scripts\run_reproduction.py --spec visualspec.json --source source.png --out-dir delivery\strict_bundle --require-strict
 ```
 
 ## R Quick Start
@@ -241,23 +267,23 @@ Rscript scripts\render_visualspec_r.R --spec visualspec.json --out-dir outputs\r
 
 ## Completion Gate
 
-A run is complete only when the manifest lists source inputs, rendered exports, visual scores, per-figure scripts, a validated data-swap template covering every figure, source strategy, representation, final status, and remaining deviations. Use `validate_reproduction_manifest.py --require-data-swap-template` for the enforced manifest gate. If any figure is still approximate, label it `semantic_near_pass` or `not_strict`; do not soften the wording.
+A run is complete only when its selected profile's enabled gates pass and the report lists source inputs, rendered exports, per-figure scripts, source strategy, representation, final status, and remaining deviations. Standard requires mapping, semantic, canvas, and vector evidence but does not require a data-swap template. Audit keeps the existing bundle, lock, environment, attestation, portability, and manifest gates. Use `validate_reproduction_manifest.py --require-data-swap-template` only when reusable/data-swap delivery is enabled. If any figure is still approximate, label it `semantic_near_pass` or `not_strict`; do not soften the wording.
 
 When the full manifest workflow is unavailable, the notes/manifest-lite must list source inputs, scripts, export paths, reconstruction modes, key transformations, calibration assumptions, and remaining deviations.
 
 Do not call a multi-figure task complete unless each requested figure has:
 
 - a source path,
-- a rendered PNG/SVG/PDF or declared alternative,
+- the profile-selected rendered outputs,
 - whole-figure and panel visual score or deviation ledger,
 - a per-figure runnable script path.
-- a data-swap template record with schema, example data, renderer, and output declarations.
+- when reusable/data-swap is enabled, a template record with schema, example data, renderer, and output declarations.
 
 Before final delivery, freshly verify:
 
 - `scripts/run_reproduction.py` or an equivalent project runner completes from the project root,
-- `scripts/validate_data_swap_template.py --root <project> --template <template_manifest.json>` reports `status: pass` for every reproduced figure,
-- scripts/run_data_swap.py independently recalculates input/output SHA-256 values for every template-declared output, captures renderer stdout/stderr under runner_logs, and scripts/verify_data_swap_change.py proves a changed payload changes at least one declared output hash,
+- when reusable/data-swap is enabled, `scripts/validate_data_swap_template.py --root <project> --template <template_manifest.json>` reports `status: pass` for every declared reusable figure,
+- when reusable/data-swap is enabled, scripts/run_data_swap.py independently recalculates input/output SHA-256 values for every template-declared output, captures renderer stdout/stderr under runner_logs, and scripts/verify_data_swap_change.py proves a changed payload changes at least one declared output hash,
 - `reproduce.py` can run from the bundle root without the original skill directory,
 - `bundle.lock.json` passes before rerendering and `verify.py` fails if tracked runtime, inputs, entrypoints, renderer configuration, or environment records are modified,
 - every expected SVG/PDF/PNG exists,

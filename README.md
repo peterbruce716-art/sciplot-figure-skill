@@ -6,6 +6,51 @@ A reproducible scientific figure generation and validation framework for AI-assi
 
 SciPlot Figure Skill uses a VisualSpec JSON description to generate deterministic scientific figures and package the result as a portable, verifiable bundle.
 
+## Quick Start
+
+Use the unified CLI for ordinary figure work. `standard` performs one render and keeps mapping, semantic, canvas, and vector QA without creating a full audit bundle or a data-swap template.
+
+```bash
+py -3.14 scripts/sciplot.py run \
+  --input examples/data/trend_comparison.csv \
+  --profile standard \
+  --out-dir out/figure
+
+py -3.14 scripts/sciplot.py validate \
+  --project out/figure \
+  --profile standard
+```
+
+Choose the smallest profile that satisfies the delivery claim:
+
+| Profile | Intended use | Default work |
+|---|---|---|
+| `quick` | Preview and style iteration | One render, PNG plus suitable SVG, input hash, mapping, parseability, and canvas checks |
+| `standard` | Ordinary manuscript figures | Quick gates plus semantic/vector QA, PDF when appropriate, checksums, and a compact environment summary |
+| `audit` | Archival, reusable-data, benchmark, or release delivery | Existing strict bundle, lock, environment, attestation, portability, and final manifest gates |
+
+`--profile auto` selects `audit` for archival/release/reusable claims and reference-backed or strict visual-fidelity work, `standard` for ordinary manuscript work, and `quick` for explicit previews. It writes `execution_plan.json` before lightweight execution and archives the plan inside audit bundles. Data-swap templates and changed-input proof are conditional: enable them with `--enable-data-swap`, `--verify-data-driven`, or `--claim reusable`.
+
+Upgrade an existing working project only when the strict bundle is needed:
+
+```bash
+py -3.14 scripts/sciplot.py finalize \
+  --project out/figure \
+  --profile audit \
+  --bundle delivery/figure_bundle
+```
+
+Fresh PDF work uses the same entry point without treating a raster trace as editable vector data:
+
+```bash
+py -3.14 scripts/sciplot.py trace-pdf \
+  --pdf source.pdf \
+  --clip-manifest clips.json \
+  --out-dir out/trace
+```
+
+Measure the local line-plot workflow with `py -3.14 scripts/benchmark_workflow_profiles.py --json-out outputs/workflow_profile_benchmark.json`. The report records subprocess, render, file, gate, and wall-time counts.
+
 Core capabilities:
 
 - advisor-first data profiling, chart selection, plotting-policy checks, journal-style and CJK font records, and an offline AI visual-review contract
@@ -73,7 +118,7 @@ The pipeline writes `advisor/`, `style/`, and optional `qa/` artifacts. These ar
 
 For explicit uncertainty values, pass `--uncertainty response_sd`. The Advisor verifies the column independently from `y`, records its identification evidence and definition, and carries the source hash and mapping through ChartDecision, VisualSpec, semantic audit, and the final manifest. A declared uncertainty definition without independent values falls back to a non-error chart with a structured warning.
 
-This path renders the example, audits its semantics, validates SVG/PDF structure, writes checksums, and creates a portable verification bundle.
+The legacy command below remains the direct audit-bundle entry point. It renders the example, audits its semantics, validates SVG/PDF structure, writes checksums, and creates a portable verification bundle.
 
 ```bash
 python scripts/run_reproduction.py \
@@ -190,7 +235,7 @@ sciplot-figure-skill/
 
 ## Version
 
-Current version: **v2.9.2**
+Current version: **v2.9.3**
 
 ### Reusing a renderer with new data
 
@@ -202,9 +247,10 @@ outside the data directory and emit a `scientificfigure.data-swap-run.v1`
 manifest with input/output hashes. Do not invoke a batch command that rebuilds
 canonical source crops or fresh measurements for an alternate-data run.
 
-Every reproduced figure also needs a reusable template manifest. Read
-references/DATA_SWAP_TEMPLATE_PROTOCOL.md, then validate it and run a replacement
-through the generic dispatcher:
+A reusable template manifest is required only when the delivery claims reusable
+data, explicitly enables data-swap, requests changed-input proof, or sets an
+equivalent audit requirement. Read references/DATA_SWAP_TEMPLATE_PROTOCOL.md,
+then validate it and run a replacement through the generic dispatcher:
 
     py -3.14 scripts/validate_data_swap_template.py --root path/to/project --template path/to/project/template_manifest.json
     py -3.14 scripts/run_data_swap.py --root path/to/project --template path/to/project/template_manifest.json --figure fig1 --data path/to/new-data/fig1.json --out-dir path/to/isolated-output --input-mode user_supplied

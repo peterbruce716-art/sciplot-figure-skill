@@ -83,6 +83,46 @@ class FreshPdfBatchTests(unittest.TestCase):
                     figure_clips={"x": {"page": 1, "clip_pdf_points": [0, 0, 10, 10]}},
                 )
 
+    def test_rejects_page_out_of_range_before_tracing(self) -> None:
+        module = load_module()
+        import fitz
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "paper.pdf"
+            document = fitz.open()
+            document.new_page(width=144, height=72)
+            document.save(source)
+            document.close()
+            with self.assertRaisesRegex(ValueError, "E130_PAGE_OUT_OF_RANGE"):
+                module.run_batch(
+                    source,
+                    root / "out",
+                    figures=["x"],
+                    dpi=72,
+                    figure_clips={"x": {"page": 2, "clip_pdf_points": [0, 0, 10, 10]}},
+                )
+
+    def test_rejects_clip_outside_page_bounds_before_tracing(self) -> None:
+        module = load_module()
+        import fitz
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "paper.pdf"
+            document = fitz.open()
+            document.new_page(width=144, height=72)
+            document.save(source)
+            document.close()
+            with self.assertRaisesRegex(ValueError, "E131_CLIP_OUT_OF_PAGE"):
+                module.run_batch(
+                    source,
+                    root / "out",
+                    figures=["x"],
+                    dpi=72,
+                    figure_clips={"x": {"page": 1, "clip_pdf_points": [0, 0, 145, 72]}},
+                )
+
     def test_trace_manifest_records_fresh_identity(self) -> None:
         module = load_module()
         try:
