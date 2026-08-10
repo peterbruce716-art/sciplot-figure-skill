@@ -12,6 +12,8 @@ permissions:
 jobs:
   fast:
     runs-on: ubuntu-latest
+    env:
+      MPLBACKEND: Agg
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -70,6 +72,8 @@ jobs:
   integration:
     runs-on: ubuntu-latest
     needs: fast
+    env:
+      MPLBACKEND: Agg
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -84,6 +88,8 @@ jobs:
   acceptance:
     runs-on: ubuntu-latest
     needs: integration
+    env:
+      MPLBACKEND: Agg
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
