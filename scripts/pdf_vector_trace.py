@@ -144,9 +144,12 @@ def _native_vector_clip(page: Any, document: Any, clip: Any, svg_path: Path, pdf
 
 def _fitz() -> Any:
     try:
-        import fitz
+        import pymupdf as fitz
     except ImportError as exc:  # pragma: no cover - environment dependent
-        raise RuntimeError("PDF vector tracing requires PyMuPDF (pip install PyMuPDF)") from exc
+        try:
+            import fitz
+        except ImportError:
+            raise RuntimeError("PDF vector tracing requires PyMuPDF (pip install PyMuPDF)") from exc
     return fitz
 
 

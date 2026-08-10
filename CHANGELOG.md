@@ -4,6 +4,7 @@
 - Added canonical style-field accounting and structured rendered policy context fields.
 - Added fresh-PDF per-figure preflight reports and regression coverage.
 - Accepted sub-point PDF page-boundary rounding differences across PyMuPDF builds.
+- Prefer the canonical PyMuPDF import to keep CLI JSON stdout clean on 1.28+.
 - Updated public version declarations to v2.9.4.
 
 ## 2026-07-21 v2.9.3 Profile-Aware Workflow Simplification
