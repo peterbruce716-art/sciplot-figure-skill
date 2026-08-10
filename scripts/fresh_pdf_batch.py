@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from pdf_vector_trace import trace_pdf_clip
+from preflight_figure import preflight_png
 from score_batch import score_batch
 
 
@@ -303,6 +304,13 @@ def run_batch(
         result["source_pdf_sha256"] = pdf_hash
         result["fresh_extraction"] = True
         result["historical_data_consumed"] = False
+        preflight_report = preflight_png(figure_dir / result["outputs"]["png"])
+        preflight_report["input"]["path"] = (figure_dir / result["outputs"]["png"]).relative_to(out_dir).as_posix()
+        preflight_path = figure_dir / f"fig{figure_id}_preflight.json"
+        preflight_path.write_text(json.dumps(preflight_report, indent=2) + "\n", encoding="utf-8")
+        if preflight_report["status"] != "pass":
+            raise RuntimeError(f"E132_PREFLIGHT_FAILED: figure {figure_id}")
+        result["outputs"]["preflight"] = preflight_path.name
         script_path = _write_per_figure_script(
             out_dir,
             figure_id,

@@ -10,6 +10,8 @@
     "profile_id": {"type": ["string", "null"]},
     "source_profile_sha256": {"type": ["string", "null"]},
     "applied_keys": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "compatibility_mapped_keys": {"type": "object", "additionalProperties": {"type": "string"}},
+    "unsupported_keys": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "applied": {"type": "object", "additionalProperties": true},
     "visualspec_hash_before": {"type": ["string", "null"]},
     "status": {"enum": ["applied", "no_compatible_settings"]}

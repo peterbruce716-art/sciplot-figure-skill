@@ -5,6 +5,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -164,6 +165,58 @@ class FreshPdfBatchTests(unittest.TestCase):
             self.assertFalse(rerun["historical_data_consumed"])
             self.assertEqual("scripts/fig3_trace.py", rerun["figures"]["3"]["per_figure_script"])
             self.assertEqual("trace_rerun_manifest.json", saved["trace_rerun_manifest"])
+
+    def test_batch_writes_preflight_report_for_each_trace_png(self) -> None:
+        module = load_module()
+        try:
+            import fitz
+        except ImportError:
+            self.skipTest("PyMuPDF is not installed")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "paper.pdf"
+            document = fitz.open()
+            page = document.new_page(width=144, height=72)
+            page.draw_rect((10, 10, 60, 50), color=(0, 0, 1), fill=(0.8, 0.9, 1.0))
+            document.save(source)
+            document.close()
+            result = module.run_batch(
+                source,
+                root / "out",
+                figures=["3"],
+                dpi=72,
+                figure_clips={"3": {"page": 1, "clip_pdf_points": [0.0, 0.0, 144.0, 72.0]}},
+            )
+            preflight_path = root / "out" / "fig3" / "fig3_preflight.json"
+            self.assertTrue(preflight_path.is_file())
+            report = json.loads(preflight_path.read_text(encoding="utf-8"))
+            self.assertEqual("pass", report["status"])
+            self.assertEqual("fig3/fig3.png", report["input"]["path"])
+            self.assertEqual("fig3/fig3_preflight.json", result["figures"]["3"]["outputs"]["preflight"])
+
+    def test_batch_rejects_failed_preflight(self) -> None:
+        module = load_module()
+        try:
+            import fitz
+        except ImportError:
+            self.skipTest("PyMuPDF is not installed")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "paper.pdf"
+            document = fitz.open()
+            page = document.new_page(width=144, height=72)
+            page.draw_rect((10, 10, 60, 50), color=(0, 0, 1), fill=(0.8, 0.9, 1.0))
+            document.save(source)
+            document.close()
+            with patch.object(module, "preflight_png", return_value={"status": "failed", "input": {"path": ""}}):
+                with self.assertRaisesRegex(RuntimeError, "E132_PREFLIGHT_FAILED: figure 3"):
+                    module.run_batch(
+                        source,
+                        root / "out",
+                        figures=["3"],
+                        dpi=72,
+                        figure_clips={"3": {"page": 1, "clip_pdf_points": [0.0, 0.0, 144.0, 72.0]}},
+                    )
 
 
 if __name__ == "__main__":
