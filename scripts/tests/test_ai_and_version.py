@@ -14,7 +14,7 @@ class AIAndVersionTest(unittest.TestCase):
     def test_local_version_declarations_are_consistent(self):
         versions = find_versions(ROOT)
         self.assertTrue(versions)
-        self.assertEqual(set(versions.values()), {"2.9.3"})
+        self.assertEqual(set(versions.values()), {"2.9.4"})
 
     def test_policy_context_uses_render_objects(self):
         context = build_context({"panels": [{"id": "A"}], "artists": [{"kind": "line", "y_axis": "left"}, {"kind": "text"}], "theme": {"font": {"family": "DejaVu Sans", "size": 8}}})

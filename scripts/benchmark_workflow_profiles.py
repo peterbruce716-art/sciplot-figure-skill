@@ -104,7 +104,7 @@ def build_benchmark() -> dict[str, Any]:
         legacy, legacy_elapsed = _run([sys.executable, str(SCRIPTS / "run_reproduction.py"), "--spec", str(SPEC), "--out-dir", str(legacy_dir)])
         legacy_report = json.loads((legacy_dir / "run_report.json").read_text(encoding="utf-8-sig"))
         baseline = {
-            "workflow": "v2.9.3 run_reproduction",
+            "workflow": "v2.9.4 run_reproduction",
             "status": legacy.get("status"),
             "subprocess_count": count_command_steps(legacy_report),
             "render_count": count_render_steps(legacy_report),

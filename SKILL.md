@@ -5,7 +5,7 @@ description: Use when reproducing, redrawing, auditing, or visually optimizing s
 
 # SciPlot Figure Skill
 
-## Default Profile Workflow (v2.9.3)
+## Default Profile Workflow (v2.9.4)
 
 Use `scripts/sciplot.py` as the default user-facing entry point. Select the smallest profile that supports the requested claim:
 
@@ -75,7 +75,7 @@ Run this skill with Python 3.14 only. Use `py -3.14` on Windows or `python3.14` 
 
 ## Overview
 
-Use this skill to reproduce scientific figures with open Python-first workflows. The v2.9.3 default is a profile-aware working project: standard covers ordinary manuscript figures, while audit retains the self-contained deterministic bundle, optional Advisor artifacts, semantic coverage, verifiable attestation, shared-geometry QA, batch visual gates, object-level reconstruction, and path-portable delivery JSON. Read `references/DATA_SWAP_PROTOCOL.md` for lineage rules and `references/DATA_SWAP_TEMPLATE_PROTOCOL.md` only when a renderer must accept replacement measurements. When no reference image is supplied for a raw-data figure, successful semantic and vector checks produce `semantic_validated_pass`; this is intentionally not a visual strict claim. Do not use proprietary project conversion, desktop GUI automation, or approval-chain-dependent plotting tools in this skill.
+Use this skill to reproduce scientific figures with open Python-first workflows. The v2.9.4 default is a profile-aware working project: standard covers ordinary manuscript figures, while audit retains the self-contained deterministic bundle, optional Advisor artifacts, semantic coverage, verifiable attestation, shared-geometry QA, batch visual gates, object-level reconstruction, and path-portable delivery JSON. Read `references/DATA_SWAP_PROTOCOL.md` for lineage rules and `references/DATA_SWAP_TEMPLATE_PROTOCOL.md` only when a renderer must accept replacement measurements. When no reference image is supplied for a raw-data figure, successful semantic and vector checks produce `semantic_validated_pass`; this is intentionally not a visual strict claim. Do not use proprietary project conversion, desktop GUI automation, or approval-chain-dependent plotting tools in this skill.
 
 ## Workflow
 
@@ -245,7 +245,7 @@ py -3.14 scripts\sciplot.py finalize --project out\figure --profile audit --bund
 py -3.14 scripts\sciplot.py trace-pdf --pdf source.pdf --clip-manifest clips.json --out-dir out\trace
 ```
 
-Use `py -3.14 scripts\benchmark_workflow_profiles.py` only when measuring workflow overhead. It runs one local line-plot fixture through the compatible v2.9.3 full runner and all three profiles, then records subprocess, render, file, gate, and wall-time counts.
+Use `py -3.14 scripts\benchmark_workflow_profiles.py` only when measuring workflow overhead. It runs one local line-plot fixture through the compatible v2.9.4 full runner and all three profiles, then records subprocess, render, file, gate, and wall-time counts.
 
 For a direct strict reference-image bundle, the compatible low-level command remains:
 

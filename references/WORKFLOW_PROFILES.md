@@ -49,4 +49,4 @@ Quick and standard write a working project with `input/`, `src/render.py`, `outp
 
 ## Performance Measurement
 
-Run `py -3.14 scripts/benchmark_workflow_profiles.py` to compare the compatible v2.9.3 full runner with quick, standard, and audit on the same local line-plot fixture. The report stores internal subprocess count, render count, created files, enabled gate count, and wall time in `outputs/workflow_profile_benchmark.json`. The old full workflow uses the same 24-capability audit taxonomy; recorded subprocess steps remain a separate metric.
+Run `py -3.14 scripts/benchmark_workflow_profiles.py` to compare the compatible v2.9.4 full runner with quick, standard, and audit on the same local line-plot fixture. The report stores internal subprocess count, render count, created files, enabled gate count, and wall time in `outputs/workflow_profile_benchmark.json`. The old full workflow uses the same 24-capability audit taxonomy; recorded subprocess steps remain a separate metric.

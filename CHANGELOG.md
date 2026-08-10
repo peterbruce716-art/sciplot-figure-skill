@@ -1,3 +1,10 @@
+## 2026-08-11 v2.9.4 Rendered Figure Preflight and Public Release Updates
+
+- Added a lightweight rendered-PNG preflight gate for canvas size and non-blank output.
+- Added canonical style-field accounting and structured rendered policy context fields.
+- Added fresh-PDF per-figure preflight reports and regression coverage.
+- Updated public version declarations to v2.9.4.
+
 ## 2026-07-21 v2.9.3 Profile-Aware Workflow Simplification
 
 - Added `scripts/sciplot.py` with `run`, `validate`, `finalize`, and `trace-pdf` subcommands.

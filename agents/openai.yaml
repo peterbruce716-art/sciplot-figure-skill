@@ -1,6 +1,6 @@
 interface:
   display_name: "SciPlot Figure Skill"
-  version: "2.9.3"
+  version: "2.9.4"
   short_description: "Render scientific figures with quick, standard, or audit validation profiles."
   default_prompt: "Use $sciplot-figure-skill with the standard profile for ordinary manuscript figures; select quick for previews and audit only for archival, reusable-data, benchmark, strict bundle, or release delivery."
   trigger_examples:
