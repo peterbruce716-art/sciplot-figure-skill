@@ -325,6 +325,19 @@ def trace_pdf_clip(
     try:
         page = document[page_number - 1]
         clip = fitz.Rect(*clip_values)
+        page_rect = page.rect
+        # Normalize only tiny boundary discrepancies reported by different
+        # PyMuPDF builds; meaningful out-of-page geometry remains rejected by
+        # fresh_pdf_batch._validate_pdf_clips before this function is called.
+        tolerance = 1e-3
+        if abs(clip.x0 - page_rect.x0) <= tolerance:
+            clip.x0 = page_rect.x0
+        if abs(clip.y0 - page_rect.y0) <= tolerance:
+            clip.y0 = page_rect.y0
+        if abs(clip.x1 - page_rect.x1) <= tolerance:
+            clip.x1 = page_rect.x1
+        if abs(clip.y1 - page_rect.y1) <= tolerance:
+            clip.y1 = page_rect.y1
         reference_path = out_dir / f"{stem}_reference.png"
         render_path = out_dir / f"{stem}.png"
         svg_path = out_dir / f"{stem}.svg"

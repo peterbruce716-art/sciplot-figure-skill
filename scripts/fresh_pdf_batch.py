@@ -91,6 +91,12 @@ if __name__ == "__main__":
 '''
 
 
+# PDF page dimensions can differ from declared integer clip edges by a few
+# floating-point units across PyMuPDF builds. Keep strict rejection for real
+# out-of-page clips while accepting that representation noise at the boundary.
+CLIP_BOUNDARY_TOLERANCE_PT = 1e-3
+
+
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -181,7 +187,11 @@ def _validate_pdf_clips(pdf: Path, figure_clips: dict[str, dict[str, Any]]) -> N
             page = document[page_number - 1]
             x0, y0, x1, y1 = (float(value) for value in config["clip_pdf_points"])
             width, height = float(page.rect.width), float(page.rect.height)
-            if not (0 <= x0 < x1 <= width and 0 <= y0 < y1 <= height):
+            tolerance = CLIP_BOUNDARY_TOLERANCE_PT
+            if not (
+                -tolerance <= x0 < x1 <= width + tolerance
+                and -tolerance <= y0 < y1 <= height + tolerance
+            ):
                 raise ValueError(
                     f"E131_CLIP_OUT_OF_PAGE: figure {figure_id} clip "
                     f"[{x0}, {y0}, {x1}, {y1}] exceeds page {page_number} bounds [0, 0, {width}, {height}]"
