@@ -35,7 +35,28 @@ jobs:
       - run: python -m unittest discover -s scripts/tests -p "test_figure_priors_mixed_backend.py"
       - run: python -m unittest discover -s scripts/tests -p "test_ai_and_version.py"
       - run: python -m unittest discover -s scripts/tests -p "test_execution_profiles.py"
-      - run: python -m unittest discover -s scripts/tests -p "test_sciplot_cli.py"
+      - name: sciplot cli quick input
+        run: python -m unittest scripts.tests.test_sciplot_cli.SciPlotCliTests.test_quick_input_run_writes_small_project_without_pdf_or_data_swap
+      - name: sciplot cli standard run
+        run: python -m unittest scripts.tests.test_sciplot_cli.SciPlotCliTests.test_standard_run_keeps_semantic_and_vector_qa_without_data_swap
+      - name: sciplot cli validate missing project
+        run: python -m unittest scripts.tests.test_sciplot_cli.SciPlotCliTests.test_validate_reports_structured_failure_for_missing_project
+      - name: sciplot cli validate audit rejection
+        run: python -m unittest scripts.tests.test_sciplot_cli.SciPlotCliTests.test_validate_audit_rejects_a_lightweight_project
+      - name: sciplot cli data swap without template
+        run: python -m unittest scripts.tests.test_sciplot_cli.SciPlotCliTests.test_standard_data_swap_is_explicit_and_fail_closed_without_template
+      - name: sciplot cli data swap profile guard
+        run: python -m unittest scripts.tests.test_sciplot_cli.SciPlotCliTests.test_standard_data_swap_with_template_requires_audit_profile
+      - name: sciplot cli create bundle profile guard
+        run: python -m unittest scripts.tests.test_sciplot_cli.SciPlotCliTests.test_standard_create_bundle_requires_audit_profile
+      - name: sciplot cli finalize audit bundle
+        run: python -m unittest scripts.tests.test_sciplot_cli.SciPlotCliTests.test_finalize_upgrades_standard_project_to_existing_audit_bundle
+      - name: sciplot cli audit runner
+        run: python -m unittest scripts.tests.test_sciplot_cli.SciPlotCliTests.test_run_audit_uses_the_same_bundle_runner
+      - name: sciplot cli invalid reusable finalize
+        run: python -m unittest scripts.tests.test_sciplot_cli.SciPlotCliTests.test_reusable_finalize_fails_before_creating_bundle_when_proof_is_invalid
+      - name: sciplot cli trace pdf
+        run: python -m unittest scripts.tests.test_sciplot_cli.SciPlotCliTests.test_trace_pdf_delegates_to_fresh_pdf_batch
       - run: python -m unittest discover -s scripts/tests -p "test_pdf_vector_trace_safety.py"
       - run: python -m unittest discover -s scripts/tests -p "test_benchmark_workflow_profiles.py"
       - name: bundle strict success
