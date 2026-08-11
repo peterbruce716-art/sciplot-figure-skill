@@ -61,7 +61,7 @@ def _svg_path_audit(svg_text: str) -> dict[str, Any]:
 def _native_source_audit(page: Any, document: Any, clip: Any) -> dict[str, Any]:
     visible_images = []
     for image in page.get_image_info(xrefs=True):
-        bbox = _fitz().Rect(image["bbox"])
+        bbox = _pymupdf().Rect(image["bbox"])
         if bbox.intersects(clip):
             visible_images.append(image)
     if visible_images:
@@ -121,7 +121,7 @@ def _native_source_audit(page: Any, document: Any, clip: Any) -> dict[str, Any]:
 
 
 def _native_vector_clip(page: Any, document: Any, clip: Any, svg_path: Path, pdf_path: Path) -> dict[str, Any]:
-    fitz = _fitz()
+    pymupdf = _pymupdf()
     svg_root = ET.fromstring(page.get_svg_image(text_as_path=True))
     svg_root.set("width", f"{float(clip.width):.6f}pt")
     svg_root.set("height", f"{float(clip.height):.6f}pt")
@@ -132,7 +132,7 @@ def _native_vector_clip(page: Any, document: Any, clip: Any, svg_path: Path, pdf
     svg_text = ET.tostring(svg_root, encoding="unicode")
     svg_path.write_text(svg_text + "\n", encoding="utf-8")
 
-    output = fitz.open()
+    output = pymupdf.open()
     try:
         output_page = output.new_page(width=float(clip.width), height=float(clip.height))
         output_page.show_pdf_page(output_page.rect, document, page.number, clip=clip, keep_proportion=False)
@@ -142,15 +142,12 @@ def _native_vector_clip(page: Any, document: Any, clip: Any, svg_path: Path, pdf
     return _svg_path_audit(svg_text)
 
 
-def _fitz() -> Any:
+def _pymupdf() -> Any:
     try:
-        import pymupdf as fitz
+        import pymupdf
     except ImportError as exc:  # pragma: no cover - environment dependent
-        try:
-            import fitz
-        except ImportError:
-            raise RuntimeError("PDF vector tracing requires PyMuPDF (pip install PyMuPDF)") from exc
-    return fitz
+        raise RuntimeError("PDF vector tracing requires PyMuPDF (pip install PyMuPDF)") from exc
+    return pymupdf
 
 
 def _point_xy(point: Any) -> tuple[float, float]:
@@ -321,13 +318,13 @@ def trace_pdf_clip(
     *,
     dpi: int = 300,
 ) -> dict[str, Any]:
-    fitz = _fitz()
+    pymupdf = _pymupdf()
     out_dir.mkdir(parents=True, exist_ok=True)
     source_pdf_sha256 = hashlib.sha256(pdf_path.read_bytes()).hexdigest()
-    document = fitz.open(pdf_path)
+    document = pymupdf.open(pdf_path)
     try:
         page = document[page_number - 1]
-        clip = fitz.Rect(*clip_values)
+        clip = pymupdf.Rect(*clip_values)
         page_rect = page.rect
         # Normalize only tiny boundary discrepancies reported by different
         # PyMuPDF builds; meaningful out-of-page geometry remains rejected by
@@ -348,17 +345,17 @@ def trace_pdf_clip(
         geometry_path = out_dir / f"{stem}_geometry_audit.json"
         qa_path = out_dir / f"{stem}_visual_qa.json"
 
-        matrix = fitz.Matrix(dpi / 72.0, dpi / 72.0)
+        matrix = pymupdf.Matrix(dpi / 72.0, dpi / 72.0)
         pixmap = page.get_pixmap(matrix=matrix, clip=clip, alpha=False)
         pixmap.save(reference_path)
 
         _native_vector_clip(page, document, clip, svg_path, pdf_out_path)
         output_scale_x = pixmap.width / float(clip.width)
         output_scale_y = pixmap.height / float(clip.height)
-        rendered_document = fitz.open(pdf_out_path)
+        rendered_document = pymupdf.open(pdf_out_path)
         try:
             rendered_pixmap = rendered_document[0].get_pixmap(
-                matrix=fitz.Matrix(output_scale_x, output_scale_y),
+                matrix=pymupdf.Matrix(output_scale_x, output_scale_y),
                 alpha=False,
             )
             rendered_pixmap.save(render_path)

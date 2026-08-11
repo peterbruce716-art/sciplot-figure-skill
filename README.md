@@ -199,6 +199,19 @@ A completed output directory includes:
 
 ## Tests
 
+### Windows 10/11 isolated environment
+
+SciPlot requires Python 3.14 and should run from its own `.venv`; do not install it
+into Origin 2022's Python environment. Check installed interpreters with `py -0p`, then
+create and diagnose the isolated environment without administrator privileges:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts\setup_windows_env.ps1
+```
+
+The script uses `py -3.14`, installs only into `.venv`, and emits the structured
+`check_environment.py` report before any figure workflow is run.
+
 Run tests from an activated Python 3.14 environment only:
 
 ```bash

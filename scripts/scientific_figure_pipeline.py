@@ -126,6 +126,8 @@ def run_pipeline(args: argparse.Namespace) -> dict[str, Any]:
             generated, style_application = apply_style(generated, style_payload)
             artifacts["style_application"] = output / "style" / "style_application.json"
             write_json(artifacts["style_application"], style_application)
+        resolved_families = [font["resolved"].get("latin_family"), font["resolved"].get("cjk_family")]
+        generated.setdefault("theme", {}).setdefault("font", {})["family_candidates"] = [family for family in resolved_families if isinstance(family, str) and family.strip()] or generated.get("theme", {}).get("font", {}).get("family_candidates", [])
         spec_path = output / "visualspec" / "generated_visualspec.json"
         write_json(spec_path, generated)
         artifacts["chart_decision_materialization"] = output / "visualspec" / "chart_decision_materialization.json"

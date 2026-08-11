@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import platform
 import shutil
@@ -27,6 +28,7 @@ from data_resolver import load_data_source
 from execution_planner import ExecutionRequest, PlannerError, build_execution_plan
 from output_policy import OutputSelection, resolve_outputs
 from render_visualspec_matplotlib import render_file
+from uncertainty_semantics import infer_uncertainty_name
 from visualspec import load_json, validate_visualspec
 
 
@@ -97,7 +99,7 @@ def _numeric_columns(table: Any) -> list[str]:
     return result
 
 
-def _build_visualspec(input_path: Path, copied_ref: str, *, x: str | None, y: str | None, yerr: str | None, plot_type: str | None) -> dict[str, Any]:
+def _build_visualspec(input_path: Path, copied_ref: str, *, x: str | None, y: str | None, yerr: str | None, uncertainty_semantics: str | None, plot_type: str | None) -> dict[str, Any]:
     table = load_data_source(input_path)
     numeric = _numeric_columns(table)
     x_name = x or (numeric[0] if numeric else None)
@@ -113,7 +115,7 @@ def _build_visualspec(input_path: Path, copied_ref: str, *, x: str | None, y: st
             raise WorkflowError("mapping_column_missing", "Mapped yerr column is missing", yerr=yerr)
         if yerr == y_name:
             raise WorkflowError("uncertainty_same_as_measurement", "yerr must not use the y column", column=yerr)
-        if any(not isinstance(value, (int, float)) or isinstance(value, bool) or float(value) < 0 for value in table[yerr]):
+        if any(not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(float(value)) or float(value) < 0 for value in table[yerr]):
             raise WorkflowError("uncertainty_values_invalid", "yerr must contain finite non-negative numeric values", column=yerr)
     chosen_type = plot_type or ("errorbar" if yerr else "line")
     if chosen_type not in {"line", "scatter", "errorbar"}:
@@ -126,7 +128,23 @@ def _build_visualspec(input_path: Path, copied_ref: str, *, x: str | None, y: st
         mapping["yerr"] = yerr
     data: dict[str, Any] = {"source": copied_ref, "mapping": mapping}
     if yerr:
-        data["uncertainty"] = {"semantics": "user_declared", "evidence_source": "explicit_cli_mapping", "column": yerr}
+        if uncertainty_semantics and uncertainty_semantics.strip():
+            data["uncertainty"] = {
+                "source": "explicit",
+                "user_specified": True,
+                "column": yerr,
+                "semantics": uncertainty_semantics.strip(),
+            }
+        else:
+            inferred = infer_uncertainty_name(yerr)
+            if not inferred["is_uncertainty"] or not inferred["semantics"]:
+                raise WorkflowError(
+                    "uncertainty_definition_unknown",
+                    "Provide --uncertainty-semantics or use a yerr name with an auditable uncertainty token such as _sd or _sem",
+                    column=yerr,
+                )
+            inferred["column"] = yerr
+            data["uncertainty"] = inferred
     return {
         "schema": "scientificfigure.visualspec.v2",
         "figure": {"id": "figure", "size_mm": [90, 60], "dpi": 200, "crop_mode": "fixed_canvas", "background": "white"},
@@ -192,7 +210,7 @@ def _prepare_visualspec(args: argparse.Namespace, project: Path) -> tuple[Path, 
             raise WorkflowError("missing_input", "Input data file does not exist", path=str(source))
         copied = _safe_copy(source, project / "input" / source.name, project)
         ref = relative(copied, project)
-        spec = _build_visualspec(copied, ref, x=args.x, y=args.y, yerr=args.yerr, plot_type=args.plot_type)
+        spec = _build_visualspec(copied, ref, x=args.x, y=args.y, yerr=args.yerr, uncertainty_semantics=args.uncertainty_semantics, plot_type=args.plot_type)
         hashes = {ref: sha256_file(copied)}
     else:
         source_spec = args.spec.resolve()
@@ -369,6 +387,7 @@ def _run_lightweight(args: argparse.Namespace, plan: Any, project: Path, started
         profile=plan.selected_profile,
         plot_kinds=_plot_kinds(spec),
         preview_only=(args.claim == "preview"),
+        delivery_vector_formats=(spec.get("delivery") or {}).get("vector_formats"),
     )
     if "png" not in selection.formats:
         raise WorkflowError("png_required", "quick and standard profiles require PNG for canvas safety")
@@ -807,6 +826,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--x")
     run_parser.add_argument("--y")
     run_parser.add_argument("--yerr")
+    run_parser.add_argument("--uncertainty-semantics", help="Explicit uncertainty definition for --yerr, for example 'standard deviation'.")
     run_parser.add_argument("--plot-type", choices=("line", "scatter", "errorbar"))
     run_parser.add_argument("--claim", choices=CLAIMS)
     run_parser.add_argument("--enable-data-swap", action="store_true")

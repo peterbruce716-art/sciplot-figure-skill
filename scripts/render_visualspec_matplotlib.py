@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,10 @@ from visualspec import load_json, make_manifest, manifest_overall_status, requir
 
 from portable_paths import portable_path
 from audit_semantics import extract_matplotlib_semantics
+
+
+_CJK_PATTERN = re.compile(r"[\u3400-\u9fff\uf900-\ufaff]")
+_CJK_FALLBACKS = ("Noto Sans CJK SC", "Source Han Sans SC", "SimHei", "Microsoft YaHei", "Arial Unicode MS")
 
 
 def _series(data: dict[str, Any], key: str, *, base_dir: Path | None = None) -> list[float]:
@@ -260,12 +265,26 @@ def _draw_annotation(ax: Any, annotation: dict[str, Any]) -> None:
         raise ValueError(f"unsupported annotation type: {atype}")
 
 
+def _visible_text(spec: dict[str, Any]) -> list[str]:
+    values: list[str] = []
+    for panel in spec.get("panels", []):
+        for axis in (panel.get("axes") or {}).values():
+            if isinstance(axis, dict) and isinstance(axis.get("label"), str):
+                values.append(axis["label"])
+        values.extend(str(plot["label"]) for plot in panel.get("plots", []) if plot.get("label") is not None)
+        values.extend(str(annotation["text"]) for annotation in panel.get("annotations", []) if annotation.get("type") == "text" and annotation.get("text") is not None)
+    return values
+
+
 def _lock_rcparams(spec: dict[str, Any]) -> None:
     os.environ.setdefault("SOURCE_DATE_EPOCH", "0")
     theme = spec.get("theme") or {}
     font = theme.get("font") or {}
+    cjk_required = any(_CJK_PATTERN.search(value) for value in _visible_text(spec))
     candidates = font.get("family_candidates") or [font.get("family"), "Liberation Sans", "DejaVu Sans", "STIXGeneral"]
-    candidates = [item for item in candidates if item]
+    candidates = [str(item).strip() for item in candidates if isinstance(item, str) and item.strip()]
+    if cjk_required:
+        candidates.extend(item for item in _CJK_FALLBACKS if item not in candidates)
     available: list[str] = []
     for candidate in candidates:
         try:
@@ -273,6 +292,8 @@ def _lock_rcparams(spec: dict[str, Any]) -> None:
             available.append(candidate)
         except Exception:
             continue
+    if cjk_required and not any(candidate in _CJK_FALLBACKS for candidate in available):
+        raise ValueError("cjk_font_unresolved: a visible CJK label requires a resolvable CJK font")
     if not available:
         available = ["DejaVu Sans"]
     resolved = font_manager.FontProperties(family=available).get_name()
@@ -289,7 +310,23 @@ def _lock_rcparams(spec: dict[str, Any]) -> None:
             "savefig.pad_inches": 0,
         }
     )
-    spec.setdefault("_resolved_runtime", {})["font"] = resolved
+    runtime = spec.setdefault("_resolved_runtime", {})
+    runtime["font"] = resolved
+    runtime["font_candidates"] = available
+    runtime["cjk_required"] = cjk_required
+
+
+def _minimum_font_size(fig: Any, spec: dict[str, Any]) -> dict[str, float] | None:
+    policy = spec.get("qa_policy") or {}
+    minimum = policy.get("minimum_font_size_pt") if isinstance(policy, dict) else None
+    if minimum is None:
+        return None
+    threshold = float(minimum)
+    sizes = [float(text.get_fontsize()) for text in fig.findobj(match=lambda item: hasattr(item, "get_fontsize")) if text.get_text()]
+    observed = min(sizes) if sizes else threshold
+    if observed + 1e-9 < threshold:
+        raise ValueError(f"minimum_font_size_violation: observed {observed:g} pt is below required {threshold:g} pt")
+    return {"required_pt": threshold, "observed_min_pt": observed}
 
 
 def render_visualspec(
@@ -320,6 +357,9 @@ def render_visualspec(
     fig = plt.figure(figsize=(width_mm / 25.4, height_mm / 25.4), dpi=dpi, facecolor=figure_cfg.get("background", "white"))
     for panel in spec["panels"]:
         ax = fig.add_axes(panel["bbox_normalized"])
+        palette = ((spec.get("theme") or {}).get("colors") or {}).get("palette")
+        if isinstance(palette, list) and palette:
+            ax.set_prop_cycle(color=[str(color) for color in palette])
         ax._visualspec_panel_id = str(panel.get("id", "panel"))
         _apply_axes(ax, panel)
         for plot_index, plot in enumerate(panel.get("plots", [])):
@@ -328,6 +368,7 @@ def render_visualspec(
             _draw_annotation(ax, annotation)
         if any(plot.get("label") for plot in panel.get("plots", [])) or any(group.get("label") for plot in panel.get("plots", []) for group in (plot.get("data") or {}).get("groups", [])):
             _apply_legend(ax, panel)
+    font_size_gate = _minimum_font_size(fig, spec)
     png = output_dir / f"{basename}.png"
     svg = output_dir / f"{basename}.svg"
     pdf = output_dir / f"{basename}.pdf"
@@ -396,7 +437,11 @@ def render_visualspec(
             "per_figure_scripts": per_figure_scripts,
             "backend": "python_matplotlib",
             "crop_mode": crop_mode,
-            "resolved_fonts": {"default": spec.get("_resolved_runtime", {}).get("font", "unknown")},
+            "resolved_fonts": {
+                "default": spec.get("_resolved_runtime", {}).get("font", "unknown"),
+                "delivery": {"cjk_required": bool(spec.get("_resolved_runtime", {}).get("cjk_required", False)), "candidates": spec.get("_resolved_runtime", {}).get("font_candidates", [])},
+            },
+            "publication_readiness": {"minimum_font_size": font_size_gate} if font_size_gate else {},
         }
     )
     if write_support_files:

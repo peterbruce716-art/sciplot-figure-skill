@@ -37,6 +37,7 @@ def resolve_outputs(
     plot_kinds: set[str],
     preview_only: bool = False,
     pdf_trace: bool = False,
+    delivery_vector_formats: object | None = None,
 ) -> OutputSelection:
     requested = requested.lower()
     if requested != "auto":
@@ -46,9 +47,14 @@ def resolve_outputs(
         return OutputSelection(requested="auto", formats=("png", "pdf"), reason="PDF trace preserves raster evidence and the PDF contract")
     if preview_only:
         return OutputSelection(requested="auto", formats=("png",), reason="Preview-only output")
+    preferred_vector = tuple(
+        dict.fromkeys(str(item).lower() for item in (delivery_vector_formats or []) if str(item).lower() in {"svg", "pdf"})
+    )
+    if delivery_vector_formats is not None and not preferred_vector:
+        raise ValueError("delivery.vector_formats must contain at least one supported vector format")
     raster_dominant = bool(plot_kinds) and plot_kinds.issubset(RASTER_KINDS)
     if raster_dominant:
-        formats = ("png",) if profile == "quick" else ("png", "pdf")
+        formats = ("png",) if profile == "quick" else (("png", *preferred_vector) if preferred_vector else ("png", "pdf"))
         return OutputSelection(requested="auto", formats=formats, reason="Raster-dominant scientific image")
-    formats = ("png", "svg") if profile == "quick" else ("png", "svg", "pdf")
-    return OutputSelection(requested="auto", formats=formats, reason="Semantic vector-compatible plot")
+    formats = ("png", *preferred_vector) if preferred_vector else (("png", "svg") if profile == "quick" else ("png", "svg", "pdf"))
+    return OutputSelection(requested="auto", formats=formats, reason="Semantic vector-compatible plot" if not preferred_vector else "VisualSpec delivery vector formats")

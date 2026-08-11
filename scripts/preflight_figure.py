@@ -39,6 +39,12 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _pixels(image: Any) -> Any:
+    """Use the current Pillow iterator while retaining support for older releases."""
+    getter = getattr(image, "get_flattened_data", None)
+    return getter() if callable(getter) else image.getdata()
+
+
 def preflight_png(path: Path) -> dict[str, Any]:
     try:
         from PIL import Image
@@ -47,7 +53,7 @@ def preflight_png(path: Path) -> dict[str, Any]:
     with Image.open(path) as image:
         rgb = image.convert("RGB")
         width, height = rgb.size
-        ink_pixels = sum(1 for red, green, blue in rgb.getdata() if min(red, green, blue) < 245)
+        ink_pixels = sum(1 for red, green, blue in _pixels(rgb) if min(red, green, blue) < 245)
     report = inspect_raster(width, height, ink_pixels)
     report["input"] = {"path": str(path), "sha256": _file_sha256(path)}
     return report

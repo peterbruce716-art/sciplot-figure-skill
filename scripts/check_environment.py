@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+from importlib.metadata import PackageNotFoundError, version
 import json
 import shutil
 import sys
@@ -12,10 +13,14 @@ from matplotlib import font_manager
 
 def module_version(name: str) -> str | None:
     try:
-        module = importlib.import_module(name)
+        importlib.import_module(name)
     except Exception:
         return None
-    return str(getattr(module, "__version__", "installed"))
+    distribution = {"PIL": "Pillow", "skimage": "scikit-image"}.get(name, name)
+    try:
+        return version(distribution)
+    except PackageNotFoundError:
+        return "installed"
 
 
 def font_available(name: str) -> bool:

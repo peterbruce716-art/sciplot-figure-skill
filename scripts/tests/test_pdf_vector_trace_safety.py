@@ -65,7 +65,7 @@ class EdgeInkReportTests(unittest.TestCase):
         self.assertEqual(0, report["edge_ink_pixels"])
 
     def test_full_bleed_attention_does_not_downgrade_trace_status(self) -> None:
-        import fitz
+        import pymupdf as fitz
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -172,6 +172,18 @@ def validate_manifest(manifest: dict[str, Any], *, schema_path: Path | None = No
                 issues.append(_issue("anchor_side", f"invalid {field} side", element_id=element_id))
 
     completeness = manifest.get("manifest_completeness_status")
+    required_text = (manifest.get("visible_content") or {}).get("required_text", [])
+    if completeness == "complete" and (not isinstance(required_text, list) or not required_text):
+        issues.append(_issue("visible_content_required", "complete manifests require a non-empty visible_content.required_text ledger"))
+    if isinstance(required_text, list):
+        declared_text = {
+            str((item.get("text") or {}).get("content", "")).strip()
+            for item in elements
+            if isinstance(item, dict) and item.get("primitive") == "textbox"
+        }
+        for content in required_text:
+            if isinstance(content, str) and content.strip() and content.strip() not in declared_text:
+                issues.append(_issue("required_text_missing", f"required visible text is not declared: {content}"))
     if completeness == "incomplete":
         issues.append(_issue("manifest_incomplete", "final rendering is blocked while manifest is incomplete"))
     elif completeness == "complete_with_warnings":
@@ -591,7 +603,20 @@ def render_manifest(manifest: dict[str, Any], output: Path, *, stage: str, asset
         image.convert("RGB").save(output, format="PNG")
     else:
         raise ValueError("render_manifest currently writes PNG; use export_vector_manifest for SVG/PDF")
-    return {"stage": stage, "output": output.as_posix(), "canvas_px": [width, height], "element_count": len(elements), "status": "pass"}
+    return {"stage": stage, "output": output.as_posix(), "canvas_px": [width, height], "element_count": len(elements), "visible_content_completeness": _visible_text_completeness(manifest), "status": "pass"}
+
+
+def _visible_text_completeness(manifest: dict[str, Any]) -> dict[str, Any]:
+    expected = list((manifest.get("visible_content") or {}).get("required_text") or [])
+    declared = [str((element.get("text") or {}).get("content", "")) for element in manifest.get("elements", []) if str((element.get("text") or {}).get("content", ""))]
+    missing = [text for text in expected if text not in declared]
+    return {
+        "expected_text_count": len(expected),
+        "declared_text_count": len(declared),
+        "rendered_text_count": len(declared),
+        "missing_text_ids": missing,
+        "status": "pass" if not missing else "failed",
+    }
 
 
 def export_vector_manifest(manifest: dict[str, Any], output: Path, *, assets_dir: Path | None = None) -> dict[str, Any]:
@@ -651,7 +676,7 @@ def export_vector_manifest(manifest: dict[str, Any], output: Path, *, assets_dir
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, dpi=100, transparent=False, metadata={"Creator": "SciPlot object reconstruction"})
     plt.close(fig)
-    return {"output": output.as_posix(), "status": "pass"}
+    return {"output": output.as_posix(), "visible_content_completeness": _visible_text_completeness(manifest), "status": "pass"}
 
 
 def build_object_masks(manifest: dict[str, Any], masks_dir: Path, *, id_map_path: Path | None = None) -> dict[str, Any]:

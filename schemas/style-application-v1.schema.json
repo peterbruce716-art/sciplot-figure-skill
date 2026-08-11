@@ -14,6 +14,6 @@
     "unsupported_keys": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "applied": {"type": "object", "additionalProperties": true},
     "visualspec_hash_before": {"type": ["string", "null"]},
-    "status": {"enum": ["applied", "no_compatible_settings"]}
+    "status": {"enum": ["applied", "partial", "no_compatible_settings"]}
   }
 }

@@ -13,6 +13,7 @@
     "scope": {"type": "string"},
     "settings": {"type": "object", "additionalProperties": true},
     "user_overrides": {"type": "object", "additionalProperties": true},
-    "disclaimer": {"type": "string"}
+    "disclaimer": {"type": "string"},
+    "source_profile_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
   }
 }

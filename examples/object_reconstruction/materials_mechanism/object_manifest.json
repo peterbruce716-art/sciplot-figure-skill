@@ -12,6 +12,13 @@
     "origin": "top_left"
   },
   "manifest_completeness_status": "complete",
+  "visible_content": {
+    "required_text": [
+      "Deformation",
+      "Subgrain rotation",
+      "HAGB increase"
+    ]
+  },
   "elements": [
     {
       "id": "step-1",
@@ -153,6 +160,84 @@
       },
       "routing": "direct",
       "arrowhead": "triangle"
+    },
+    {
+      "id": "label-step-1",
+      "semantic_role": "annotation_text",
+      "primitive": "textbox",
+      "bucket": "editable_vector",
+      "bbox_px": [
+        65,
+        157,
+        120,
+        28
+      ],
+      "bbox_norm": [
+        0.1015625,
+        0.4361111111111111,
+        0.1875,
+        0.07777777777777778
+      ],
+      "z_order": 6,
+      "provenance": "generated",
+      "confidence": 1.0,
+      "text": {
+        "content": "Deformation",
+        "font_size_pt": 10,
+        "color": "#111111"
+      }
+    },
+    {
+      "id": "label-step-2",
+      "semantic_role": "annotation_text",
+      "primitive": "textbox",
+      "bucket": "editable_vector",
+      "bbox_px": [
+        255,
+        157,
+        130,
+        28
+      ],
+      "bbox_norm": [
+        0.3984375,
+        0.4361111111111111,
+        0.203125,
+        0.07777777777777778
+      ],
+      "z_order": 7,
+      "provenance": "generated",
+      "confidence": 1.0,
+      "text": {
+        "content": "Subgrain rotation",
+        "font_size_pt": 10,
+        "color": "#111111"
+      }
+    },
+    {
+      "id": "label-step-3",
+      "semantic_role": "annotation_text",
+      "primitive": "textbox",
+      "bucket": "editable_vector",
+      "bbox_px": [
+        455,
+        157,
+        120,
+        28
+      ],
+      "bbox_norm": [
+        0.7109375,
+        0.4361111111111111,
+        0.1875,
+        0.07777777777777778
+      ],
+      "z_order": 8,
+      "provenance": "generated",
+      "confidence": 1.0,
+      "text": {
+        "content": "HAGB increase",
+        "font_size_pt": 10,
+        "color": "#111111"
+      }
     }
   ]
 }

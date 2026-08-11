@@ -172,13 +172,10 @@ def _validate_pdf_clips(pdf: Path, figure_clips: dict[str, dict[str, Any]]) -> N
     """Fail closed when declared page/clip geometry cannot exist in the source PDF."""
 
     try:
-        import pymupdf as fitz
+        import pymupdf
     except ImportError as exc:  # pragma: no cover - environment dependent
-        try:
-            import fitz
-        except ImportError:
-            raise RuntimeError("E130_PDF_VALIDATION_UNAVAILABLE: PyMuPDF is required to validate PDF clips") from exc
-    document = fitz.open(pdf)
+        raise RuntimeError("E130_PDF_VALIDATION_UNAVAILABLE: PyMuPDF is required to validate PDF clips") from exc
+    document = pymupdf.open(pdf)
     try:
         for figure_id, config in figure_clips.items():
             page_number = int(config["page"])

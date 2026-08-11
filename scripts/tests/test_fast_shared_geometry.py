@@ -38,7 +38,7 @@ class SharedGeometryTests(ScientificFigureReproductionTestBase):
 
     def test_pdf_vector_trace_exports_shared_path_audit(self) -> None:
         try:
-            import fitz
+            import pymupdf as fitz
         except ImportError:
             self.skipTest("PyMuPDF is not installed")
         tracer = load_module("pdf_vector_trace", SCRIPTS / "pdf_vector_trace.py")

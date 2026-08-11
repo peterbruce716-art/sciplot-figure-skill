@@ -86,7 +86,7 @@ class FreshPdfBatchTests(unittest.TestCase):
 
     def test_rejects_page_out_of_range_before_tracing(self) -> None:
         module = load_module()
-        import fitz
+        import pymupdf as fitz
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -106,7 +106,7 @@ class FreshPdfBatchTests(unittest.TestCase):
 
     def test_rejects_clip_outside_page_bounds_before_tracing(self) -> None:
         module = load_module()
-        import fitz
+        import pymupdf as fitz
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -127,7 +127,7 @@ class FreshPdfBatchTests(unittest.TestCase):
     def test_trace_manifest_records_fresh_identity(self) -> None:
         module = load_module()
         try:
-            import fitz
+            import pymupdf as fitz
         except ImportError:
             self.skipTest("PyMuPDF is not installed")
         with tempfile.TemporaryDirectory() as tmp:
@@ -169,7 +169,7 @@ class FreshPdfBatchTests(unittest.TestCase):
     def test_batch_writes_preflight_report_for_each_trace_png(self) -> None:
         module = load_module()
         try:
-            import fitz
+            import pymupdf as fitz
         except ImportError:
             self.skipTest("PyMuPDF is not installed")
         with tempfile.TemporaryDirectory() as tmp:
@@ -197,7 +197,7 @@ class FreshPdfBatchTests(unittest.TestCase):
     def test_batch_rejects_failed_preflight(self) -> None:
         module = load_module()
         try:
-            import fitz
+            import pymupdf as fitz
         except ImportError:
             self.skipTest("PyMuPDF is not installed")
         with tempfile.TemporaryDirectory() as tmp:

@@ -6,7 +6,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from advisor_common import deep_merge, load_json, validate_payload, write_json
+from advisor_common import deep_merge, load_json, sha256_file, validate_payload, write_json
 
 
 def resolve_style(profile: str, *, override: dict[str, Any] | None = None, root: Path | None = None) -> dict[str, Any]:
@@ -24,6 +24,7 @@ def resolve_style(profile: str, *, override: dict[str, Any] | None = None, root:
         "checked_date": str(merged.get("checked_date", date.today().isoformat())),
         "scope": str(merged.get("scope", "")),
         "settings": dict(merged.get("settings", {})),
+        "source_profile_sha256": sha256_file(path),
         "user_overrides": override or {},
         "disclaimer": str(merged.get("disclaimer", "Verify current venue requirements.")),
     }

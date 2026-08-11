@@ -2,9 +2,25 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 from advisor_common import load_json, sha256_file, validate_payload, write_json
+
+
+PALETTES = {
+    "okabe_ito": ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"],
+}
+
+
+def _resolve_palette(value: object) -> tuple[str | None, list[str]]:
+    if isinstance(value, str):
+        if value not in PALETTES:
+            raise ValueError(f"unknown named palette: {value}")
+        return value, list(PALETTES[value])
+    if isinstance(value, list) and value and all(isinstance(color, str) and re.fullmatch(r"#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?", color) for color in value):
+        return None, list(value)
+    raise ValueError("palette must be a registered name or a non-empty list of hexadecimal colors")
 
 
 def apply_style(visualspec: dict, profile: dict) -> tuple[dict, dict]:
@@ -62,9 +78,34 @@ def apply_style(visualspec: dict, profile: dict) -> tuple[dict, dict]:
             applied[key] = float(settings[key])
             applied_keys.append(key)
     if "palette" in settings:
-        theme["colors"] = {"palette": list(settings["palette"])}
-        applied["palette"] = list(settings["palette"])
+        palette_name, resolved_palette = _resolve_palette(settings["palette"])
+        colors = dict(theme.get("colors", {}))
+        colors["palette"] = resolved_palette
+        if palette_name is not None:
+            colors["palette_name"] = palette_name
+        theme["colors"] = colors
+        applied["palette"] = {"palette_name": palette_name, "palette": resolved_palette}
         applied_keys.append("palette")
+    if "column_width_mm" in settings:
+        current_size = list(figure.get("size_mm", [90.0, 60.0]))
+        current_size[0] = float(settings["column_width_mm"])
+        figure["size_mm"] = current_size
+        applied["column_width_mm"] = current_size[0]
+        applied_keys.append("column_width_mm")
+    if "double_column_width_mm" in settings:
+        delivery = visualspec.setdefault("delivery", {})
+        delivery["double_column_width_mm"] = float(settings["double_column_width_mm"])
+        applied["double_column_width_mm"] = float(settings["double_column_width_mm"])
+        applied_keys.append("double_column_width_mm")
+    if "minimum_font_size_pt" in settings:
+        qa_policy["minimum_font_size_pt"] = float(settings["minimum_font_size_pt"])
+        applied["minimum_font_size_pt"] = float(settings["minimum_font_size_pt"])
+        applied_keys.append("minimum_font_size_pt")
+    if "vector_formats" in settings:
+        delivery = visualspec.setdefault("delivery", {})
+        delivery["vector_formats"] = list(settings["vector_formats"])
+        applied["vector_formats"] = list(settings["vector_formats"])
+        applied_keys.append("vector_formats")
     if "background" in settings:
         figure["background"] = settings["background"]
         applied["background"] = settings["background"]
@@ -96,13 +137,13 @@ def apply_style(visualspec: dict, profile: dict) -> tuple[dict, dict]:
         "schema": "scientificfigure.style_application.v1",
         "schema_version": "1.0",
         "profile_id": profile.get("profile_id"),
-        "source_profile_sha256": profile.get("source_sha256"),
+        "source_profile_sha256": profile.get("source_profile_sha256") or profile.get("source_sha256"),
         "applied_keys": sorted(set(applied_keys)),
         "compatibility_mapped_keys": compatibility_mapped_keys,
         "unsupported_keys": unsupported_keys,
         "applied": applied,
         "visualspec_hash_before": None,
-        "status": "applied" if applied else "no_compatible_settings",
+        "status": "applied" if applied and not unsupported_keys else ("partial" if applied else "no_compatible_settings"),
     }
     return visualspec, report
 

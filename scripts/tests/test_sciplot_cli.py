@@ -8,6 +8,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import matplotlib
+
+matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -78,10 +82,76 @@ class SciPlotCliTests(unittest.TestCase):
             report = json.loads((project / "qa" / "report.json").read_text(encoding="utf-8"))
             self.assertEqual("pass", report["semantic_audit"]["overall"])
             self.assertEqual("pass", report["vector_validation"]["status"])
+
+    def test_standard_errorbar_accepts_auditable_sd_name_inference(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "trend.csv"
+            with source.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.writer(handle)
+                writer.writerow(["temperature", "response", "response_sd"])
+                writer.writerows([[300, 10.0, 0.2], [350, 12.0, 0.3], [400, 15.0, 0.4]])
+            project = root / "standard_errorbar"
+            completed, payload = self._run(
+                "run", "--input", str(source), "--profile", "standard", "--out-dir", str(project),
+                "--x", "temperature", "--y", "response", "--yerr", "response_sd", "--plot-type", "errorbar",
+            )
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            self.assertEqual("ok", payload["status"])
+            report = json.loads((project / "qa" / "report.json").read_text(encoding="utf-8"))
+            self.assertEqual("pass", report["mapping_validation"]["status"])
             self.assertEqual("not_applicable", report["plot_geometry_safety"]["status"])
             self.assertEqual("not_applicable", report["boxed_text_safety"]["status"])
             self.assertEqual("pass", report["manifest_validation"]["status"])
             self.assertNotIn("data_swap_template", report["enabled_gates"])
+
+    def test_standard_errorbar_accepts_explicit_semantics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "trend.csv"
+            source.write_text("temperature,response,spread\n300,10,0.2\n350,12,0.3\n", encoding="utf-8")
+            completed, payload = self._run("run", "--input", str(source), "--profile", "standard", "--out-dir", str(root / "out"), "--x", "temperature", "--y", "response", "--yerr", "spread", "--plot-type", "errorbar", "--uncertainty-semantics", "standard deviation")
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            self.assertEqual("ok", payload["status"])
+
+    def test_standard_errorbar_rejects_unknown_semantics_before_render(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "trend.csv"
+            source.write_text("temperature,response,spread\n300,10,0.2\n", encoding="utf-8")
+            completed, payload = self._run("run", "--input", str(source), "--profile", "standard", "--out-dir", str(root / "out"), "--x", "temperature", "--y", "response", "--yerr", "spread", "--plot-type", "errorbar")
+            self.assertNotEqual(0, completed.returncode)
+            self.assertEqual("uncertainty_definition_unknown", payload["failure_type"])
+            self.assertFalse((root / "out" / "output").exists())
+
+    def test_standard_errorbar_rejects_negative_or_measurement_uncertainty(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            negative = root / "negative.csv"
+            negative.write_text("x,y,y_sd\n1,2,-0.1\n", encoding="utf-8")
+            completed, payload = self._run("run", "--input", str(negative), "--profile", "standard", "--out-dir", str(root / "negative"), "--x", "x", "--y", "y", "--yerr", "y_sd", "--plot-type", "errorbar")
+            self.assertNotEqual(0, completed.returncode)
+            self.assertEqual("uncertainty_values_invalid", payload["failure_type"])
+            good = root / "good.csv"
+            good.write_text("x,y\n1,2\n", encoding="utf-8")
+            completed, payload = self._run("run", "--input", str(good), "--profile", "standard", "--out-dir", str(root / "same"), "--x", "x", "--y", "y", "--yerr", "y", "--plot-type", "errorbar")
+            self.assertNotEqual(0, completed.returncode)
+            self.assertEqual("uncertainty_same_as_measurement", payload["failure_type"])
+
+    def test_visualspec_delivery_vector_formats_control_auto_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = root / "spec.json"
+            spec.write_text(json.dumps({
+                "schema": "scientificfigure.visualspec.v2", "figure": {"size_mm": [50, 40], "dpi": 100}, "qa_policy": {"canvas_safety": {"enabled": False}},
+                "delivery": {"vector_formats": ["pdf"]},
+                "panels": [{"id": "A", "bbox_normalized": [0.15, 0.15, 0.75, 0.75], "axes": {"x": {}, "y": {}}, "plots": [{"type": "line", "data": {"x": [0, 1], "y": [0, 1]}, "style": {}}], "annotations": []}],
+            }), encoding="utf-8")
+            project = root / "out"
+            completed, payload = self._run("run", "--spec", str(spec), "--profile", "standard", "--out-dir", str(project), "--outputs", "auto")
+            self.assertEqual(0, completed.returncode, completed.stderr)
+            self.assertEqual(["pdf", "png"], sorted(payload["outputs"].keys()))
+            self.assertFalse((project / "output" / "figure.svg").exists())
 
     def test_validate_reports_structured_failure_for_missing_project(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

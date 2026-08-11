@@ -10,8 +10,23 @@
     "source": {"type": "object", "additionalProperties": false, "required": ["path", "width_px", "height_px", "sha256"], "properties": {"path": {"type": "string"}, "width_px": {"type": "integer", "minimum": 1}, "height_px": {"type": "integer", "minimum": 1}, "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}},
     "canvas": {"type": "object", "additionalProperties": false, "required": ["coordinate_space", "origin"], "properties": {"coordinate_space": {"const": "source_pixel"}, "origin": {"const": "top_left"}}},
     "manifest_completeness_status": {"enum": ["complete", "complete_with_warnings", "incomplete"]},
+    "visible_content": {"type": "object", "additionalProperties": false, "properties": {"required_text": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}}},
     "elements": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/element"}}
   },
+  "allOf": [
+    {
+      "if": {"properties": {"manifest_completeness_status": {"const": "complete"}}},
+      "then": {
+        "required": ["visible_content"],
+        "properties": {
+          "visible_content": {
+            "required": ["required_text"],
+            "properties": {"required_text": {"minItems": 1}}
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "bbox": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "number"}},
     "anchor": {"type": "object", "additionalProperties": false, "required": ["element_id", "side", "offset"], "properties": {"element_id": {"type": ["string", "null"]}, "side": {"enum": ["left", "right", "top", "bottom", "center", "custom"]}, "offset": {"type": "number", "minimum": 0, "maximum": 1}, "point_px": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}}}},

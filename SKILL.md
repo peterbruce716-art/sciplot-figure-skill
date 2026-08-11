@@ -53,6 +53,7 @@ The pipeline supports `--dry-run`, `--manifest-only`, `--run-geometry-stage`, `-
 - Uncertainty names are recognized only from explicit token or phrase evidence such as `sd`, `sem`, `ci95`, `error_bar`, or their documented equivalents. Ordinary measurement names are never matched by substrings. `--uncertainty <column>` has priority over name inference, and every candidate records its evidence source, matched token, and semantics.
 - A trend receives error bars or bands only when independent values and declared or confirmed semantics support them. Semantics without values fall back to markers or scatter with `uncertainty_values_missing`; inferred names without confirmation do not materialize error bars.
 - Error mappings fail closed for same-source y/yerr or x/xerr, negative or non-numeric values, length mismatch, row-wise measurement copies, missing evidence, and unknown definitions. A reasoned user override must be explicit and auditable; automatic inference cannot create one.
+- The unified `sciplot.py run --yerr` path emits the same uncertainty evidence schema required by semantic validation. Supply `--uncertainty-semantics` for an explicit definition; otherwise only a documented uncertainty-name token such as `_sd` or `_sem` is accepted.
 - Automatic error bands are limited to standard deviation or standard error (computed from repeated groups); confidence intervals must provide explicit lower/upper bounds, and the generic renderer does not silently drop xerr.
 - Physical axes such as temperature are not suspected IDs merely because all values are unique. Identifier names such as sample/specimen IDs remain flagged.
 - `ChartDecision` must be materialized into a `VisualSpec` by `chart_decision_to_visualspec.py`; unsupported mappings fail explicitly instead of silently falling back to a line plot.
@@ -218,6 +219,7 @@ If repeated geometry, color, typography, antialiasing, or legend tuning fails to
 - For R legends and boxed annotations, render the final PNG with a glyph-complete backend such as `ragg::agg_png`, declare each text row in `qa_policy.boxed_text_safety`, and verify the exported pixels at delivery size. A complete surrounding rectangle does not prove that the glyph interior is complete.
 - Prefer semantic objects: curves, bars, contours, heatmaps, text, arrows, regions, and labels.
 - For schematic figures, extract object coordinates and rebuild with vector primitives.
+- A manifest marked `complete` must declare source-visible required labels under `visible_content.required_text`; each must map to a `textbox` object. Missing required text blocks final completeness rather than allowing object QA to pass on boxes and connectors alone.
 - For contour/heatmap figures, prefer source data or extracted color regions over hand-tuned analytic surfaces.
 - If using trace primitives for exact visual matching, state that the result is visually strict but not semantic scientific data reconstruction; pixel trace cannot claim semantic strict pass.
 - Do not use `near_not_strict`; use `semantic_near_pass` or `not_strict`.
