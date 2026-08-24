@@ -16,16 +16,16 @@ def _match(path: Path, pattern: str) -> str | None:
 
 
 def find_versions(root: Path) -> dict[str, str]:
-    """Return canonical release-version declarations only.
+    """Return explicit release-version declarations.
 
-    Narrative files such as README.md, SKILL.md, and CHANGELOG.md may contain
-    historical protocol versions and are intentionally not release-version
-    authorities.
+    README.md is included only through its anchored ``Current version`` line,
+    so unrelated narrative or historical version text is ignored.
     """
     sources = {
         "VERSION": rf"^v?{SEMVER}\s*$",
         "pyproject.toml": rf'^version\s*=\s*["\']{SEMVER}["\']\s*$',
         "agents/openai.yaml": rf'^\s*version:\s*["\']?{SEMVER}["\']?\s*$',
+        "README.md": rf"^Current version:\s+\*\*v?{SEMVER}\*\*\s*$",
     }
     result: dict[str, str] = {}
     for rel, pattern in sources.items():
@@ -39,13 +39,13 @@ def find_versions(root: Path) -> dict[str, str]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Check canonical package version declarations for consistency.")
+    parser = argparse.ArgumentParser(description="Check release-version declarations for consistency.")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
-    parser.add_argument("--expected", help="Require every canonical declaration to match this release version.")
+    parser.add_argument("--expected", help="Require every release declaration to match this version.")
     args = parser.parse_args()
     versions = find_versions(args.root)
     unique = sorted(set(versions.values()))
-    required = {"VERSION", "pyproject.toml", "agents/openai.yaml"}
+    required = {"VERSION", "pyproject.toml", "agents/openai.yaml", "README.md"}
     complete = set(versions) == required
     consistent = len(unique) == 1
     expected_match = args.expected is None or unique == [args.expected]
