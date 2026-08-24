@@ -26,7 +26,7 @@ Python 3.14 is the supported runtime. Do not read every reference up front; load
 7. Escalate only when the requested claim needs stronger evidence.
 8. Report the strongest status actually supported, plus material limitations.
 
-For complex figures, keep one runnable script per figure or a batch runner with clear per-figure functions and output paths.
+For each reproduced figure, keep a dedicated runnable script, or use a batch runner with clear per-figure functions and output paths.
 
 ## Representation Selection
 
