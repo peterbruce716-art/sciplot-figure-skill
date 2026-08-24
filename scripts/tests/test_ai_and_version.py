@@ -18,7 +18,7 @@ from preflight_figure import inspect_raster
 class AIAndVersionTest(unittest.TestCase):
     def test_local_version_declarations_are_consistent(self):
         versions = find_versions(ROOT)
-        self.assertEqual(set(versions), {"VERSION", "pyproject.toml", "agents/openai.yaml"})
+        self.assertEqual(set(versions), {"VERSION", "pyproject.toml", "agents/openai.yaml", "README.md"})
         self.assertEqual(set(versions.values()), {"2.10.0"})
 
     def test_policy_context_uses_render_objects(self):
