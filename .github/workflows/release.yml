@@ -1,0 +1,61 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - VERSION
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt
+
+      - name: Resolve version
+        run: |
+          VERSION="$(tr -d '\r\n' < VERSION)"
+          test -n "$VERSION"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Run release acceptance
+        run: python scripts/release_acceptance.py --json-out release_acceptance.json
+
+      - name: Build and validate package
+        run: |
+          mkdir -p dist
+          python scripts/build_skill_package.py --root . --out "dist/sciplot-figure-skill-v${VERSION}.zip"
+          python scripts/validate_skill_package.py --root . --zip "dist/sciplot-figure-skill-v${VERSION}.zip" --json-out dist/package_validation.json
+          sha256sum "dist/sciplot-figure-skill-v${VERSION}.zip" > "dist/sciplot-figure-skill-v${VERSION}.zip.sha256"
+          test -f "docs/releases/v${VERSION}.md"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v${VERSION}" >/dev/null 2>&1; then
+            echo "Release v${VERSION} already exists; refusing to overwrite it."
+            exit 1
+          fi
+          gh release create "v${VERSION}" \
+            "dist/sciplot-figure-skill-v${VERSION}.zip" \
+            "dist/sciplot-figure-skill-v${VERSION}.zip.sha256" \
+            release_acceptance.json \
+            --target "$GITHUB_SHA" \
+            --title "SciPlot Figure Skill v${VERSION}" \
+            --notes-file "docs/releases/v${VERSION}.md"
