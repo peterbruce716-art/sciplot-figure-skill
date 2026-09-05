@@ -70,6 +70,9 @@ def check_svg(path: Path, *, representation: str, project_root: Path | None = No
     except Exception as exc:
         result["failure_reasons"].append(f"svg_parse_error:{exc}")
         return result
+    if root.tag not in {"svg", "{http://www.w3.org/2000/svg}svg"}:
+        result["failure_reasons"].append("svg_root_invalid")
+        return result
     result["parseable"] = True
     canvas_width, canvas_height = _svg_canvas_size(root)
     raster_coverage = 0.0
@@ -177,8 +180,6 @@ def check_vector_outputs(svg_path: Path, pdf_path: Path, *, representation: str 
     svg = check_svg(svg_path, representation=representation, project_root=project_root)
     pdf = check_pdf(pdf_path, representation=representation, project_root=project_root)
     status = "pass" if svg["status"] == "pass" and pdf["status"] == "pass" else "failed"
-    if representation in {"semantic_raster", "mixed"} and svg["parseable"] and pdf["parseable"]:
-        status = "pass" if not svg["external_resources"] else "failed"
     return {
         "schema": "scientificfigure.vector_validation.v1",
         "status": status,
