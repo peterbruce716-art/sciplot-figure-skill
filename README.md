@@ -248,7 +248,7 @@ sciplot-figure-skill/
 
 ## Version
 
-Current version: **v2.10.0**
+Current version: **v2.10.1**
 
 ### Reusing a renderer with new data
 

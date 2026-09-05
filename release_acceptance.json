@@ -4,11 +4,15 @@
     "bundle_verify": "pass",
     "data_swap_hardening": "pass",
     "execution_profiles": "pass",
+    "object_reconstruction": "pass",
     "official_example": "semantic_strict_pass",
+    "pdf_trace": "pass",
     "portability": "pass",
     "render_baseline": "pass",
     "root_package": "pass",
     "run_reproduction": "pass",
+    "semantic_plot_matrix": "pass",
+    "style_and_cjk_delivery": "pass",
     "unified_cli": "pass",
     "version_consistency": "pass",
     "zip_package": "pass"
@@ -34,6 +38,16 @@
       "returncode": 0,
       "status": "pass"
     },
+    "object_reconstruction": {
+      "name": "object_reconstruction",
+      "returncode": 0,
+      "status": "pass"
+    },
+    "pdf_trace": {
+      "name": "pdf_trace",
+      "returncode": 0,
+      "status": "pass"
+    },
     "portability": {
       "name": "portability",
       "returncode": 0,
@@ -51,6 +65,16 @@
     },
     "run_reproduction": {
       "name": "run_reproduction",
+      "returncode": 0,
+      "status": "pass"
+    },
+    "semantic_plot_matrix": {
+      "name": "semantic_plot_matrix",
+      "returncode": 0,
+      "status": "pass"
+    },
+    "style_and_cjk_delivery": {
+      "name": "style_and_cjk_delivery",
       "returncode": 0,
       "status": "pass"
     },
@@ -72,5 +96,5 @@
   },
   "schema": "scientificfigure.release_acceptance.v1",
   "status": "pass",
-  "version": "2.9.4"
+  "version": "2.10.1"
 }

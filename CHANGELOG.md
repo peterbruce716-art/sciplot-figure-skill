@@ -1,3 +1,11 @@
+## v2.10.1 Reliability and Package Delivery
+
+- Hardened external CSV/TSV/JSON/NumPy data loading against ambiguous or silently altered measurements.
+- Fixed repeat-render configuration mutation and figure cleanup on failures.
+- Corrected SVG/PDF validation and SVG raster coverage calculations.
+- Excluded release output archives and root-level dist artifacts from skill packages.
+- Added regression coverage without new dependencies; Python 3.14 remains supported.
+
 ## 2026-08-11 v2.9.4 Rendered Figure Preflight and Public Release Updates
 
 - Added a lightweight rendered-PNG preflight gate for canvas size and non-blank output.

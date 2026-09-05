@@ -23,6 +23,8 @@ def build_package(root: Path, output: Path | None = None) -> Path:
     output.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(output, "w", ZIP_DEFLATED) as archive:
         for path in sorted(root.rglob("*")):
+            if path.relative_to(root).parts[0] == "dist" or path.resolve() == output:
+                continue
             if not should_include(path):
                 continue
             relative = path.relative_to(root.parent)
