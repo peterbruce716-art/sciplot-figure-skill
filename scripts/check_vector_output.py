@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
 from portable_paths import portable_path
+
+
+_SVG_NUMBER = r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?"
+_SVG_ABSOLUTE_UNITS = {"": 1.0, "px": 1.0, "in": 96.0, "cm": 96.0 / 2.54, "mm": 96.0 / 25.4, "q": 96.0 / 101.6, "pt": 96.0 / 72.0, "pc": 16.0}
 
 
 def _svg_tag(element: ET.Element) -> str:
@@ -17,36 +22,39 @@ def _svg_tag(element: ET.Element) -> str:
 def _svg_number(value: str | None, reference: float | None = None) -> float | None:
     if value is None:
         return None
-    text = str(value).strip()
-    if text.endswith("%") and reference is not None:
-        try:
-            return float(text[:-1]) * reference / 100.0
-        except ValueError:
-            return None
-    match = re.match(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?", text)
+    match = re.fullmatch(f"({_SVG_NUMBER})([a-zA-Z%]*)", str(value).strip())
     if not match:
         return None
-    return float(match.group(0))
+    number, unit = float(match.group(1)), match.group(2).lower()
+    if unit == "%":
+        resolved = (number / 100.0) * reference if reference is not None else None
+    else:
+        factor = _SVG_ABSOLUTE_UNITS.get(unit)
+        resolved = number * factor if factor is not None else None
+    return resolved if resolved is not None and math.isfinite(resolved) else None
 
 
-def _svg_canvas_size(root: ET.Element) -> tuple[float | None, float | None]:
-    width = _svg_number(root.attrib.get("width"))
-    height = _svg_number(root.attrib.get("height"))
+def _svg_canvas_bounds(root: ET.Element) -> tuple[float, float, float | None, float | None]:
     viewbox = root.attrib.get("viewBox")
-    if (width is None or height is None) and viewbox:
-        parts = [float(item) for item in re.split(r"[\s,]+", viewbox.strip()) if item]
-        if len(parts) == 4:
-            width = width if width is not None else parts[2]
-            height = height if height is not None else parts[3]
-    return width, height
+    if viewbox is not None:
+        tokens = re.split(r"[ \t\r\n]*,[ \t\r\n]*|[ \t\r\n]+", viewbox.strip(" \t\r\n"))
+        if len(tokens) != 4 or not all(re.fullmatch(_SVG_NUMBER, item) for item in tokens):
+            raise ValueError("svg_viewbox_invalid")
+        parts = [float(item) for item in tokens]
+        if not all(math.isfinite(item) for item in parts) or parts[2] <= 0 or parts[3] <= 0:
+            raise ValueError("svg_viewbox_invalid")
+        # Image coordinates use viewBox units, not the physical page dimensions.
+        return parts[0], parts[1], parts[2], parts[3]
+    return 0.0, 0.0, _svg_number(root.attrib.get("width")), _svg_number(root.attrib.get("height"))
 
 
-def _intersect_area(x: float, y: float, width: float, height: float, canvas_width: float, canvas_height: float) -> float:
+def _intersect_ratio(x: float, y: float, width: float, height: float, canvas_width: float, canvas_height: float) -> float:
     left = max(0.0, x)
     top = max(0.0, y)
     right = min(canvas_width, x + width)
     bottom = min(canvas_height, y + height)
-    return max(0.0, right - left) * max(0.0, bottom - top)
+    # Normalize each dimension before multiplying to avoid area under/overflow.
+    return (max(0.0, right - left) / canvas_width) * (max(0.0, bottom - top) / canvas_height)
 
 
 def check_svg(path: Path, *, representation: str, project_root: Path | None = None) -> dict[str, Any]:
@@ -74,8 +82,13 @@ def check_svg(path: Path, *, representation: str, project_root: Path | None = No
         result["failure_reasons"].append("svg_root_invalid")
         return result
     result["parseable"] = True
-    canvas_width, canvas_height = _svg_canvas_size(root)
+    try:
+        canvas_x, canvas_y, canvas_width, canvas_height = _svg_canvas_bounds(root)
+    except ValueError as exc:
+        result["failure_reasons"].append(str(exc))
+        return result
     raster_coverage = 0.0
+    raster_geometry_unknown = False
     for element in root.iter():
         tag = _svg_tag(element)
         if tag == "path":
@@ -91,12 +104,16 @@ def check_svg(path: Path, *, representation: str, project_root: Path | None = No
                 result["external_resources"].append(href)
             image_width = _svg_number(element.attrib.get("width"), canvas_width)
             image_height = _svg_number(element.attrib.get("height"), canvas_height)
-            image_x = _svg_number(element.attrib.get("x"), canvas_width) or 0.0
-            image_y = _svg_number(element.attrib.get("y"), canvas_height) or 0.0
-            if canvas_width and canvas_height and image_width and image_height:
-                raster_coverage += max(0.0, min(1.0, _intersect_area(image_x, image_y, image_width, image_height, canvas_width, canvas_height) / (canvas_width * canvas_height)))
+            image_x = _svg_number(element.attrib.get("x", "0"), canvas_width)
+            image_y = _svg_number(element.attrib.get("y", "0"), canvas_height)
+            if (canvas_width is not None and canvas_width > 0 and canvas_height is not None and canvas_height > 0
+                    and image_width is not None and image_width >= 0 and image_height is not None and image_height >= 0
+                    and image_x is not None and image_y is not None):
+                raster_coverage += _intersect_ratio(image_x - canvas_x, image_y - canvas_y, image_width, image_height, canvas_width, canvas_height)
             elif element.attrib.get("width") == "100%" and element.attrib.get("height") == "100%":
                 raster_coverage = 1.0
+            else:
+                raster_geometry_unknown = True
     result["raster_coverage_ratio"] = round(min(1.0, raster_coverage), 6)
     vector_count = int(result["paths"]) + int(result["lines"]) + int(result["text_elements"])
     if result["external_resources"]:
@@ -105,6 +122,8 @@ def check_svg(path: Path, *, representation: str, project_root: Path | None = No
         result["failure_reasons"].append("semantic_vector_svg_is_raster_only")
     if representation == "semantic_vector" and vector_count == 0:
         result["failure_reasons"].append("semantic_vector_svg_has_no_vector_content")
+    if representation == "semantic_vector" and raster_geometry_unknown:
+        result["failure_reasons"].append("semantic_vector_svg_raster_geometry_unknown")
     if representation == "semantic_vector" and float(result["raster_coverage_ratio"]) > 0.05:
         result["failure_reasons"].append("semantic_vector_svg_raster_coverage_exceeds_0_05")
     result["status"] = "pass" if not result["failure_reasons"] else "failed"

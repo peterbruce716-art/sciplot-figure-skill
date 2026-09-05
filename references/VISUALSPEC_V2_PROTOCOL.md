@@ -41,6 +41,8 @@ For CSV/TSV plot data, set `data.source` and map plot fields to exact column nam
 
 UTF-8 BOM, quoted delimiters/newlines, and blank records are supported. Column-name whitespace is preserved. Explicitly empty cells stay empty strings; the loader does not impute missing measurements. Header-only tables retain their named empty columns, which does not establish that a plot has usable data.
 
+For external JSON/NumPy sources, mapped series must be lists/array columns, not scalar strings, numbers, or objects. JSON object keys must be unique. These checks prevent strings, object keys, or overwritten measurements from becoming plausible plotted data.
+
 ### Plot types
 
 The authoritative capability list lives in `scripts/capabilities.py`.

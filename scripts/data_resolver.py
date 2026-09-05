@@ -49,7 +49,15 @@ def _read_table(path: Path) -> dict[str, list[Any]]:
 
 
 def _read_json(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8-sig"))
+    def unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"{path}: duplicate JSON key {key!r}")
+            result[key] = value
+        return result
+
+    return json.loads(path.read_text(encoding="utf-8-sig"), object_pairs_hook=unique_object)
 
 
 def _read_numpy(path: Path) -> Any:
@@ -90,5 +98,8 @@ def resolve_series(data: dict[str, Any], key: str, *, base_dir: Path | None = No
     mapping = data.get("mapping") or {}
     column = mapping.get(key, key)
     if isinstance(table, dict) and column in table:
-        return list(table[column])
+        value = table[column]
+        if not isinstance(value, list):
+            raise ValueError(f"{data['source']}: mapped column {column!r} for {key} must be a list")
+        return value
     raise KeyError(f"data source does not contain mapped column for {key}: {column}")

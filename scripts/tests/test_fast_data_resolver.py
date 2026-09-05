@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -83,6 +86,38 @@ class TabularDataTests(unittest.TestCase):
     def test_header_only_table_keeps_named_empty_columns(self) -> None:
         path = self.write_table("x,y\n")
         self.assertEqual({"x": [], "y": []}, load_data_source(path))
+
+    def test_duplicate_json_columns_are_rejected_before_data_loss(self) -> None:
+        path = self.write_table('{"x":[0,1],"y":[10,20],"y":[90,80]}', ".json")
+        with self.assertRaisesRegex(ValueError, r"measurements.*duplicate.*y"):
+            load_data_source(path)
+
+    def test_external_json_columns_must_be_lists(self) -> None:
+        for value in ["42", {"3": 100, "4": 200}, 42, 1.5, True, None]:
+            with self.subTest(value=value):
+                path = self.write_table(json.dumps({"time": [0, 1], "response": value}), ".json")
+                data = {"source": str(path), "mapping": {"y": "response"}}
+                with self.assertRaisesRegex(ValueError, r"measurements.*response.*y.*list"):
+                    resolve_series(data, "y")
+
+    def test_scalar_numpy_columns_are_not_split_into_samples(self) -> None:
+        path = self.root / "measurements.npz"
+        for value in ["42", 42]:
+            with self.subTest(value=value):
+                np.savez(path, x=[0, 1], response=np.array(value))
+                with self.assertRaisesRegex(ValueError, r"measurements.*response.*y.*list"):
+                    resolve_series({"source": str(path), "mapping": {"y": "response"}}, "y")
+
+    def test_json_and_numpy_list_columns_preserve_mapping_and_values(self) -> None:
+        table = {"time": [0, 1], "response": [10.0, 20.0]}
+        json_path = self.write_table(json.dumps(table), ".json")
+        npz_path = self.root / "measurements.npz"
+        np.savez(npz_path, **table)
+        for path in [json_path, npz_path]:
+            with self.subTest(path=path):
+                data = {"source": path.name, "mapping": {"x": "time", "y": "response"}}
+                self.assertEqual([0, 1], resolve_series(data, "x", base_dir=self.root))
+                self.assertEqual([10.0, 20.0], resolve_series(data, "y", base_dir=self.root))
 
 
 if __name__ == "__main__":
