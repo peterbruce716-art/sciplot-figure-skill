@@ -22,11 +22,29 @@ def _coerce_number(value: Any) -> Any:
 def _read_table(path: Path) -> dict[str, list[Any]]:
     delimiter = "\t" if path.suffix.lower() == ".tsv" else ","
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
-        reader = csv.DictReader(handle, delimiter=delimiter)
-        columns: dict[str, list[Any]] = {}
-        for row in reader:
-            for key, value in row.items():
-                columns.setdefault(str(key), []).append(_coerce_number(value))
+        reader = csv.reader(handle, delimiter=delimiter, strict=True)
+        try:
+            header = next(reader, None)
+            if not header:
+                raise ValueError(f"{path}: missing table header")
+            columns: dict[str, list[Any]] = {}
+            for index, name in enumerate(header, start=1):
+                if not name.strip():
+                    raise ValueError(f"{path}: empty header at column {index}")
+                if name in columns:
+                    raise ValueError(f"{path}: duplicate header {name!r} at column {index}")
+                columns[name] = []
+            for row in reader:
+                if not row:  # Ignore blank records, not explicitly empty cells.
+                    continue
+                if len(row) != len(header):
+                    raise ValueError(
+                        f"{path}: line {reader.line_num}: expected {len(header)} fields, got {len(row)}"
+                    )
+                for key, value in zip(header, row):
+                    columns[key].append(_coerce_number(value))
+        except csv.Error as exc:
+            raise ValueError(f"{path}: line {reader.line_num}: {exc}") from exc
     return columns
 
 

@@ -35,6 +35,14 @@ Use a project-level Python/R script for complex diagrams, irregular fills, inset
 
 ## Generic Renderer Capability Contract
 
+### External table data
+
+For CSV/TSV plot data, set `data.source` and map plot fields to exact column names in `data.mapping`. Relative source paths resolve from the spec directory. Files must have unique, non-blank headers and every data record must have the same number of fields as the header; malformed input raises a source-located error instead of silently dropping or shifting values. Correct the source or mapping from trustworthy data before rerunning.
+
+UTF-8 BOM, quoted delimiters/newlines, and blank records are supported. Column-name whitespace is preserved. Explicitly empty cells stay empty strings; the loader does not impute missing measurements. Header-only tables retain their named empty columns, which does not establish that a plot has usable data.
+
+### Plot types
+
 The authoritative capability list lives in `scripts/capabilities.py`.
 
 Official generic plot types:
