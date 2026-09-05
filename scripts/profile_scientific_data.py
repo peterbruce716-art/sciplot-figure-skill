@@ -54,7 +54,11 @@ def infer_type(series: pd.Series) -> tuple[str, list[str]]:
             notes.append("numeric_low_cardinality")
             return "ordinal", notes
         return "continuous", notes
-    if pd.api.types.is_object_dtype(series.dtype) or isinstance(series.dtype, pd.CategoricalDtype):
+    if (
+        pd.api.types.is_object_dtype(series.dtype)
+        or pd.api.types.is_string_dtype(series.dtype)
+        or isinstance(series.dtype, pd.CategoricalDtype)
+    ):
         parsed = pd.to_datetime(non_null.astype(str), errors="coerce", format="mixed")
         parse_ratio = float(parsed.notna().mean())
         if parse_ratio >= 0.9:

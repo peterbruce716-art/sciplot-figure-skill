@@ -1,3 +1,7 @@
+## Unreleased
+
+- Recognize pandas string columns when profiling categories, dates, and free text, restoring date-based trend suggestions with pandas 3 defaults and nullable string data.
+
 ## v2.10.1 Reliability and Package Delivery
 
 - Hardened external CSV/TSV/JSON/NumPy data loading against ambiguous or silently altered measurements.
