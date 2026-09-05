@@ -340,6 +340,7 @@ def render_visualspec(
     write_support_files: bool = True,
 ) -> dict[str, Any]:
     require_valid_visualspec(spec)
+    spec = dict(spec)  # Runtime font metadata must not alter the caller's spec.
     formats = tuple(output_formats or ("png", "svg", "pdf"))
     invalid_formats = sorted(set(formats) - {"png", "svg", "pdf"})
     if not formats or invalid_formats:
@@ -355,34 +356,36 @@ def render_visualspec(
     bbox_inches = "tight" if crop_mode == "content_tight" else None
     spec_base = Path(spec_path).resolve().parent if spec_path else None
     fig = plt.figure(figsize=(width_mm / 25.4, height_mm / 25.4), dpi=dpi, facecolor=figure_cfg.get("background", "white"))
-    for panel in spec["panels"]:
-        ax = fig.add_axes(panel["bbox_normalized"])
-        palette = ((spec.get("theme") or {}).get("colors") or {}).get("palette")
-        if isinstance(palette, list) and palette:
-            ax.set_prop_cycle(color=[str(color) for color in palette])
-        ax._visualspec_panel_id = str(panel.get("id", "panel"))
-        _apply_axes(ax, panel)
-        for plot_index, plot in enumerate(panel.get("plots", [])):
-            _draw_plot(ax, plot, base_dir=spec_base, plot_index=plot_index)
-        for annotation in panel.get("annotations", []):
-            _draw_annotation(ax, annotation)
-        if any(plot.get("label") for plot in panel.get("plots", [])) or any(group.get("label") for plot in panel.get("plots", []) for group in (plot.get("data") or {}).get("groups", [])):
-            _apply_legend(ax, panel)
-    font_size_gate = _minimum_font_size(fig, spec)
-    png = output_dir / f"{basename}.png"
-    svg = output_dir / f"{basename}.svg"
-    pdf = output_dir / f"{basename}.pdf"
-    export_paths = {"png": png, "svg": svg, "pdf": pdf}
-    project_root = output_dir.parent if output_dir.name == "outputs" else output_dir
-    metadata = {"Creator": "sciplot-figure-skill", "Date": None}
-    if "png" in formats:
-        fig.savefig(png, dpi=dpi, bbox_inches=bbox_inches, pad_inches=0, metadata={"Software": "sciplot-figure-skill"})
-    if "svg" in formats:
-        fig.savefig(svg, bbox_inches=bbox_inches, pad_inches=0, metadata=metadata)
-    if "pdf" in formats:
-        fig.savefig(pdf, bbox_inches=bbox_inches, pad_inches=0, metadata={"Creator": "sciplot-figure-skill", "Producer": "sciplot-figure-skill", "CreationDate": None, "ModDate": None})
-    semantics = extract_matplotlib_semantics(fig, figure_id=str(figure_cfg.get("id", "figure_1"))) if write_support_files else None
-    plt.close(fig)
+    try:
+        for panel in spec["panels"]:
+            ax = fig.add_axes(panel["bbox_normalized"])
+            palette = ((spec.get("theme") or {}).get("colors") or {}).get("palette")
+            if isinstance(palette, list) and palette:
+                ax.set_prop_cycle(color=[str(color) for color in palette])
+            ax._visualspec_panel_id = str(panel.get("id", "panel"))
+            _apply_axes(ax, panel)
+            for plot_index, plot in enumerate(panel.get("plots", [])):
+                _draw_plot(ax, plot, base_dir=spec_base, plot_index=plot_index)
+            for annotation in panel.get("annotations", []):
+                _draw_annotation(ax, annotation)
+            if any(plot.get("label") for plot in panel.get("plots", [])) or any(group.get("label") for plot in panel.get("plots", []) for group in (plot.get("data") or {}).get("groups", [])):
+                _apply_legend(ax, panel)
+        font_size_gate = _minimum_font_size(fig, spec)
+        png = output_dir / f"{basename}.png"
+        svg = output_dir / f"{basename}.svg"
+        pdf = output_dir / f"{basename}.pdf"
+        export_paths = {"png": png, "svg": svg, "pdf": pdf}
+        project_root = output_dir.parent if output_dir.name == "outputs" else output_dir
+        metadata = {"Creator": "sciplot-figure-skill", "Date": None}
+        if "png" in formats:
+            fig.savefig(png, dpi=dpi, bbox_inches=bbox_inches, pad_inches=0, metadata={"Software": "sciplot-figure-skill"})
+        if "svg" in formats:
+            fig.savefig(svg, bbox_inches=bbox_inches, pad_inches=0, metadata=metadata)
+        if "pdf" in formats:
+            fig.savefig(pdf, bbox_inches=bbox_inches, pad_inches=0, metadata={"Creator": "sciplot-figure-skill", "Producer": "sciplot-figure-skill", "CreationDate": None, "ModDate": None})
+        semantics = extract_matplotlib_semantics(fig, figure_id=str(figure_cfg.get("id", "figure_1"))) if write_support_files else None
+    finally:
+        plt.close(fig)
     if semantics is not None:
         write_json(output_dir / "render_semantics.json", semantics)
     manifest = make_manifest(spec_path=portable_path(spec_path, project_root) or "", output_dir=portable_path(output_dir, project_root) or output_dir.name)
