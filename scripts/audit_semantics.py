@@ -10,6 +10,7 @@ from typing import Any
 
 import numpy as np
 from matplotlib.colors import to_hex
+from matplotlib.container import ErrorbarContainer
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -557,12 +558,15 @@ def extract_matplotlib_semantics(fig: Any, *, figure_id: str = "figure_1") -> di
         plots: list[dict[str, Any]] = []
         errorbar_segments: dict[int, list[Any]] = {}
         errorbar_capsize: dict[int, float] = {}
+        errorbar_line_labels: dict[int, str] = {}
         bar_patches: dict[tuple[str, int], list[Any]] = {}
         bar_patch_labels: dict[int, str] = {}
         for container in getattr(ax, "containers", []):
             label = container.get_label() if hasattr(container, "get_label") else None
             if not label or str(label).startswith("_"):
                 continue
+            if isinstance(container, ErrorbarContainer) and container.lines[0] is not None:
+                errorbar_line_labels[id(container.lines[0])] = str(label)
             for patch in getattr(container, "patches", []):
                 bar_patch_labels[id(patch)] = str(label)
         for collection in ax.collections:
@@ -589,6 +593,9 @@ def extract_matplotlib_semantics(fig: Any, *, figure_id: str = "figure_1") -> di
                 continue
             item = extract_line_semantics(line)
             if item["type"] == "errorbar":
+                if id(line) in errorbar_line_labels:
+                    item["label"] = errorbar_line_labels[id(line)]
+                    item["provenance"]["label"] = "observed"
                 index = int(item.get("plot_index", 0))
                 segments = errorbar_segments.get(index, [])
                 item["yerr_hash"] = _hash_values(_yerr_from_segments(segments))

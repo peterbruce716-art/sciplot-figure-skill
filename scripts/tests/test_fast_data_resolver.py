@@ -21,7 +21,7 @@ class TabularDataTests(unittest.TestCase):
 
     def write_table(self, text: str, suffix: str = ".csv") -> Path:
         path = self.root / f"measurements{suffix}"
-        path.write_text(text, encoding="utf-8")
+        path.write_text(text, encoding="utf-8", newline="")
         return path
 
     def test_duplicate_headers_fail_before_overwriting_values(self) -> None:
@@ -78,6 +78,28 @@ class TabularDataTests(unittest.TestCase):
             {"x": [0.0, 1.0], "y": [10.0, ""], "note": ["", "label"]},
             load_data_source(path),
         )
+
+    def test_quoted_newline_sequences_are_preserved_without_normalization(self) -> None:
+        for suffix, delimiter in [(".csv", ","), (".tsv", "\t")]:
+            for record_newline in ["\n", "\r\n", "\r"]:
+                for embedded_newline in ["\n", "\r\n", "\r"]:
+                    with self.subTest(
+                        suffix=suffix,
+                        record_newline=record_newline,
+                        embedded_newline=embedded_newline,
+                    ):
+                        label = f"two{embedded_newline}lines"
+                        text = (
+                            f"x{delimiter}label{record_newline}"
+                            f'0{delimiter}"{label}"{record_newline}'
+                            f"1{delimiter}tail{record_newline}"
+                        )
+                        path = self.write_table(text, suffix)
+                        self.assertEqual(text.encode("utf-8"), path.read_bytes())
+                        self.assertEqual(
+                            {"x": [0.0, 1.0], "label": [label, "tail"]},
+                            load_data_source(path),
+                        )
 
     def test_column_names_are_not_silently_normalized(self) -> None:
         path = self.write_table("x, y,y\n0,10,20\n")
