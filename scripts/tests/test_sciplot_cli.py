@@ -256,7 +256,7 @@ class SciPlotCliTests(unittest.TestCase):
             self.assertEqual("audit", payload["profile"])
             self.assertTrue((root / "audit" / "reproduction_manifest.json").is_file())
             self.assertTrue((root / "audit" / "qa" / "execution_plan.json").is_file())
-            self.assertEqual(str(root / "audit"), payload["project"])
+            self.assertEqual(str((root / "audit").resolve()), payload["project"])
             self.assertEqual("audit", payload["selected_profile"])
 
     def test_reusable_finalize_fails_before_creating_bundle_when_proof_is_invalid(self) -> None:

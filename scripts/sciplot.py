@@ -17,19 +17,9 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
-from PIL import Image
 
-from audit_semantics import audit_mapping_validity, audit_semantics
-from check_boxed_text_safety import analyze_boxed_text
-from check_canvas_safety import analyze_canvas
-from check_plot_geometry_safety import analyze_plot_geometry
-from check_vector_output import check_pdf, check_svg, check_vector_outputs
-from data_resolver import load_data_source
 from execution_planner import ExecutionRequest, PlannerError, build_execution_plan
 from output_policy import OutputSelection, resolve_outputs
-from render_visualspec_matplotlib import render_file
-from uncertainty_semantics import infer_uncertainty_name
-from visualspec import load_json, validate_visualspec
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -100,6 +90,9 @@ def _numeric_columns(table: Any) -> list[str]:
 
 
 def _build_visualspec(input_path: Path, copied_ref: str, *, x: str | None, y: str | None, yerr: str | None, uncertainty_semantics: str | None, plot_type: str | None) -> dict[str, Any]:
+    from data_resolver import load_data_source
+    from uncertainty_semantics import infer_uncertainty_name
+
     table = load_data_source(input_path)
     numeric = _numeric_columns(table)
     x_name = x or (numeric[0] if numeric else None)
@@ -202,6 +195,8 @@ def _copy_spec_sources(spec: dict[str, Any], spec_path: Path, project: Path) -> 
 
 
 def _prepare_visualspec(args: argparse.Namespace, project: Path) -> tuple[Path, dict[str, str]]:
+    from visualspec import load_json, validate_visualspec
+
     if bool(args.input) == bool(args.spec):
         raise WorkflowError("input_selection_error", "Provide exactly one of --input or --spec")
     if args.input:
@@ -255,6 +250,8 @@ def _declared_safety_report(
 
 
 def _source_has_boxed_text(spec_path: Path | None) -> bool:
+    from visualspec import load_json
+
     if spec_path is None or not spec_path.is_file():
         return False
     try:
@@ -300,11 +297,15 @@ def _parse_outputs(project: Path, formats: tuple[str, ...]) -> dict[str, Any]:
             continue
         try:
             if fmt == "png":
+                from PIL import Image
+
                 with Image.open(path) as image:
                     image.verify()
             elif fmt == "svg":
                 ET.parse(path)
             elif fmt == "pdf":
+                from check_vector_output import check_pdf
+
                 report = check_pdf(path, representation="semantic_raster", project_root=project)
                 if report["status"] != "pass":
                     reports[fmt] = report
@@ -316,6 +317,8 @@ def _parse_outputs(project: Path, formats: tuple[str, ...]) -> dict[str, Any]:
 
 
 def _vector_report(project: Path, formats: tuple[str, ...], representation: str) -> dict[str, Any]:
+    from check_vector_output import check_pdf, check_svg, check_vector_outputs
+
     svg = project / "output" / "figure.svg"
     pdf = project / "output" / "figure.pdf"
     if "svg" in formats and "pdf" in formats:
@@ -375,11 +378,62 @@ def _canvas_config(spec: dict[str, Any]) -> tuple[int, str, int, tuple[str, ...]
 
 
 def _canvas_report(spec: dict[str, Any], image: Path, project: Path) -> dict[str, Any]:
+    from check_canvas_safety import analyze_canvas
+
     margin, background, tolerance, edges = _canvas_config(spec)
     return analyze_canvas(image, margin_px=margin, background=background, tolerance=tolerance, required_edges=edges, project_root=project)
 
 
+def _evaluate_project(
+    project: Path,
+    spec: dict[str, Any],
+    spec_path: Path,
+    formats: tuple[str, ...],
+    *,
+    profile: str,
+) -> tuple[dict[str, Any], bool]:
+    from audit_semantics import audit_mapping_validity
+
+    parseability = _parse_outputs(project, formats)
+    mapping = audit_mapping_validity(spec, spec_path=spec_path)
+    canvas = _canvas_report(spec, project / "output" / "figure.png", project)
+    semantic: dict[str, Any] = {"status": "not_run", "overall": "not_run"}
+    vector: dict[str, Any] = {"status": "not_run"}
+    geometry: dict[str, Any] = {"status": "not_run"}
+    boxed_text: dict[str, Any] = {"status": "not_run"}
+    if profile == "standard":
+        from audit_semantics import audit_semantics
+        from check_boxed_text_safety import analyze_boxed_text
+        from check_plot_geometry_safety import analyze_plot_geometry
+
+        semantic = audit_semantics(spec_path, project / "output" / "render_semantics.json", project_root=project)
+        vector = _vector_report(project, formats, _representation(spec))
+        geometry = _declared_safety_report(spec, "plot_geometry_safety", project / "output" / "figure.png", analyze_plot_geometry, project)
+        boxed_text = _declared_safety_report(spec, "boxed_text_safety", project / "output" / "figure.png", analyze_boxed_text, project)
+    ok = all(item.get("status") == "pass" for item in parseability.values()) and mapping["status"] == "pass" and canvas["status"] == "pass"
+    if profile == "standard":
+        ok = (
+            ok
+            and semantic["overall"] == "pass"
+            and vector["status"] in {"pass", "not_applicable"}
+            and geometry["status"] in {"pass", "not_applicable"}
+            and boxed_text["status"] in {"pass", "not_applicable"}
+        )
+    return {
+        "parseability": parseability,
+        "mapping_validation": mapping,
+        "canvas_safety": canvas,
+        "plot_geometry_safety": geometry,
+        "boxed_text_safety": boxed_text,
+        "semantic_audit": semantic,
+        "vector_validation": vector,
+    }, ok
+
+
 def _run_lightweight(args: argparse.Namespace, plan: Any, project: Path, started: float) -> dict[str, Any]:
+    from render_visualspec_matplotlib import render_file
+    from visualspec import load_json
+
     spec_path, input_hashes = _prepare_visualspec(args, project)
     spec = load_json(spec_path)
     selection = resolve_outputs(
@@ -407,28 +461,8 @@ def _run_lightweight(args: argparse.Namespace, plan: Any, project: Path, started
         basename="figure",
         write_support_files=write_support_files,
     )
-    parseability = _parse_outputs(project, selection.formats)
-    mapping = audit_mapping_validity(spec, spec_path=spec_path)
-    canvas = _canvas_report(spec, output_dir / "figure.png", project)
-    semantic: dict[str, Any] = {"status": "not_run", "overall": "not_run"}
-    vector: dict[str, Any] = {"status": "not_run"}
-    geometry: dict[str, Any] = {"status": "not_run"}
-    boxed_text: dict[str, Any] = {"status": "not_run"}
-    if plan.selected_profile == "standard":
-        semantic = audit_semantics(spec_path, output_dir / "render_semantics.json", project_root=project)
-        vector = _vector_report(project, selection.formats, _representation(spec))
-        geometry = _declared_safety_report(spec, "plot_geometry_safety", output_dir / "figure.png", analyze_plot_geometry, project)
-        boxed_text = _declared_safety_report(spec, "boxed_text_safety", output_dir / "figure.png", analyze_boxed_text, project)
-    parse_ok = all(item.get("status") == "pass" for item in parseability.values())
-    required_ok = render_manifest.get("render_status") == "pass" and parse_ok and mapping["status"] == "pass" and canvas["status"] == "pass"
-    if plan.selected_profile == "standard":
-        required_ok = (
-            required_ok
-            and semantic["overall"] == "pass"
-            and vector["status"] in {"pass", "not_applicable"}
-            and geometry["status"] in {"pass", "not_applicable"}
-            and boxed_text["status"] in {"pass", "not_applicable"}
-        )
+    checks, checks_ok = _evaluate_project(project, spec, spec_path, selection.formats, profile=plan.selected_profile)
+    required_ok = render_manifest.get("render_status") == "pass" and checks_ok
     report_path = project / ("quick_report.json" if plan.selected_profile == "quick" else "qa" / Path("report.json"))
     outputs = {fmt: f"output/figure.{fmt}" for fmt in selection.formats}
     checksums = _project_checksums(project, [spec_path, render_script, *(project / path for path in outputs.values())]) if plan.selected_profile == "standard" else {}
@@ -439,13 +473,7 @@ def _run_lightweight(args: argparse.Namespace, plan: Any, project: Path, started
         "enabled_gates": list(plan.enabled_gates),
         "input_hashes": input_hashes,
         "output_selection": selection.to_dict(),
-        "parseability": parseability,
-        "mapping_validation": mapping,
-        "canvas_safety": canvas,
-        "plot_geometry_safety": geometry,
-        "boxed_text_safety": boxed_text,
-        "semantic_audit": semantic,
-        "vector_validation": vector,
+        **checks,
     }
     if plan.selected_profile == "standard":
         report["checksums"] = checksums
@@ -551,6 +579,8 @@ def run_command(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def validate_command(args: argparse.Namespace) -> dict[str, Any]:
+    from visualspec import load_json
+
     project = args.project.resolve()
     if not project.is_dir():
         raise WorkflowError("missing_project", "Project directory does not exist", path=str(project))
@@ -590,42 +620,17 @@ def validate_command(args: argparse.Namespace) -> dict[str, Any]:
     spec = load_json(spec_path)
     manifest = load_json(manifest_path)
     formats = tuple((manifest.get("outputs") or {}).keys())
-    parseability = _parse_outputs(project, formats)
-    mapping = audit_mapping_validity(spec, spec_path=spec_path)
-    canvas = _canvas_report(spec, project / "output" / "figure.png", project)
-    semantic = {"status": "not_run", "overall": "not_run"}
-    vector = {"status": "not_run"}
-    geometry = {"status": "not_run"}
-    boxed_text = {"status": "not_run"}
+    checks, ok = _evaluate_project(project, spec, spec_path, formats, profile=args.profile)
     manifest_validation = {"status": "not_run", "failures": []}
     if args.profile == "standard":
-        semantic = audit_semantics(spec_path, project / "output" / "render_semantics.json", project_root=project)
-        vector = _vector_report(project, formats, _representation(spec))
-        geometry = _declared_safety_report(spec, "plot_geometry_safety", project / "output" / "figure.png", analyze_plot_geometry, project)
-        boxed_text = _declared_safety_report(spec, "boxed_text_safety", project / "output" / "figure.png", analyze_boxed_text, project)
         manifest_validation = _validate_project_manifest(project, manifest)
-    ok = all(item.get("status") == "pass" for item in parseability.values()) and mapping["status"] == "pass" and canvas["status"] == "pass"
-    if args.profile == "standard":
-        ok = (
-            ok
-            and semantic["overall"] == "pass"
-            and vector["status"] in {"pass", "not_applicable"}
-            and geometry["status"] in {"pass", "not_applicable"}
-            and boxed_text["status"] in {"pass", "not_applicable"}
-            and manifest_validation["status"] == "pass"
-        )
+        ok = ok and manifest_validation["status"] == "pass"
     result = {
         "schema": "sciplot.validation-result.v1",
         "status": "pass" if ok else "failed",
         "profile": args.profile,
         "project": str(project),
-        "parseability": parseability,
-        "mapping_validation": mapping,
-        "canvas_safety": canvas,
-        "plot_geometry_safety": geometry,
-        "boxed_text_safety": boxed_text,
-        "semantic_audit": semantic,
-        "vector_validation": vector,
+        **checks,
         "manifest_validation": manifest_validation,
     }
     write_json(project / "qa" / "validation_report.json", result)
@@ -654,6 +659,8 @@ def _run_captured(command: list[str], *, timeout: int = 600) -> subprocess.Compl
 
 
 def finalize_command(args: argparse.Namespace) -> dict[str, Any]:
+    from visualspec import load_json
+
     started = time.perf_counter()
     project = args.project.resolve()
     bundle = args.bundle.resolve()

@@ -13,32 +13,30 @@ Use `scripts/sciplot.py` as the default entry point and choose the **smallest wo
 - `standard`: ordinary manuscript, collaborator, or data-driven work. This is the default.
 - `audit`: archival/release bundles, reusable-data proof, benchmarks, attestation, or strict evidence unavailable from lighter profiles.
 
-Python 3.14 is the supported runtime. Do not read every reference up front; load the matching protocol only when its branch is needed.
+Use Python 3.14. Do not read every reference up front; load the relevant protocol on demand.
+
+Five-figure benchmark: `py -3.14 scripts/benchmark_five_figures.py --profile audit --out-dir <new-directory>`. Read `references/FIVE_FIGURE_BENCHMARK.md`; synthetic fixtures do not prove experimental accuracy or paper-image fidelity.
 
 ## Default Workflow
 
-1. Identify the source: trustworthy raw/extracted data, raster-only plot, schematic, image/map, or visual-trace request.
-2. Classify each panel independently; mixed figures may use different representations per panel.
-3. Create or update `scientificfigure.visualspec.v2` with explicit mappings, units, geometry, annotations, QA policy, and outputs.
-4. Run `scripts/sciplot.py run --profile standard` unless the request is clearly preview-only or audit-only.
-5. Inspect the actual outputs. Validate data mapping, semantics, canvas safety, vector structure when relevant, and visible layout.
-6. Fix in this order: geometry → axes → data marks → labels/legend → color → typography.
-7. Escalate only when the requested claim needs stronger evidence.
-8. Report the strongest status actually supported, plus material limitations.
+1. Identify the source and classify each panel independently using the table below.
+2. Write `scientificfigure.visualspec.v2`: mappings, units, geometry, annotations, QA policy, outputs.
+3. Run the smallest profile supporting the claim; inspect outputs and layout.
+4. Fix geometry → axes → data marks → labels/legend → color → typography; rerun and report status and limitations.
 
-For each reproduced figure, keep a dedicated runnable script and record it under `per_figure_scripts`, or use a batch runner with clear per-figure functions and output paths.
+Keep a dedicated runnable script per figure (`per_figure_scripts`), or batch functions with per-figure output paths.
 
 ## Representation Selection
 
 | Source | Strategy | Representation |
 |---|---|---|
-| Raw data or trustworthy table | `raw_data` | `semantic_vector` or `semantic_raster` |
+| Trustworthy data/table | `raw_data` | `semantic_vector` or `semantic_raster` |
 | Raster plot only | `digitized_raster` | usually `semantic_vector` |
 | Mechanism/equipment/schematic | `vector_redraw` | `semantic_vector` |
 | Heatmap, contour, EBSD/phase map, micrograph | `raw_data` or `color_region_extraction` | `semantic_raster` or `mixed` |
-| Appearance is explicitly more important than recovered data | `pixel_trace` | `pixel_primitives` |
+| Explicit appearance-first tracing | `pixel_trace` | `pixel_primitives` |
 
-A visual trace is not recovered experimental data. A raster pasted into SVG/PDF is not semantic-vector reconstruction.
+Traces are not recovered experimental data; raster pasted into SVG/PDF is not semantic-vector reconstruction.
 
 ## Load Details Only When Needed
 
@@ -59,13 +57,13 @@ A visual trace is not recovered experimental data. A raster pasted into SVG/PDF 
 | AI visual review | `references/AI_VISUAL_REVIEW.md` |
 | Reconstruction connector anchors | `references/CONNECTOR_ANCHOR_PROTOCOL.md` |
 
-Do not copy protocol detail back into this file. Keep `SKILL.md` as routing + invariants; keep deep rules in `references/` and implementation in `scripts/`.
+Keep protocol details in `references/`, not this routing entrypoint.
 
 ## Command Routing
 
 | Need | Command |
 |---|---|
-| Normal generation | `scripts/sciplot.py run --profile standard` |
+| Generate | `scripts/sciplot.py run --profile standard` |
 | Fast preview | `scripts/sciplot.py run --profile quick` |
 | Re-run profile checks | `scripts/sciplot.py validate` |
 | Upgrade to strict bundle | `scripts/sciplot.py finalize --profile audit` |
@@ -73,11 +71,11 @@ Do not copy protocol detail back into this file. Keep `SKILL.md` as routing + in
 | Direct legacy audit path | `scripts/run_reproduction.py` |
 | Advisor-first data workflow | `scripts/scientific_figure_pipeline.py` |
 
-Run `--help` on the selected command instead of duplicating full flag documentation here.
+Use the selected command's `--help` for flags.
 
 ## Scientific Invariants
 
-- Preserve source provenance, units, mappings, transformations, and declared limitations.
+- Preserve provenance, units, mappings, transformations, and limitations.
 - Never invent data, uncertainty semantics, sample size, statistical tests, significance, or causal claims.
 - Error bars/bands require independent values and defensible semantics; do not duplicate `y` as `yerr` or infer uncertainty from ordinary measurement names.
 - Do not resize a reference image to hide canvas mismatch during visual QA.
@@ -88,42 +86,24 @@ Run `--help` on the selected command instead of duplicating full flag documentat
 
 ## Raster and Schematic Rules
 
-For raster plots, calibrate the plotting region and axis mapping before extracting data. Exclude legends, labels, arrows, and annotations from curve extraction. Smoothing may remove pixel stair-steps but must not invent a trend. Treat extracted values as `digitized_raster`, not primary raw data.
+Calibrate raster plotting regions and axes; exclude legends, labels, arrows, and annotations from curve extraction. Smoothing must not invent trends. Label extracted values `digitized_raster`, never primary data.
 
-For schematics, prefer editable semantic primitives and preserve physical labels, units, symbols, panel letters, and relationships. If raster regions must be preserved, identify them explicitly rather than claiming the full canvas is editable.
+Use editable schematic primitives; preserve physical labels, units, symbols, panel letters, and relationships. Declare preserved raster regions instead of claiming a fully editable canvas.
 
 ## Status Vocabulary
 
 - `semantic_strict_pass`: reference-backed visual, semantic, panel, and relevant vector gates pass.
-- `semantic_validated_pass`: mapping, render integrity, semantics, and relevant vector checks pass without requiring visual-reference identity.
-- `semantic_near_pass`: semantic reconstruction exists but reference-backed visual QA still differs.
-- `visual_trace_pass`: appearance is reproduced with trace primitives without claiming recovered primary data.
-- `render_only`: exports exist but evidence is insufficient for a stronger claim.
-- `not_strict`: material differences or strict-gate failures remain.
-- `failed`: the selected workflow did not complete successfully.
+- `semantic_validated_pass`: mapping, render integrity, semantics, and relevant vector checks pass; no reference identity claimed.
+- `semantic_near_pass`: semantic reconstruction exists; reference-image QA differs.
+- `visual_trace_pass`: trace primitives match appearance; not recovered primary data.
+- `render_only`: exports exist; insufficient validation.
+- `not_strict`: material differences or strict-gate failures.
+- `failed`: selected workflow unsuccessful.
 
 Publication readiness is separate from rendering or semantic validation.
 
 ## Completion Gate
 
-A task is complete when the selected profile's enabled gates pass and the delivery records source inputs, source strategy, output paths, runnable script(s), representation, final status, and remaining deviations.
+Completion requires all enabled profile gates to pass. Record source inputs/strategy, representation, output paths, runnable scripts, supported status, and deviations; exports alone are insufficient.
 
-Additionally:
-
-- strict reference-image work needs reference-backed visual evidence;
-- semantic-vector outputs need vector validation;
-- reusable/data-swap claims need the required template and changed-input proof;
-- audit delivery needs bundle, lock, portability, environment, attestation, checksum, and manifest closure.
-
-Do not run audit-only gates for ordinary `quick` or `standard` work unless the requested claim requires them.
-
-## Common Mistakes
-
-| Mistake | Correct action |
-|---|---|
-| Running full audit for every figure | Start with `standard`; escalate only when needed |
-| Reading every protocol before starting | Load only the matching reference |
-| Treating successful export as scientific validation | Check mapping, semantics, provenance, and relevant QA |
-| Calling a raster trace editable scientific vector data | Use `pixel_trace` / `visual_trace_pass` |
-| Inferring significance or uncertainty from appearance | Require explicit or auditable evidence |
-| Tuning typography before geometry | Fix geometry and axes first |
+Require reference-backed visual evidence for strict claims, vector validation for semantic vectors, and template plus changed-input proof for reusable/data-swap claims. Audit also requires bundle, lock, portability, environment, attestation, checksum, and manifest closure. Do not run audit-only gates for ordinary quick/standard work unless the claim requires them.

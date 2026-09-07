@@ -120,3 +120,45 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt
       - run: python scripts/release_acceptance.py
+
+  regression:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    env:
+      MPLBACKEND: Agg
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONIOENCODING: utf-8
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+      VECLIB_MAXIMUM_THREADS: "1"
+      BLIS_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements.txt
+      - name: Full unittest regression
+        run: python -m unittest discover -s scripts/tests -p "test_*.py" -v
+      - name: Standard five-figure benchmark
+        run: python scripts/benchmark_five_figures.py --profile standard --out-dir "${{ runner.temp }}/sciplot-regression-${{ github.run_id }}-${{ github.run_attempt }}/standard"
+      - name: Polished audit five-figure benchmark
+        run: python scripts/benchmark_five_figures.py --profile audit --polished --out-dir "${{ runner.temp }}/sciplot-regression-${{ github.run_id }}-${{ github.run_attempt }}/audit-polished"
+      - name: Archive public synthetic benchmark outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-five-figure-benchmarks-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/sciplot-regression-${{ github.run_id }}-${{ github.run_attempt }}/
+          if-no-files-found: ignore
+          retention-days: 7
