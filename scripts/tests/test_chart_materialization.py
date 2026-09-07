@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from contextlib import chdir
 from pathlib import Path
 
 import common  # noqa: F401
@@ -104,6 +105,21 @@ class ChartMaterializationTest(unittest.TestCase):
             self.assertIn("lower", rows[0])
             self.assertEqual(3, len(rows))
             self.assertIn("source_hashes", spec["delivery"])
+
+    def test_error_band_relative_output_matches_resolved_output(self):
+        with tempfile.TemporaryDirectory() as directory, chdir(directory):
+            data = Path("data.csv")
+            data.write_text("x,y\n0,1\n0,3\n1,2\n1,4\n", encoding="utf-8")
+            decision = {"recommended_type": "line_with_error_band", "uncertainty_source": "repeated_observations", "uncertainty_evidence": {"source": "metadata", "match_type": "repeated_observations", "confidence": 1.0, "semantics": "standard error"}}
+            results = []
+            for output_dir in (Path("relative"), Path("absolute").resolve()):
+                spec, report = materialize_chart_decision(decision, data_path=data, output_dir=output_dir, x="x", y="y")
+                self.assertEqual("pass", report["status"])
+                self.assertEqual("derived/data_error_band.csv", report["derived_data"])
+                self.assertTrue((output_dir / report["derived_data"]).is_file())
+                self.assertEqual(report["source_hashes"], spec["delivery"]["source_hashes"])
+                results.append((spec, report))
+            self.assertEqual(results[0], results[1])
 
     def test_unsupported_automatic_ci_band_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:

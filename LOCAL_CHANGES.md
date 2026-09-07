@@ -25,3 +25,10 @@ Local extension identifier: `function-preserving-simplification` (on top of the 
 - Command help and parser routing load only lightweight modules. Rendering, data loading, and quality-check dependencies are imported by the code paths that use them.
 - The entrypoint omits duplicate workflow and common-mistake explanations while retaining protocol links, source/representation rules, scientific invariants, command routes, and status definitions.
 - No legacy command, protocol, schema, renderer, digitizer, Advisor, data-swap, or bundle module is removed. Six new evaluation tests cover profile gates, return contracts, and dependency-free help.
+
+## Cross-Platform CI Follow-Up
+
+- Preserve the existing CI jobs and add complete unittest discovery plus standard and polished audit five-figure runs on Ubuntu and Windows.
+- Build derived error-band paths from the already-resolved output root. This handles relative directories and Windows short-path aliases without changing derived values, source hashes, or scientific checks.
+- Compare CLI project paths against their resolved form in the audit routing test, matching the existing CLI contract rather than a platform-dependent spelling.
+- Add a regression requiring relative and resolved output directories to produce identical specifications and materialization reports.

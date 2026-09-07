@@ -153,7 +153,7 @@ def materialize_chart_decision(
             derived["lower"] = derived[y] - derived["std"]
             derived["upper"] = derived[y] + derived["std"]
             mapping.update({"lower": "lower", "upper": "upper", "uncertainty": "std"})
-        derived_path = output_dir / "derived" / f"{source.stem}_error_band.csv"
+        derived_path = root / "derived" / f"{source.stem}_error_band.csv"
         derived_path.parent.mkdir(parents=True, exist_ok=True)
         derived.to_csv(derived_path, index=False)
         derived_ref = _source_ref(derived_path, root)
