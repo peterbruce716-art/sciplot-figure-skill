@@ -21,7 +21,7 @@ Five-figure benchmark: `py -3.14 scripts/benchmark_five_figures.py --profile aud
 
 1. Identify the source and classify each panel independently using the table below.
 2. Write `scientificfigure.visualspec.v2`: mappings, units, geometry, annotations, QA policy, outputs.
-3. Run the smallest profile supporting the claim; inspect outputs and layout.
+3. Run the smallest profile supporting the claim; inspect outputs, layout, and `readability.warnings`. Resolve warnings or report the remaining issue; a semantic pass does not certify readability. See `references/WORKFLOW_PROFILES.md` for supported checks and limitations.
 4. Fix geometry → axes → data marks → labels/legend → color → typography; rerun and report status and limitations.
 
 Keep a dedicated runnable script per figure (`per_figure_scripts`), or batch functions with per-figure output paths.
@@ -72,6 +72,8 @@ Keep protocol details in `references/`, not this routing entrypoint.
 | Advisor-first data workflow | `scripts/scientific_figure_pipeline.py` |
 
 Use the selected command's `--help` for flags.
+
+For CSV input, `--x-label` and `--y-label` set display text without changing data mappings. Only recognized unit suffixes are formatted automatically (`stress_MPa` → `Stress (MPa)`); confirm labels and units before delivery.
 
 ## Scientific Invariants
 

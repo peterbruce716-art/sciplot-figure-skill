@@ -25,6 +25,7 @@ from visualspec import load_json, make_manifest, manifest_overall_status, requir
 
 from portable_paths import portable_path
 from audit_semantics import extract_matplotlib_semantics
+from readability import analyze_readability
 
 
 _CJK_PATTERN = re.compile(r"[\u3400-\u9fff\uf900-\ufaff]")
@@ -371,6 +372,11 @@ def render_visualspec(
             if any(plot.get("label") for plot in panel.get("plots", [])) or any(group.get("label") for plot in panel.get("plots", []) for group in (plot.get("data") or {}).get("groups", [])):
                 _apply_legend(ax, panel)
         font_size_gate = _minimum_font_size(fig, spec)
+        readability = analyze_readability(fig, spec, base_dir=spec_base)
+        for warning in readability["warnings"]:
+            print(f"SciPlot readability [{warning['code']}] panel {warning['panel']}: {warning['message']}", file=sys.stderr)
+        if (spec.get("qa_policy") or {}).get("readability") == "error" and readability["warnings"]:
+            raise ValueError("readability_violation: " + ", ".join(w["code"] for w in readability["warnings"]))
         png = output_dir / f"{basename}.png"
         svg = output_dir / f"{basename}.svg"
         pdf = output_dir / f"{basename}.pdf"
@@ -445,6 +451,7 @@ def render_visualspec(
                 "delivery": {"cjk_required": bool(spec.get("_resolved_runtime", {}).get("cjk_required", False)), "candidates": spec.get("_resolved_runtime", {}).get("font_candidates", [])},
             },
             "publication_readiness": {"minimum_font_size": font_size_gate} if font_size_gate else {},
+            "readability": readability,
         }
     )
     if write_support_files:

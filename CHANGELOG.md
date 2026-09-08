@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Add renderer readability advisories for legend/data overlap, grouped-bar ticks and low-contrast annotations, with an explicit opt-in error policy and documented heuristic limits.
+- Add CSV `--x-label`/`--y-label` overrides and conservative unit-suffix formatting without altering source columns or measurements.
+- Retain readability evidence in working-project and five-figure reports and the portable audit runtime; document independent real-source evaluation requirements.
+
 - Recognize pandas string columns when profiling categories, dates, and free text, restoring date-based trend suggestions with pandas 3 defaults and nullable string data.
 
 ## v2.10.1 Reliability and Package Delivery

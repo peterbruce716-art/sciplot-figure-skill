@@ -369,6 +369,9 @@ def _plot_data_errors(data: Any, ptype: str, prefix: str, *, allow_empty: bool =
 
 def validate_visualspec(spec: dict[str, Any]) -> list[str]:
     errors: list[str] = []
+    policy = spec.get("qa_policy")
+    if isinstance(policy, dict) and "readability" in policy and policy["readability"] not in ("warn", "error"):
+        errors.append("qa_policy.readability must be warn or error")
     schema = spec.get("schema")
     if schema not in {VISUALSPEC_SCHEMA, VISUALSPEC_SCHEMA_V2}:
         errors.append(f"schema must be {VISUALSPEC_SCHEMA} or {VISUALSPEC_SCHEMA_V2}")

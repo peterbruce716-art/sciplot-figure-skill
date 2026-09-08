@@ -39,6 +39,7 @@ RUNTIME_FILES = [
     "uncertainty_semantics.py",
     "visualspec.py",
     "render_visualspec_matplotlib.py",
+    "readability.py",
     "audit_semantics.py",
     "score_iteration.py",
     "score_visual.py",

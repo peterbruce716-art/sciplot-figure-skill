@@ -46,6 +46,16 @@
     "figure_contract": {"type": "string"},
     "statistics_report": {"type": "string"},
     "publication_readiness": {"type": "object", "additionalProperties": true},
+    "readability": {
+      "type": "object",
+      "required": ["status", "warnings", "limitations"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"enum": ["warning", "no_warnings"]},
+        "warnings": {"type": "array", "items": {"type": "object", "required": ["code", "panel", "message"]}},
+        "limitations": {"type": "string"}
+      }
+    },
     "semantics": {"type": "string"},
     "source_strategy": {
       "enum": ["raw_data", "digitized_raster", "manual_measurement", "vector_redraw", "color_region_extraction", "pixel_trace", "mixed"]

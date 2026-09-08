@@ -21,6 +21,18 @@ py -3.14 scripts/sciplot.py validate \
   --profile standard
 ```
 
+For explicit mappings and manuscript labels:
+
+```bash
+python scripts/sciplot.py run --input stress_strain.csv \
+  --x strain --y stress_MPa --x-label "True strain" \
+  --y-label "Flow stress (MPa)" --profile standard --out-dir out/stress_strain
+```
+
+Use Python 3.14 for this command. Labels change display text only. Recognized unit suffixes such as `stress_MPa` become `Stress (MPa)` by default; unknown suffixes and original column mappings remain intact. With `--spec`, edit each panel's axes labels instead of using these CSV-only flags.
+
+The renderer reports likely legend/data overlap, intermediate grouped-bar ticks, and low-contrast unboxed annotations in `readability.warnings`. These warnings are visible on stderr and in render/working-project reports; they do not change explicit styles or claim publication readiness. See [readability checks](references/WORKFLOW_PROFILES.md#readability-advisories) for coverage and opt-in rejection.
+
 Choose the smallest profile that satisfies the delivery claim:
 
 | Profile | Intended use | Default work |

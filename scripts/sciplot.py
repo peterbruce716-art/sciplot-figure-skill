@@ -51,6 +51,16 @@ def relative(path: Path, root: Path) -> str:
     return path.resolve().relative_to(root.resolve()).as_posix()
 
 
+def _recorded_readability(project: Path, *, audit: bool = False) -> dict[str, Any]:
+    from visualspec import load_json
+
+    path = project / ("outputs" if audit else "output") / "render_manifest.json"
+    if not path.is_file():
+        return {"status": "not_run"}
+    report = load_json(path).get("readability", {"status": "not_run"})
+    return {**report, "evidence": "recorded_at_render"}
+
+
 def _ensure_project_root(project: Path) -> Path:
     project = project.resolve()
     if project.exists() and project.is_file():
@@ -89,7 +99,17 @@ def _numeric_columns(table: Any) -> list[str]:
     return result
 
 
-def _build_visualspec(input_path: Path, copied_ref: str, *, x: str | None, y: str | None, yerr: str | None, uncertainty_semantics: str | None, plot_type: str | None) -> dict[str, Any]:
+def _column_label(name: str) -> str:
+    # Only unambiguous, case-sensitive unit suffixes are formatted. No unit
+    # conversion, symbol expansion or scientific meaning is inferred.
+    quantity, separator, unit = name.rpartition("_")
+    if separator and quantity and unit in {"Pa", "kPa", "MPa", "GPa", "K", "s", "ms", "mm", "cm", "nm", "um", "μm", "µm", "Hz", "N", "kN"}:
+        quantity = quantity.replace("_", " ")
+        return f"{quantity[0].upper() + quantity[1:]} ({unit})"
+    return name
+
+
+def _build_visualspec(input_path: Path, copied_ref: str, *, x: str | None, y: str | None, yerr: str | None, uncertainty_semantics: str | None, plot_type: str | None, x_label: str | None = None, y_label: str | None = None) -> dict[str, Any]:
     from data_resolver import load_data_source
     from uncertainty_semantics import infer_uncertainty_name
 
@@ -148,7 +168,7 @@ def _build_visualspec(input_path: Path, copied_ref: str, *, x: str | None, y: st
                 "bbox_normalized": [0.16, 0.18, 0.78, 0.74],
                 "source_strategy": "raw_data",
                 "representation": "semantic_vector",
-                "axes": {"x": {"label": x_name}, "y": {"label": y_name}},
+                "axes": {"x": {"label": _column_label(x_name) if x_label is None else x_label}, "y": {"label": _column_label(y_name) if y_label is None else y_label}},
                 "plots": [{"type": chosen_type, "data": data, "style": {"color": "#176B87", "line_width_pt": 1.2}}],
                 "annotations": [],
             }
@@ -205,9 +225,11 @@ def _prepare_visualspec(args: argparse.Namespace, project: Path) -> tuple[Path, 
             raise WorkflowError("missing_input", "Input data file does not exist", path=str(source))
         copied = _safe_copy(source, project / "input" / source.name, project)
         ref = relative(copied, project)
-        spec = _build_visualspec(copied, ref, x=args.x, y=args.y, yerr=args.yerr, uncertainty_semantics=args.uncertainty_semantics, plot_type=args.plot_type)
+        spec = _build_visualspec(copied, ref, x=args.x, y=args.y, yerr=args.yerr, uncertainty_semantics=args.uncertainty_semantics, plot_type=args.plot_type, x_label=getattr(args, "x_label", None), y_label=getattr(args, "y_label", None))
         hashes = {ref: sha256_file(copied)}
     else:
+        if getattr(args, "x_label", None) is not None or getattr(args, "y_label", None) is not None:
+            raise WorkflowError("label_override_requires_input", "--x-label/--y-label require --input; edit per-panel axes labels when using --spec")
         source_spec = args.spec.resolve()
         if not source_spec.is_file():
             raise WorkflowError("missing_spec", "VisualSpec file does not exist", path=str(source_spec))
@@ -474,6 +496,7 @@ def _run_lightweight(args: argparse.Namespace, plan: Any, project: Path, started
         "input_hashes": input_hashes,
         "output_selection": selection.to_dict(),
         **checks,
+        "readability": render_manifest.get("readability", {"status": "not_run"}),
     }
     if plan.selected_profile == "standard":
         report["checksums"] = checksums
@@ -511,6 +534,7 @@ def _run_lightweight(args: argparse.Namespace, plan: Any, project: Path, started
         "input_hashes": input_hashes,
         "outputs": outputs,
         "report": relative(report_path, project),
+        "readability": render_manifest.get("readability", {"status": "not_run"}),
         "performance": {
             "subprocess_count": 0,
             "render_count": 1,
@@ -611,6 +635,7 @@ def validate_command(args: argparse.Namespace) -> dict[str, Any]:
             "bundle_verification": {"status": "pass", "returncode": verify.returncode},
             "manifest_status": manifest.get("status"),
             "audit_report_status": run_report.get("status"),
+            "readability": _recorded_readability(project, audit=True),
         }
         return result
     spec_path = project / "visualspec.json"
@@ -632,6 +657,7 @@ def validate_command(args: argparse.Namespace) -> dict[str, Any]:
         "project": str(project),
         **checks,
         "manifest_validation": manifest_validation,
+        "readability": _recorded_readability(project),
     }
     write_json(project / "qa" / "validation_report.json", result)
     return result
@@ -766,6 +792,7 @@ def finalize_command(args: argparse.Namespace) -> dict[str, Any]:
         "bundle": str(bundle),
         "manifest_status": manifest.get("status"),
         "audit_report_status": run_report.get("status"),
+        "readability": _recorded_readability(bundle, audit=True),
         "data_swap_proof": data_swap_proof,
         "release_acceptance": release_report,
         "performance": {
@@ -832,6 +859,8 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--outputs", default="auto")
     run_parser.add_argument("--x")
     run_parser.add_argument("--y")
+    run_parser.add_argument("--x-label", help="Display label for the input x column; preserves the data mapping and values.")
+    run_parser.add_argument("--y-label", help="Display label for the input y column, e.g. 'Stress (MPa)'.")
     run_parser.add_argument("--yerr")
     run_parser.add_argument("--uncertainty-semantics", help="Explicit uncertainty definition for --yerr, for example 'standard deviation'.")
     run_parser.add_argument("--plot-type", choices=("line", "scatter", "errorbar"))

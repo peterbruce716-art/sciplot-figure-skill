@@ -44,6 +44,8 @@ For separately labeled presentation improvements, add `--polished`. This moves t
 
 Inspect the contact sheet and full-resolution figures after running. Outer-margin checks do not prove that interior labels never overlap. Human-readable scientific meaning, uncertainty declarations, and reference fidelity still require their own evidence.
 
+Each figure row now retains the renderer's `readability` advisory. The unchanged baseline intentionally demonstrates warnings for the bar legend/ticks and contour annotation; `--polished` should resolve those examples. Readability warnings do not turn an engineering pass into proof of a publication-ready layout. For a render that must reject every detected warning, set `qa_policy.readability` to `error` in its VisualSpec.
+
 ## Limits
 
 Benchmark reports retain absolute command paths, the skill root, and environment details for local reproducibility. Review or redact those fields before publishing reports from a personal machine. CI may archive its own public synthetic runs; that does not authorize uploading unrelated local benchmark directories or private files.

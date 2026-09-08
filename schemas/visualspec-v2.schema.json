@@ -38,6 +38,7 @@
       "type": "object",
       "additionalProperties": true,
       "properties": {
+        "readability": {"type": "string", "enum": ["warn", "error"]},
         "canvas_safety": {"$ref": "#/$defs/canvas_safety_policy"},
         "boxed_text_safety": {"$ref": "#/$defs/boxed_text_safety_policy"},
         "plot_geometry_safety": {"$ref": "#/$defs/plot_geometry_safety_policy"}

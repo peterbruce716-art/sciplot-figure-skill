@@ -94,7 +94,8 @@ def project_evidence(project: Path, profile: str) -> tuple[dict[str, Path], dict
         status = report.get("status", "fail")
         directory, stem = "output", "figure"
     paths = {extension: project / directory / f"{stem}.{extension}" for extension in ("png", "svg", "pdf")}
-    return paths, {"status": status, "semantic_status": semantic.get("overall"), "vector_status": vector.get("status")}
+    render = load_json(project / directory / "render_manifest.json")
+    return paths, {"status": status, "semantic_status": semantic.get("overall"), "vector_status": vector.get("status"), "readability": render.get("readability", {"status": "not_run"})}
 
 
 def case_passes(returncode: int, result: dict[str, Any], evidence: dict[str, Any], outputs: dict[str, Any], validated: bool) -> bool:
@@ -154,6 +155,7 @@ def run_benchmark(root: Path, profile: str, compare: Path | None = None, *, poli
         validation_elapsed = time.perf_counter() - validation_started
         passed = case_passes(returncode, result, evidence, outputs, validated)
         row = {"name": name, "status": "pass" if passed else "fail", "returncode": returncode, "duration_seconds": round(elapsed, 3), "validation_seconds": round(validation_elapsed, 3), "validation_command": validation_command, "validation": validation_result, "command": command, "input_sha256": sha256(spec_path), "result": result, "qa_status": evidence["status"], "semantic_status": evidence["semantic_status"], "vector_status": evidence["vector_status"], "outputs": outputs}
+        row["readability"] = evidence["readability"]
         if "png" in outputs:
             image_path = root / outputs["png"]["path"]
             with Image.open(image_path) as image:
